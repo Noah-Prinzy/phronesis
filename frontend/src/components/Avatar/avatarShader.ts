@@ -100,13 +100,34 @@ export const avatarVertexShader = /* glsl */ `
     return 42.0 * dot(m * m, vec4(dot(p0, x0), dot(p1, x1), dot(p2, x2), dot(p3, x3)));
   }
 
+  // Asymmetric power curve: pushes most values toward flat while letting
+  // the extremes punch through sharply — crests read as tall spikes and
+  // troughs as deep, punchy dips, instead of one smooth uniform ripple.
+  // Troughs get a steeper curve + bigger boost than crests, so they carve in
+  // harder than the peaks rise.
+  float shapeWave(float n) {
+    float s = sign(n);
+    float a = abs(n);
+    float sharpness = s > 0.0 ? 1.5 : 1.85;
+    float boost = s > 0.0 ? 1.5 : 1.9;
+    return s * pow(a, sharpness) * boost;
+  }
+
   // Two octaves of flowing noise, sampled along the surface normal — a slow
   // "liquid" layer plus a smaller/faster one riding on top of it.
   float displacementAt(vec3 p) {
     float slowTime = uTime * 0.2;
     float n1 = snoise(p * 1.6 + vec3(0.0, 0.0, slowTime));
     float n2 = snoise(p * 3.4 + vec3(slowTime * 0.6, slowTime * -0.4, 0.0)) * 0.5;
-    return (n1 + n2) * uDisplacementStrength;
+    float wave = shapeWave(n1 + n2);
+
+    // Coarse, low-frequency noise so different regions of the sphere ripple
+    // with different intensity — smoothly, so it stays stable under the
+    // finite-difference normal reconstruction below (a per-vertex random
+    // value here would make the recomputed normals jitter).
+    float ampVariance = mix(0.55, 1.65, (snoise(p * 0.6) + 1.0) * 0.5);
+
+    return wave * ampVariance * uDisplacementStrength;
   }
 
   void main() {

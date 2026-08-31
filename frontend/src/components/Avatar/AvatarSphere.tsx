@@ -21,10 +21,12 @@ const SPHERE_SEGMENTS = 96;
 const IDLE_ROTATION_SPEED = (Math.PI * 2) / 90; // one full turn every 90s — calm, not distracting
 const LOADING_ROTATION_SPEED = (Math.PI * 2) / 25; // noticeably faster while thinking, still smooth
 
-// Surface ripple amplitude, as a fraction of the sphere's radius — kept
-// subtle so the shape reads as a perfectly smooth sphere at a glance.
+// Surface ripple amplitude, as a fraction of the sphere's radius. The
+// shader's own wave shaping now does sharp crests/punchy troughs, so the
+// ceiling is a bit higher than a plain smooth ripple needs — enough for
+// those peaks to actually read as tall without the base looking chaotic.
 const DISPLACEMENT_MIN = 0.02;
-const DISPLACEMENT_MAX = 0.04;
+const DISPLACEMENT_MAX = 0.05;
 
 // How long the center-outward theme-color reveal takes, in seconds.
 const THEME_TRANSITION_DURATION_S = 1.3;
