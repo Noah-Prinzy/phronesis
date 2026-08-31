@@ -2,17 +2,25 @@
 
 import * as THREE from 'three';
 
+export type AvatarTheme = 'light' | 'dark';
+
 /**
- * Brand colors for the 3D sphere shader — just two: blue and white.
+ * Brand colors for the 3D sphere shader, one pair per page theme.
  *
- * These mirror the CSS custom properties in src/index.css (--color-secondary,
- * --color-accent). A shader can't read CSS variables, so the values are
- * duplicated here deliberately — keep the two in sync if the palette ever
- * changes.
+ * Dark mode sits on a black page, so blue-to-white reads great. Light mode
+ * sits on a white page, where anything close to white would nearly
+ * disappear — so it swaps to a dark-navy-to-blue pair that stays visible
+ * against a white background instead.
  */
-export const AVATAR_SHADER_COLORS = {
-  primary: new THREE.Color('#3b82f6'), // blue, sphere base
-  accent: new THREE.Color('#ffffff'), // white, sphere top / highlights
+export const AVATAR_THEME_COLORS: Record<AvatarTheme, { primary: THREE.Color; accent: THREE.Color }> = {
+  dark: {
+    primary: new THREE.Color('#1369f5'), // blue, sphere base
+    accent: new THREE.Color('#ffffff'), // white, sphere top / highlights
+  },
+  light: {
+    primary: new THREE.Color('#0b1220'), // near-black navy, sphere base
+    accent: new THREE.Color('#2563eb'), // saturated blue, sphere top / highlights
+  },
 };
 
 /** Fixed, camera-relative light direction (view space) — top-right of the viewer. */
@@ -129,8 +137,11 @@ export const avatarVertexShader = /* glsl */ `
 `;
 
 export const avatarFragmentShader = /* glsl */ `
-  uniform vec3 uColorPrimary;
-  uniform vec3 uColorAccent;
+  uniform vec3 uColorPrimaryFrom;
+  uniform vec3 uColorPrimaryTo;
+  uniform vec3 uColorAccentFrom;
+  uniform vec3 uColorAccentTo;
+  uniform float uThemeWipe;
   uniform vec3 uLightDir;
   uniform float uShimmer;
   uniform float uTime;
@@ -141,7 +152,17 @@ export const avatarFragmentShader = /* glsl */ `
   varying vec2 vUv;
 
   void main() {
-    // Two-color vertical brand gradient: blue (bottom) -> white (top),
+    // Theme change reveal: vViewPosition.xy is the point's offset from the
+    // camera's optical axis, which is ~0 for the point facing the viewer
+    // dead-on and grows toward the silhouette rim — exactly "distance from
+    // the visual center of the orb." uThemeWipe sweeps 0->1 on a theme
+    // change, so this reveals the new palette from the center outward.
+    float radial = clamp(length(vViewPosition.xy), 0.0, 1.2);
+    float reveal = 1.0 - smoothstep(uThemeWipe - 0.22, uThemeWipe + 0.22, radial);
+    vec3 uColorPrimary = mix(uColorPrimaryFrom, uColorPrimaryTo, reveal);
+    vec3 uColorAccent = mix(uColorAccentFrom, uColorAccentTo, reveal);
+
+    // Two-color vertical brand gradient: dark (bottom) -> light (top),
     // with a slow traveling wave folded into the sampling position so the
     // gradient ripples across the surface instead of sitting static.
     float waveRaw = sin(vObjectPosition.x * 2.2 + vObjectPosition.z * 1.6 + uTime * 0.6);
@@ -165,7 +186,7 @@ export const avatarFragmentShader = /* glsl */ `
     vec2 dotUv = vUv * vec2(140.0, 70.0);
     vec2 cellUv = fract(dotUv) - 0.5;
     float dotDist = length(cellUv);
-    float dotMask = 1.0 - smoothstep(0.075, 0.115, dotDist);
+    float dotMask = 1.0 - smoothstep(0.12, 0.17, dotDist);
 
     float lightTerm = 0.45 + diffuse * 0.65;
     vec3 color = baseColor * lightTerm;
@@ -183,11 +204,21 @@ export const avatarFragmentShader = /* glsl */ `
   }
 `;
 
-/** Builds a fresh uniforms object for one sphere instance (uniforms must not be shared across materials). */
-export function createAvatarUniforms() {
+/**
+ * Builds a fresh uniforms object for one sphere instance (uniforms must not
+ * be shared across materials). `theme` seeds both the "from" and "to" color
+ * pairs so the sphere starts fully settled on that theme, with no reveal in
+ * progress — AvatarSphere.tsx re-points "to" and resets uThemeWipe whenever
+ * the theme prop actually changes.
+ */
+export function createAvatarUniforms(theme: AvatarTheme) {
+  const colors = AVATAR_THEME_COLORS[theme];
   return {
-    uColorPrimary: { value: AVATAR_SHADER_COLORS.primary },
-    uColorAccent: { value: AVATAR_SHADER_COLORS.accent },
+    uColorPrimaryFrom: { value: colors.primary.clone() },
+    uColorPrimaryTo: { value: colors.primary.clone() },
+    uColorAccentFrom: { value: colors.accent.clone() },
+    uColorAccentTo: { value: colors.accent.clone() },
+    uThemeWipe: { value: 1 },
     uLightDir: { value: AVATAR_LIGHT_DIRECTION },
     uShimmer: { value: 1 },
     uTime: { value: 0 },

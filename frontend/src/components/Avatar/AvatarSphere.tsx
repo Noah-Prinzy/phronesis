@@ -8,7 +8,13 @@ import {
   DISPLACEMENT_BREATH_DURATION_S,
   SHIMMER_DURATION_S,
 } from './avatarAnimations';
-import { avatarFragmentShader, avatarVertexShader, createAvatarUniforms } from './avatarShader';
+import {
+  AVATAR_THEME_COLORS,
+  type AvatarTheme,
+  avatarFragmentShader,
+  avatarVertexShader,
+  createAvatarUniforms,
+} from './avatarShader';
 
 // High poly count for a perfectly smooth silhouette with no jagged edges.
 const SPHERE_SEGMENTS = 96;
@@ -20,27 +26,38 @@ const LOADING_ROTATION_SPEED = (Math.PI * 2) / 25; // noticeably faster while th
 const DISPLACEMENT_MIN = 0.02;
 const DISPLACEMENT_MAX = 0.04;
 
+// How long the center-outward theme-color reveal takes, in seconds.
+const THEME_TRANSITION_DURATION_S = 1.3;
+
 interface AvatarSphereProps {
   /** Speeds up the sphere's rotation and surface-ripple breathing while Phronesis is responding. */
   isLoading: boolean;
+  /** Which page theme the orb's colors should match — swaps palette with a center-outward reveal. */
+  theme: AvatarTheme;
 }
 
 /**
  * The shaded, animated sphere mesh at the center of the Avatar scene.
  * Owns its own ShaderMaterial instance (uniforms can't be shared across
- * materials) and drives rotation, specular shimmer, and a gentle
- * noise-based surface displacement (with recomputed normals, so it actually
- * catches the light) via useFrame each render tick.
+ * materials) and drives rotation, specular shimmer, a gentle noise-based
+ * surface displacement (with recomputed normals, so it actually catches the
+ * light), and — on a theme change — a center-outward color reveal, all via
+ * useFrame each render tick.
  */
-export function AvatarSphere({ isLoading }: AvatarSphereProps) {
+export function AvatarSphere({ isLoading, theme }: AvatarSphereProps) {
   const meshRef = useRef<THREE.Mesh>(null);
+  const previousThemeRef = useRef(theme);
+  const themeTransitionStartRef = useRef(0);
 
   const material = useMemo(
     () =>
       new THREE.ShaderMaterial({
         vertexShader: avatarVertexShader,
         fragmentShader: avatarFragmentShader,
-        uniforms: createAvatarUniforms(),
+        // Seeded once from whatever theme is active at mount; later theme
+        // changes are applied to the uniforms directly below, not by
+        // recreating the material.
+        uniforms: createAvatarUniforms(theme),
         transparent: true,
         // No depth write: with a mostly-transparent shell, writing depth
         // would let the near hemisphere's empty gaps occlude the far
@@ -51,10 +68,29 @@ export function AvatarSphere({ isLoading }: AvatarSphereProps) {
         // hollow shell rather than a solid ball with a see-through skin.
         side: THREE.DoubleSide,
       }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
 
   useEffect(() => () => material.dispose(), [material]);
+
+  // On a real theme change, snap "from" to whatever the sphere is currently
+  // settled on, point "to" at the new theme, and restart the reveal clock —
+  // the actual 0->1 sweep happens per-frame below.
+  useEffect(() => {
+    if (previousThemeRef.current === theme) return;
+    previousThemeRef.current = theme;
+
+    const nextColors = AVATAR_THEME_COLORS[theme];
+    const { uColorPrimaryFrom, uColorPrimaryTo, uColorAccentFrom, uColorAccentTo, uThemeWipe } =
+      material.uniforms;
+    uColorPrimaryFrom.value.copy(uColorPrimaryTo.value);
+    uColorAccentFrom.value.copy(uColorAccentTo.value);
+    uColorPrimaryTo.value.copy(nextColors.primary);
+    uColorAccentTo.value.copy(nextColors.accent);
+    uThemeWipe.value = 0;
+    themeTransitionStartRef.current = performance.now();
+  }, [theme, material]);
 
   useFrame((state, delta) => {
     const mesh = meshRef.current;
@@ -74,6 +110,13 @@ export function AvatarSphere({ isLoading }: AvatarSphereProps) {
     const displacementPhase = (Math.sin((elapsed / displacementPeriod) * Math.PI * 2) + 1) / 2;
     material.uniforms.uDisplacementStrength.value =
       DISPLACEMENT_MIN + displacementPhase * (DISPLACEMENT_MAX - DISPLACEMENT_MIN);
+
+    if (material.uniforms.uThemeWipe.value < 1) {
+      const elapsedMs = performance.now() - themeTransitionStartRef.current;
+      const progress = Math.min(1, elapsedMs / (THEME_TRANSITION_DURATION_S * 1000));
+      // Ease-out: the reveal starts fast and settles gently at the rim.
+      material.uniforms.uThemeWipe.value = 1 - (1 - progress) ** 3;
+    }
   });
 
   return (

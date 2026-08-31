@@ -13,6 +13,7 @@ import {
   spinnerAnimation,
   tooltipMotionProps,
 } from './avatarAnimations';
+import type { AvatarTheme } from './avatarShader';
 
 export interface AvatarProps {
   /** 'large' (480px) for the Welcome screen, 'small' (64px) for corner placements. */
@@ -23,6 +24,8 @@ export interface AvatarProps {
   showTooltip?: boolean;
   /** Message displayed inside the tooltip. */
   tooltipMessage?: string;
+  /** Which page theme the orb's colors should match. Swaps palette with a center-outward reveal on change. */
+  theme?: AvatarTheme;
   /** Optional className for positioning/layout, applied to the outer element. */
   className?: string;
 }
@@ -39,13 +42,16 @@ const SIZE_CONTAINER_CLASSES: Record<AvatarSize, string> = {
  * A true 3D sphere (react-three-fiber + a custom GLSL shader, see
  * avatarShader.ts / AvatarSphere.tsx) representing the Phronesis AI
  * assistant: a hollow shell — nearly transparent except right at each dot —
- * with a fine halftone dot mesh carrying a dark-blue-to-white brand
- * gradient, lit with a directional + ambient light. Rendered double-sided
- * with no depth write, so the far hemisphere's dots show through the near
- * one as it turns; that layering is the 3D depth cue. Renders large and
- * centered on the Welcome screen, or small in a page corner elsewhere (with
- * an optional hover tooltip). The orb holds its position — only its own
- * scale pulse and internal shading move. Motion is deliberately slow and
+ * with a fine halftone dot mesh carrying a two-color brand gradient (blue
+ * -> white on a dark page, dark navy -> blue on a light page, per `theme`),
+ * lit with a directional + ambient light. A theme change reveals the new
+ * palette from the center of the orb outward rather than snapping instantly.
+ * Rendered double-sided with no depth write, so the far hemisphere's dots
+ * show through the near one as it turns; that layering is the 3D depth cue.
+ * Renders large and centered on the Welcome screen, or small in a page
+ * corner elsewhere (with an optional hover tooltip). The orb holds its
+ * position — only its own scale pulse and internal shading move. Motion is
+ * deliberately slow and
  * calm at rest, picking up pace (rotation, pulse) while `isLoading` is true.
  */
 export const Avatar: FC<AvatarProps> = ({
@@ -53,6 +59,7 @@ export const Avatar: FC<AvatarProps> = ({
   isLoading = false,
   showTooltip = false,
   tooltipMessage = 'Hey! 👋 How can I help?',
+  theme = 'dark',
   className = '',
 }) => {
   const instanceId = useId();
@@ -89,7 +96,7 @@ export const Avatar: FC<AvatarProps> = ({
         >
           <ambientLight intensity={0.5} />
           <directionalLight position={[1.5, 2, 3]} intensity={1.3} />
-          <AvatarSphere isLoading={isLoading} />
+          <AvatarSphere isLoading={isLoading} theme={theme} />
         </Canvas>
       </div>
 
