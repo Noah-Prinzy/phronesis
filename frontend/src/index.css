@@ -1,0 +1,22 @@
+@import 'tailwindcss';
+
+/* Official Phronesis theme: white background, dark blue -> blue -> white brand gradient */
+:root {
+  color-scheme: light;
+
+  --color-bg: #ffffff;
+  --color-primary: #1e3a8a;
+  --color-primary-rgb: 30, 58, 138;
+  --color-secondary: #3b82f6;
+  --color-secondary-rgb: 59, 130, 246;
+  --color-accent: #ffffff;
+  --color-accent-rgb: 255, 255, 255;
+}
+
+body {
+  margin: 0;
+  min-height: 100svh;
+  background: var(--color-bg);
+  color: var(--color-primary);
+  font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+}
