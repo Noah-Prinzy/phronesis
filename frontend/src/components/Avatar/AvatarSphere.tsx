@@ -12,8 +12,8 @@ import { avatarFragmentShader, avatarVertexShader, createAvatarUniforms } from '
 
 // High poly count for a perfectly smooth silhouette with no jagged edges.
 const SPHERE_SEGMENTS = 96;
-const IDLE_ROTATION_SPEED = (Math.PI * 2) / 60; // one full turn every 60s — calm, not distracting
-const LOADING_ROTATION_SPEED = (Math.PI * 2) / 15; // noticeably faster while thinking, still smooth
+const IDLE_ROTATION_SPEED = (Math.PI * 2) / 90; // one full turn every 90s — calm, not distracting
+const LOADING_ROTATION_SPEED = (Math.PI * 2) / 25; // noticeably faster while thinking, still smooth
 
 // Surface ripple amplitude, as a fraction of the sphere's radius — kept
 // subtle so the shape reads as a perfectly smooth sphere at a glance.
@@ -41,6 +41,15 @@ export function AvatarSphere({ isLoading }: AvatarSphereProps) {
         vertexShader: avatarVertexShader,
         fragmentShader: avatarFragmentShader,
         uniforms: createAvatarUniforms(),
+        transparent: true,
+        // No depth write: with a mostly-transparent shell, writing depth
+        // would let the near hemisphere's empty gaps occlude the far
+        // hemisphere's dots instead of blending with them.
+        depthWrite: false,
+        // Render both faces so the far side of the sphere is visible
+        // through the near side's gaps — that's what makes it read as a
+        // hollow shell rather than a solid ball with a see-through skin.
+        side: THREE.DoubleSide,
       }),
     [],
   );

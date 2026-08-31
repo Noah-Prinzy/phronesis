@@ -3,16 +3,15 @@
 import * as THREE from 'three';
 
 /**
- * Brand colors for the 3D sphere shader.
+ * Brand colors for the 3D sphere shader — just two: blue and white.
  *
- * These mirror the CSS custom properties in src/index.css (--color-primary,
- * --color-secondary, --color-accent). A shader can't read CSS variables, so
- * the values are duplicated here deliberately — keep the two in sync if the
- * palette ever changes.
+ * These mirror the CSS custom properties in src/index.css (--color-secondary,
+ * --color-accent). A shader can't read CSS variables, so the values are
+ * duplicated here deliberately — keep the two in sync if the palette ever
+ * changes.
  */
 export const AVATAR_SHADER_COLORS = {
-  primary: new THREE.Color('#1e3a8a'), // dark blue, sphere base
-  secondary: new THREE.Color('#3b82f6'), // blue, sphere midtone
+  primary: new THREE.Color('#3b82f6'), // blue, sphere base
   accent: new THREE.Color('#ffffff'), // white, sphere top / highlights
 };
 
@@ -131,10 +130,10 @@ export const avatarVertexShader = /* glsl */ `
 
 export const avatarFragmentShader = /* glsl */ `
   uniform vec3 uColorPrimary;
-  uniform vec3 uColorSecondary;
   uniform vec3 uColorAccent;
   uniform vec3 uLightDir;
   uniform float uShimmer;
+  uniform float uTime;
 
   varying vec3 vNormal;
   varying vec3 vObjectPosition;
@@ -142,11 +141,12 @@ export const avatarFragmentShader = /* glsl */ `
   varying vec2 vUv;
 
   void main() {
-    // Vertical brand gradient: dark blue (bottom) -> blue (mid) -> white (top)
-    float t = clamp((vObjectPosition.y + 1.0) * 0.5, 0.0, 1.0);
-    vec3 baseColor = t < 0.55
-      ? mix(uColorPrimary, uColorSecondary, t / 0.55)
-      : mix(uColorSecondary, uColorAccent, (t - 0.55) / 0.45);
+    // Two-color vertical brand gradient: blue (bottom) -> white (top),
+    // with a slow traveling wave folded into the sampling position so the
+    // gradient ripples across the surface instead of sitting static.
+    float waveRaw = sin(vObjectPosition.x * 2.2 + vObjectPosition.z * 1.6 + uTime * 0.6);
+    float t = clamp((vObjectPosition.y + 1.0) * 0.5 + waveRaw * 0.12, 0.0, 1.0);
+    vec3 baseColor = mix(uColorPrimary, uColorAccent, t);
 
     vec3 normal = normalize(vNormal);
     vec3 viewDir = normalize(-vViewPosition);
@@ -158,21 +158,28 @@ export const avatarFragmentShader = /* glsl */ `
     // (not flat and rigid), without the tight, glossy-plastic look of a high exponent.
     float specular = pow(max(dot(normal, halfDir), 0.0), 26.0) * uShimmer;
 
-    // Ultra-fine halftone dot mesh, tiled over the sphere's UVs at high
-    // density for a crisp, sharp point pattern. Multiplying by the diffuse
-    // term makes dots read as denser/brighter in lit regions and fade into
+    // Fine halftone dot mesh, tiled over the sphere's UVs at high density
+    // for a small, crisp point pattern. Multiplying by the diffuse term
+    // makes dots read as denser/brighter in lit regions and fade into
     // shadow, following the sphere's own curvature for free.
-    vec2 dotUv = vUv * vec2(96.0, 48.0);
+    vec2 dotUv = vUv * vec2(140.0, 70.0);
     vec2 cellUv = fract(dotUv) - 0.5;
     float dotDist = length(cellUv);
-    float dotMask = 1.0 - smoothstep(0.1, 0.16, dotDist);
+    float dotMask = 1.0 - smoothstep(0.075, 0.115, dotDist);
 
     float lightTerm = 0.45 + diffuse * 0.65;
     vec3 color = baseColor * lightTerm;
     color += dotMask * diffuse * 0.4 * uColorAccent;
     color += specular * 0.5 * uColorAccent;
 
-    gl_FragColor = vec4(color, 1.0);
+    // Hollow shell: nearly transparent everywhere except right at each dot,
+    // so the far hemisphere's dots show through the near one as the sphere
+    // turns — that layering is what reads as depth, instead of a solid fill.
+    float baseAlpha = 0.04;
+    float dotAlpha = dotMask * (0.55 + diffuse * 0.45);
+    float alpha = clamp(baseAlpha + dotAlpha, 0.0, 1.0);
+
+    gl_FragColor = vec4(color, alpha);
   }
 `;
 
@@ -180,7 +187,6 @@ export const avatarFragmentShader = /* glsl */ `
 export function createAvatarUniforms() {
   return {
     uColorPrimary: { value: AVATAR_SHADER_COLORS.primary },
-    uColorSecondary: { value: AVATAR_SHADER_COLORS.secondary },
     uColorAccent: { value: AVATAR_SHADER_COLORS.accent },
     uLightDir: { value: AVATAR_LIGHT_DIRECTION },
     uShimmer: { value: 1 },

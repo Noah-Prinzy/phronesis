@@ -7,9 +7,8 @@ import { useId } from 'react';
 import { AvatarSphere } from './AvatarSphere';
 import styles from './Avatar.module.css';
 import {
-  AVATAR_DIMENSIONS_PX,
   type AvatarSize,
-  getOrbMotion,
+  getPulseAnimation,
   hoverScaleAnimation,
   spinnerAnimation,
   tooltipMotionProps,
@@ -39,15 +38,15 @@ const SIZE_CONTAINER_CLASSES: Record<AvatarSize, string> = {
  *
  * A true 3D sphere (react-three-fiber + a custom GLSL shader, see
  * avatarShader.ts / AvatarSphere.tsx) representing the Phronesis AI
- * assistant: a dark-blue-to-white brand gradient and an ultra-fine halftone
- * dot mesh that follows the sphere's own lighting and curvature, lit with a
- * directional + ambient light (no glow/bloom halo — just the sphere's own
- * shading). Renders large and centered on the Welcome screen, or small in a
- * page corner elsewhere (with an optional hover tooltip). The whole orb
- * slowly floats/bobs in place, on top of its own scale pulse, so it reads as
- * a weightless entity rather than a fixed sprite. Motion is deliberately
- * slow and calm at rest, picking up pace (rotation, pulse) while
- * `isLoading` is true.
+ * assistant: a hollow shell — nearly transparent except right at each dot —
+ * with a fine halftone dot mesh carrying a dark-blue-to-white brand
+ * gradient, lit with a directional + ambient light. Rendered double-sided
+ * with no depth write, so the far hemisphere's dots show through the near
+ * one as it turns; that layering is the 3D depth cue. Renders large and
+ * centered on the Welcome screen, or small in a page corner elsewhere (with
+ * an optional hover tooltip). The orb holds its position — only its own
+ * scale pulse and internal shading move. Motion is deliberately slow and
+ * calm at rest, picking up pace (rotation, pulse) while `isLoading` is true.
  */
 export const Avatar: FC<AvatarProps> = ({
   size = 'large',
@@ -70,7 +69,7 @@ export const Avatar: FC<AvatarProps> = ({
       ]
         .filter(Boolean)
         .join(' ')}
-      animate={getOrbMotion(isLoading, AVATAR_DIMENSIONS_PX[size])}
+      animate={getPulseAnimation(isLoading)}
       whileHover={size === 'small' ? hoverScaleAnimation : undefined}
       role="img"
       aria-label={isLoading ? 'Phronesis is thinking' : 'Phronesis'}

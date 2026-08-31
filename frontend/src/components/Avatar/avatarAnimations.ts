@@ -14,46 +14,32 @@ export const AVATAR_DIMENSIONS_PX: Record<AvatarSize, number> = {
 // --- Animation durations (seconds), named so nothing below is a magic number ---
 // Slower and calmer than earlier passes: idle motion reads as relaxed, loading
 // picks up energy without ever feeling frantic.
-const PULSE_DURATION_S = 3.5;
-const PULSE_DURATION_LOADING_S = 1.75;
+const PULSE_DURATION_S = 5;
+const PULSE_DURATION_LOADING_S = 2.5;
 const SPIN_DURATION_S = 1;
 const HOVER_TRANSITION_DURATION_S = 0.2;
 const TOOLTIP_TRANSITION_DURATION_S = 0.2;
-/** Vertical float cycle — its own period, distinct from the pulse/glow/displacement cycles, so the motion doesn't lock into one mechanical rhythm. */
-const FLOAT_DURATION_S = 6;
-/** How far the orb drifts up/down, as a fraction of its own pixel size. */
-const FLOAT_AMPLITUDE_RATIO = 0.06;
 
 /** Shimmer cycle for the specular highlight, driven inside the WebGL shader via useFrame. */
-export const SHIMMER_DURATION_S = 3;
-/** Breathing cycle for the surface displacement amplitude — deliberately a different period than glow/shimmer so the motions don't lock into one mechanical pulse. */
-export const DISPLACEMENT_BREATH_DURATION_S = 5;
-export const DISPLACEMENT_BREATH_DURATION_LOADING_S = 2.5;
+export const SHIMMER_DURATION_S = 4.5;
+/** Breathing cycle for the surface displacement amplitude — deliberately a different period than shimmer so the motions don't lock into one mechanical pulse. */
+export const DISPLACEMENT_BREATH_DURATION_S = 7;
+export const DISPLACEMENT_BREATH_DURATION_LOADING_S = 3.5;
 
 const EASE_BREATHE = 'easeInOut';
 
 /**
- * The outer orb's idle motion: a gentle scale pulse (speeds up while
- * `isLoading` is true) combined with a slow vertical float, so it reads as a
- * weightless entity drifting on the page rather than a fixed sprite. The two
- * run on independent periods/transitions within a single `animate` target.
+ * Continuous scale pulse for the outer orb. Speeds up while `isLoading` is
+ * true, per the "thinking" state spec. No positional motion — the orb stays
+ * put, it only breathes in place.
  */
-export function getOrbMotion(isLoading: boolean, sizePx: number): TargetAndTransition {
-  const floatAmplitude = sizePx * FLOAT_AMPLITUDE_RATIO;
+export function getPulseAnimation(isLoading: boolean): TargetAndTransition {
   return {
     scale: [1, 1.02, 1],
-    y: [0, -floatAmplitude, 0],
     transition: {
-      scale: {
-        duration: isLoading ? PULSE_DURATION_LOADING_S : PULSE_DURATION_S,
-        repeat: Infinity,
-        ease: EASE_BREATHE,
-      },
-      y: {
-        duration: FLOAT_DURATION_S,
-        repeat: Infinity,
-        ease: EASE_BREATHE,
-      },
+      duration: isLoading ? PULSE_DURATION_LOADING_S : PULSE_DURATION_S,
+      repeat: Infinity,
+      ease: EASE_BREATHE,
     },
   };
 }
