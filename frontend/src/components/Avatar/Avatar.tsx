@@ -32,8 +32,8 @@ export interface AvatarProps {
 
 /** Tailwind classes per size variant. Kept static (not template-built) so Tailwind's JIT scanner can find them. */
 const SIZE_CONTAINER_CLASSES: Record<AvatarSize, string> = {
-  large: 'w-[480px] h-[480px]',
-  small: 'w-16 h-16',
+  large: 'w-[400px] h-[400px]',
+  small: 'w-12 h-12',
 };
 
 /**

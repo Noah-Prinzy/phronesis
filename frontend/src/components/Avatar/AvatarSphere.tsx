@@ -25,11 +25,11 @@ const LOADING_ROTATION_SPEED = (Math.PI * 2) / 25; // noticeably faster while th
 // shader's own wave shaping now does sharp crests/punchy troughs, so the
 // ceiling is a bit higher than a plain smooth ripple needs — enough for
 // those peaks to actually read as tall without the base looking chaotic.
-const DISPLACEMENT_MIN = 0.02;
-const DISPLACEMENT_MAX = 0.05;
+const DISPLACEMENT_MIN = 0.03;
+const DISPLACEMENT_MAX = 0.04;
 
 // How long the center-outward theme-color reveal takes, in seconds.
-const THEME_TRANSITION_DURATION_S = 1.3;
+const THEME_TRANSITION_DURATION_S = 2.9;
 
 interface AvatarSphereProps {
   /** Speeds up the sphere's rotation and surface-ripple breathing while Phronesis is responding. */
