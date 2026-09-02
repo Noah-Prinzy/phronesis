@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { useEffect, useState } from 'react';
 import AvatarElement from '../components/AvatarElement/AvatarElement';
 import StarfieldBackground from '../components/StarfieldBackground';
+import { useVoice } from '../components/Voice/VoiceProvider';
 
 export interface WelcomeProps {
   /** Called once, when it's time to move to Onboarding. */
@@ -68,6 +69,7 @@ function StagedParagraphs({ paragraphs, className }: { paragraphs: string[]; cla
 export function Welcome({ onComplete }: WelcomeProps) {
   const [showHint, setShowHint] = useState(false);
   const [fadeOut, setFadeOut] = useState(false);
+  const { speak, stop, isSpeaking } = useVoice();
 
   useEffect(() => {
     const timer = setTimeout(
@@ -75,6 +77,14 @@ export function Welcome({ onComplete }: WelcomeProps) {
       revealDurationS(INTRO_PARAGRAPHS.join(' ')) * 1000,
     );
     return () => clearTimeout(timer);
+  }, []);
+
+  // Speaks the intro alongside its staggered text reveal — not
+  // sample-accurate synced to the words, but close enough for this beat.
+  useEffect(() => {
+    speak(INTRO_PARAGRAPHS.join(' '));
+    return () => stop();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function handleAvatarTap() {
@@ -107,7 +117,7 @@ export function Welcome({ onComplete }: WelcomeProps) {
             flow, so the wrapping button owns the gesture. The mic toggle
             starts on Home, where there is something to say. */}
         <AvatarElement
-          state={showHint ? 'idle' : 'responding'}
+          state={isSpeaking || !showHint ? 'responding' : 'idle'}
           theme="dark"
           size="clamp(220px, 60vw, 400px)"
           interactive={false}

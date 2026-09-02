@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom';
 import AvatarDock from '../components/AvatarElement/AvatarDock';
 import type { AvatarState } from '../components/AvatarElement/avatarStates';
 import StarfieldBackground from '../components/StarfieldBackground';
+import { useVoice } from '../components/Voice/VoiceProvider';
 import { getStoredJourney, type Journey } from '../profileStorage';
 
 interface ChatMessage {
@@ -47,12 +48,15 @@ export function Home() {
   const listEndRef = useRef<HTMLDivElement>(null);
   const journeyRef = useRef<Journey | null>(null);
   const respondingTimer = useRef<number | null>(null);
+  const { speak, isSpeaking } = useVoice();
 
   useEffect(() => {
     const journey = getStoredJourney();
     journeyRef.current = journey;
     const greeting = journey ? JOURNEY_GREETINGS[journey] : DEFAULT_GREETING;
     setMessages([{ id: nextMessageId++, role: 'assistant', text: greeting }]);
+    speak(greeting);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -97,6 +101,7 @@ export function Home() {
       if (!response.ok) throw new Error(`Backend responded with ${response.status}`);
       const data: { reply: string } = await response.json();
       setMessages((prev) => [...prev, { id: nextMessageId++, role: 'assistant', text: data.reply }]);
+      speak(data.reply);
     } catch (err) {
       console.error('Chat request failed:', err);
       setMessages((prev) => [...prev, { id: nextMessageId++, role: 'assistant', text: FALLBACK_REPLY }]);
@@ -122,7 +127,7 @@ export function Home() {
    */
   const avatarState: AvatarState = isSending
     ? 'thinking'
-    : isResponding
+    : isResponding || isSpeaking
       ? 'responding'
       : micOn
         ? 'listening'
