@@ -8,12 +8,23 @@
 // deploys as one Vercel project rather than split across two hosts.
 
 import Anthropic from '@anthropic-ai/sdk';
+import { GoogleGenAI } from '@google/genai';
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { z } from 'zod';
 
-const MODEL = 'claude-sonnet-5';
+// Sonnet is the right balance of quality/cost/latency for a conversational
+// assistant like this — no need for Opus-level reasoning power here.
+const ANTHROPIC_MODEL = 'claude-sonnet-5';
+// Flash: fast, free-tier-friendly, strong enough for this — the free stand-in
+// while a custom model is being trained.
+const GEMINI_MODEL = 'gemini-2.5-flash';
 const MAX_TOKENS = 1024;
 
+type ChatRole = 'user' | 'assistant';
+interface ChatTurn {
+  role: ChatRole;
+  content: string;
+}
 type Journey = 'pre-car' | 'post-car';
 
 const BASE_PERSONA = `You are Phronesis, a friendly AI car diagnostic assistant built for African drivers. You help people understand what's wrong with their car, decide what car to buy, and find trustworthy mechanics. You're warm, practical, and clear — you explain things in plain language, not jargon, and you're upfront about the limits of what you can diagnose remotely (you always recommend an in-person inspection for anything safety-critical). Keep responses concise and conversational, not a wall of text.`;
@@ -28,6 +39,35 @@ const JOURNEY_ADDENDUM: Record<Journey, string> = {
 function buildSystemPrompt(journey?: Journey | null): string {
   if (!journey) return BASE_PERSONA;
   return `${BASE_PERSONA}\n\n${JOURNEY_ADDENDUM[journey]}`;
+}
+
+async function getGeminiReply(apiKey: string, messages: ChatTurn[], journey?: Journey | null): Promise<string> {
+  const ai = new GoogleGenAI({ apiKey });
+  const response = await ai.models.generateContent({
+    model: GEMINI_MODEL,
+    contents: messages.map((m) => ({
+      // Gemini uses "model" rather than "assistant" for the AI's own turns.
+      role: m.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: m.content }],
+    })),
+    config: {
+      systemInstruction: buildSystemPrompt(journey),
+      maxOutputTokens: MAX_TOKENS,
+    },
+  });
+  return response.text ?? '';
+}
+
+async function getAnthropicReply(apiKey: string, messages: ChatTurn[], journey?: Journey | null): Promise<string> {
+  const anthropic = new Anthropic({ apiKey });
+  const response = await anthropic.messages.create({
+    model: ANTHROPIC_MODEL,
+    max_tokens: MAX_TOKENS,
+    system: buildSystemPrompt(journey),
+    messages: messages.map((m) => ({ role: m.role, content: m.content })),
+  });
+  const textBlock = response.content.find((block) => block.type === 'text');
+  return textBlock?.type === 'text' ? textBlock.text : '';
 }
 
 const chatRequestSchema = z.object({
@@ -54,24 +94,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return;
   }
 
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    res.status(503).json({ error: 'ANTHROPIC_API_KEY is not configured on the server yet.' });
+  // Gemini preferred when both are set — it's the free stand-in used while
+  // a custom model trains; once that's done (or Claude is wanted instead),
+  // just unset GEMINI_API_KEY in Vercel's dashboard, no code change needed.
+  const geminiKey = process.env.GEMINI_API_KEY;
+  const anthropicKey = process.env.ANTHROPIC_API_KEY;
+  if (!geminiKey && !anthropicKey) {
+    res.status(503).json({ error: 'No chat provider configured — set GEMINI_API_KEY or ANTHROPIC_API_KEY.' });
     return;
   }
 
   try {
-    const anthropic = new Anthropic({ apiKey });
-    const response = await anthropic.messages.create({
-      model: MODEL,
-      max_tokens: MAX_TOKENS,
-      system: buildSystemPrompt(parsed.data.journey),
-      messages: parsed.data.messages.map((m) => ({ role: m.role, content: m.content })),
-    });
-    const textBlock = response.content.find((block) => block.type === 'text');
-    res.status(200).json({ reply: textBlock?.type === 'text' ? textBlock.text : '' });
+    const reply = geminiKey
+      ? await getGeminiReply(geminiKey, parsed.data.messages, parsed.data.journey)
+      : await getAnthropicReply(anthropicKey!, parsed.data.messages, parsed.data.journey);
+    res.status(200).json({ reply });
   } catch (err) {
     console.error('Chat request failed:', err);
-    res.status(502).json({ error: 'Failed to get a response from Claude.' });
+    res.status(502).json({ error: 'Failed to get a response from the AI provider.' });
   }
 }

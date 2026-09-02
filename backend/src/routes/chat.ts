@@ -2,8 +2,7 @@
 
 import { Router } from 'express';
 import { z } from 'zod';
-import { env } from '../config/env';
-import { getChatReply } from '../services/ai.service';
+import { getChatReply, hasChatProviderConfigured } from '../services/ai.service';
 
 export const chatRouter = Router();
 
@@ -26,8 +25,8 @@ chatRouter.post('/chat', async (req, res) => {
     return;
   }
 
-  if (!env.ANTHROPIC_API_KEY) {
-    res.status(503).json({ error: 'ANTHROPIC_API_KEY is not configured on the server yet.' });
+  if (!hasChatProviderConfigured()) {
+    res.status(503).json({ error: 'No chat provider configured — set GEMINI_API_KEY or ANTHROPIC_API_KEY.' });
     return;
   }
 
@@ -36,6 +35,6 @@ chatRouter.post('/chat', async (req, res) => {
     res.json({ reply });
   } catch (err) {
     console.error('Chat request failed:', err);
-    res.status(502).json({ error: 'Failed to get a response from Claude.' });
+    res.status(502).json({ error: 'Failed to get a response from the AI provider.' });
   }
 });

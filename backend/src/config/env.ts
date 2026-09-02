@@ -10,6 +10,10 @@ const envSchema = z.object({
   // rather than the whole deployment crash-looping over a config value
   // that's expected to arrive later.
   ANTHROPIC_API_KEY: z.string().optional().default(''),
+  // Free stand-in for Claude while a custom model is being trained — see
+  // ai.service.ts for the selection order (Gemini preferred if both are
+  // set). Get a free key at https://aistudio.google.com/apikey.
+  GEMINI_API_KEY: z.string().optional().default(''),
   // Scoped in ahead of need: nothing calls /api/tts-local yet (Sunbird's
   // TTS only covers Ugandan languages — Acholi, Ateso, Runyankole, Lugbara,
   // Swahili, Luganda — not English, so there's no current app content it
