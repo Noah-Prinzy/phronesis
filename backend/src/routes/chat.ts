@@ -2,6 +2,7 @@
 
 import { Router } from 'express';
 import { z } from 'zod';
+import { env } from '../config/env';
 import { getChatReply } from '../services/ai.service';
 
 export const chatRouter = Router();
@@ -22,6 +23,11 @@ chatRouter.post('/chat', async (req, res) => {
   const parsed = chatRequestSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: 'Invalid request', details: parsed.error.issues });
+    return;
+  }
+
+  if (!env.ANTHROPIC_API_KEY) {
+    res.status(503).json({ error: 'ANTHROPIC_API_KEY is not configured on the server yet.' });
     return;
   }
 

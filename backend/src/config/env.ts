@@ -4,7 +4,12 @@ import 'dotenv/config';
 import { z } from 'zod';
 
 const envSchema = z.object({
-  ANTHROPIC_API_KEY: z.string().min(1, 'ANTHROPIC_API_KEY is required — copy .env.example to .env and fill it in.'),
+  // Deliberately not required at startup: an empty key lets the server
+  // (and /api/health) come up fine — /api/chat just fails per-request with
+  // a clear "authentication_error" from Anthropic until a real key is set,
+  // rather than the whole deployment crash-looping over a config value
+  // that's expected to arrive later.
+  ANTHROPIC_API_KEY: z.string().optional().default(''),
   PORT: z.coerce.number().int().positive().default(3001),
   CORS_ORIGIN: z.string().default('http://localhost:5173'),
 });
