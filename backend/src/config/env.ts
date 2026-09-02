@@ -10,6 +10,12 @@ const envSchema = z.object({
   // rather than the whole deployment crash-looping over a config value
   // that's expected to arrive later.
   ANTHROPIC_API_KEY: z.string().optional().default(''),
+  // Scoped in ahead of need: nothing calls /api/tts-local yet (Sunbird's
+  // TTS only covers Ugandan languages — Acholi, Ateso, Runyankole, Lugbara,
+  // Swahili, Luganda — not English, so there's no current app content it
+  // can voice), but the endpoint is ready for when local-language support
+  // becomes a real feature. Get a key at https://sunbird.ai.
+  SUNBIRD_API_KEY: z.string().optional().default(''),
   PORT: z.coerce.number().int().positive().default(3001),
   CORS_ORIGIN: z.string().default('http://localhost:5173'),
 });
