@@ -17,8 +17,8 @@ import { z } from 'zod';
 const ANTHROPIC_MODEL = 'claude-sonnet-5';
 // Flash: fast, free-tier-friendly, strong enough for this — the free stand-in
 // while a custom model is being trained.
-const GEMINI_MODEL = 'gemini-2.5-flash';
-const MAX_TOKENS = 1024;
+const GEMINI_MODEL = 'gemini-3.6-flash';
+const MAX_TOKENS = 1536;
 
 type ChatRole = 'user' | 'assistant';
 interface ChatTurn {
