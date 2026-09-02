@@ -25,8 +25,12 @@ const DEFAULT_GREETING = "Hey! I'm Phronesis, your AI car diagnostic assistant. 
 const FALLBACK_REPLY =
   "Sorry, I couldn't reach my AI backend just now. Make sure the backend server is running and has a valid ANTHROPIC_API_KEY, then try again.";
 
-// Overridable via a Vite env var once deployed (e.g. VITE_API_URL=https://<railway-app>.up.railway.app) — defaults to the local dev backend.
-const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:3001';
+// Empty by default — /api/chat is served by a Vercel serverless function
+// deployed alongside the frontend (frontend/api/chat.ts), same origin, no
+// URL needed. Set VITE_API_URL in frontend/.env.local only for local dev
+// against the standalone Express server in backend/ instead (e.g.
+// http://localhost:3001).
+const API_URL = import.meta.env.VITE_API_URL ?? '';
 
 /** How long the avatar keeps "responding" after a reply lands, in ms. */
 const RESPONDING_HOLD_MS = 2600;
