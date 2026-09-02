@@ -11,18 +11,15 @@ export interface WelcomeProps {
   onComplete?: () => void;
 }
 
-const INTRO_PARAGRAPHS = [
-  'Hey there, my name is Phronesis.',
-  "I'm your AI car diagnostic assistant. Whether you're looking to buy your first car, understand what's wrong with your current ride, or find trusted mechanics in your area — I'm here to help.",
-  'I learn with every interaction, so the more you tell me, the better I can serve you.',
-];
+const INTRO_TEXT =
+  "Hey there, my name is Phronesis. I'm your AI car diagnostic assistant. Whether you're looking to buy your first car, understand what's wrong with your current ride, or find trusted mechanics in your area — I'm here to help. I learn with every interaction, so the more you tell me, the better I can serve you.";
 
-// Tuned so the ~56-word intro lands in a few seconds.
+// Roughly how long the intro takes to say, so the tap becomes available
+// around when it finishes — voice-only now, no on-screen text.
 const WORD_STAGGER_S = 0.06;
 const WORD_ANIM_DURATION_S = 0.4;
 const FADE_OUT_DURATION_S = 0.5;
 
-/** Word count driving the reveal-duration timer, so the two never drift apart. */
 function wordCount(text: string): number {
   return text.trim().split(/\s+/).length;
 }
@@ -31,40 +28,10 @@ function revealDurationS(text: string): number {
   return WORD_STAGGER_S * Math.max(0, wordCount(text) - 1) + WORD_ANIM_DURATION_S;
 }
 
-const wordVariants = {
-  hidden: { opacity: 0, y: 8 },
-  visible: { opacity: 1, y: 0, transition: { duration: WORD_ANIM_DURATION_S, ease: 'easeOut' as const } },
-};
-
-/** Renders `paragraphs` as staggered, word-by-word fading text. */
-function StagedParagraphs({ paragraphs, className }: { paragraphs: string[]; className?: string }) {
-  let index = 0;
-  return (
-    <motion.div
-      className={className}
-      initial="hidden"
-      animate="visible"
-      variants={{ visible: { transition: { staggerChildren: WORD_STAGGER_S } } }}
-    >
-      {paragraphs.map((paragraph, pIndex) => (
-        <p key={pIndex} className="mb-3 last:mb-0">
-          {paragraph.split(' ').map((word) => {
-            const wordIndex = index++;
-            return (
-              <motion.span key={wordIndex} variants={wordVariants} className="mr-[0.28em] inline-block">
-                {word}
-              </motion.span>
-            );
-          })}
-        </p>
-      ))}
-    </motion.div>
-  );
-}
-
 /**
- * Phronesis' introduction: reveals a short welcome message, then waits for
- * the user to tap the avatar to continue to Onboarding.
+ * Phronesis' introduction: speaks a short welcome message (no on-screen
+ * text — voice-only), then waits for the user to tap the avatar to
+ * continue to Onboarding.
  */
 export function Welcome({ onComplete }: WelcomeProps) {
   const [showHint, setShowHint] = useState(false);
@@ -72,17 +39,12 @@ export function Welcome({ onComplete }: WelcomeProps) {
   const { speak, stop, isSpeaking } = useVoice();
 
   useEffect(() => {
-    const timer = setTimeout(
-      () => setShowHint(true),
-      revealDurationS(INTRO_PARAGRAPHS.join(' ')) * 1000,
-    );
+    const timer = setTimeout(() => setShowHint(true), revealDurationS(INTRO_TEXT) * 1000);
     return () => clearTimeout(timer);
   }, []);
 
-  // Speaks the intro alongside its staggered text reveal — not
-  // sample-accurate synced to the words, but close enough for this beat.
   useEffect(() => {
-    speak(INTRO_PARAGRAPHS.join(' '));
+    speak(INTRO_TEXT);
     return () => stop();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -124,24 +86,6 @@ export function Welcome({ onComplete }: WelcomeProps) {
           captureMic={false}
         />
       </button>
-
-      <div className="max-w-xl">
-        <StagedParagraphs
-          paragraphs={INTRO_PARAGRAPHS}
-          className="text-[clamp(1rem,2.2vw,1.25rem)] leading-relaxed text-[#e8eefb]"
-        />
-      </div>
-
-      {showHint && (
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.5 }}
-          className="text-sm font-medium tracking-wide text-[#60a5fa] uppercase"
-        >
-          Tap the avatar to continue
-        </motion.p>
-      )}
     </motion.div>
   );
 }

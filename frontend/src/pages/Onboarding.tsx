@@ -1,14 +1,17 @@
 // frontend/src/pages/Onboarding.tsx
 
 import { motion } from 'framer-motion';
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import AvatarElement from '../components/AvatarElement/AvatarElement';
 import StarfieldBackground from '../components/StarfieldBackground';
+import { useVoice } from '../components/Voice/VoiceProvider';
 import { setStoredEmail, setStoredJourney, type Journey } from '../profileStorage';
 
 type AuthMode = 'signIn' | 'signUp';
 type Step = 'auth' | 'journey';
+
+const JOURNEY_QUESTION = 'Do you own a car?';
 
 /**
  * Sign-in/sign-up UI, followed by journey detection ("Do you own a car?").
@@ -26,6 +29,14 @@ export function Onboarding() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const { speak, stop, isSpeaking } = useVoice();
+
+  useEffect(() => {
+    if (step !== 'journey') return;
+    speak(JOURNEY_QUESTION);
+    return () => stop();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step]);
 
   function handleAuthSubmit(e: FormEvent) {
     e.preventDefault();
@@ -161,19 +172,14 @@ export function Onboarding() {
           transition={{ duration: 0.4, ease: 'easeOut' }}
           className="flex w-full max-w-sm flex-col items-center gap-8 text-center"
         >
-          {/* Phronesis asked the question, so it is still mid-utterance here. */}
+          {/* Question is voice-only — no on-screen text, just the buttons. */}
           <AvatarElement
-            state="responding"
+            state={isSpeaking ? 'responding' : 'idle'}
             theme="dark"
             size="clamp(180px, 45vw, 300px)"
             interactive={false}
             captureMic={false}
           />
-
-          <div>
-            <h1 className="mb-1 text-2xl font-bold text-[#e8eefb]">One quick question</h1>
-            <p className="text-sm text-[#e8eefb]/60">Do you own a car?</p>
-          </div>
 
           <div className="flex w-full gap-4">
             <button

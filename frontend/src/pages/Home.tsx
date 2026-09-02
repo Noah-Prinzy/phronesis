@@ -193,12 +193,10 @@ export function Home() {
           onMicToggle={setMicOn}
           onMicError={setMicNote}
         >
-          {/* Only shown while centred: the greeting, and what to do next. */}
+          {/* Only shown while centred: what to do next. The greeting itself
+              is voice-only now, no on-screen text. */}
           <div className="mx-auto max-w-md px-6 text-center">
-            <p className="text-[clamp(0.95rem,2vw,1.1rem)] leading-relaxed text-[#e8eefb]">
-              {messages[0]?.text}
-            </p>
-            <p className="mt-4 text-xs font-medium tracking-wide text-[#60a5fa] uppercase">
+            <p className="text-xs font-medium tracking-wide text-[#60a5fa] uppercase">
               Tap the avatar to speak, or type below
             </p>
             {micNote && <p className="mt-3 text-xs text-[#f0b45f]">{micNote}</p>}
