@@ -33,9 +33,9 @@ function buildSystemPrompt(journey?: Journey | null): string {
   return `${BASE_PERSONA}\n\n${JOURNEY_ADDENDUM[journey]}`;
 }
 
-async function getGeminiReply(messages: ChatTurn[], journey?: Journey | null): Promise<string> {
+async function* getGeminiReplyStream(messages: ChatTurn[], journey?: Journey | null): AsyncIterable<string> {
   const ai = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
-  const response = await ai.models.generateContent({
+  const stream = await ai.models.generateContentStream({
     model: GEMINI_MODEL,
     contents: messages.map((m) => ({
       // Gemini uses "model" rather than "assistant" for the AI's own turns.
@@ -47,32 +47,36 @@ async function getGeminiReply(messages: ChatTurn[], journey?: Journey | null): P
       maxOutputTokens: MAX_TOKENS,
     },
   });
-  return response.text ?? '';
+  for await (const chunk of stream) {
+    if (chunk.text) yield chunk.text;
+  }
 }
 
-async function getAnthropicReply(messages: ChatTurn[], journey?: Journey | null): Promise<string> {
+async function* getAnthropicReplyStream(messages: ChatTurn[], journey?: Journey | null): AsyncIterable<string> {
   const anthropic = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
-  const response = await anthropic.messages.create({
+  const stream = anthropic.messages.stream({
     model: ANTHROPIC_MODEL,
     max_tokens: MAX_TOKENS,
     system: buildSystemPrompt(journey),
     messages: messages.map((m) => ({ role: m.role, content: m.content })),
   });
-  const textBlock = response.content.find((block) => block.type === 'text');
-  return textBlock?.text ?? '';
+  for await (const event of stream) {
+    if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+      yield event.delta.text;
+    }
+  }
 }
 
 /**
- * Sends the conversation to whichever provider is configured and returns
- * Phronesis' reply as plain text. Gemini is preferred when both keys are
- * set — it's the free stand-in used while a custom model trains; once
- * that's done (or Claude is wanted instead), just unset GEMINI_API_KEY
- * (or leave it blank) and this falls through to Anthropic automatically,
- * no code change needed.
+ * Streams Phronesis' reply from whichever provider is configured, one text
+ * delta at a time. Gemini is preferred when both keys are set — it's the
+ * free stand-in used while a custom model trains; once that's done (or
+ * Claude is wanted instead), just unset GEMINI_API_KEY (or leave it blank)
+ * and this falls through to Anthropic automatically, no code change needed.
  */
-export async function getChatReply(messages: ChatTurn[], journey?: Journey | null): Promise<string> {
-  if (env.GEMINI_API_KEY) return getGeminiReply(messages, journey);
-  if (env.ANTHROPIC_API_KEY) return getAnthropicReply(messages, journey);
+export function getChatReplyStream(messages: ChatTurn[], journey?: Journey | null): AsyncIterable<string> {
+  if (env.GEMINI_API_KEY) return getGeminiReplyStream(messages, journey);
+  if (env.ANTHROPIC_API_KEY) return getAnthropicReplyStream(messages, journey);
   throw new Error('Neither GEMINI_API_KEY nor ANTHROPIC_API_KEY is configured.');
 }
 

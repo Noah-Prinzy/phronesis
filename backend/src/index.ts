@@ -4,6 +4,7 @@ import cors from 'cors';
 import express from 'express';
 import { env } from './config/env';
 import { chatRouter } from './routes/chat';
+import { diagnosisRouter } from './routes/diagnosis';
 import { healthRouter } from './routes/health';
 import { ttsRouter } from './routes/tts';
 import { ttsLocalRouter } from './routes/tts-local';
@@ -15,6 +16,7 @@ app.use(express.json());
 
 app.use('/api', healthRouter);
 app.use('/api', chatRouter);
+app.use('/api', diagnosisRouter);
 app.use('/api', ttsRouter);
 app.use('/api', ttsLocalRouter);
 

@@ -2,7 +2,7 @@
 
 import { Router } from 'express';
 import { z } from 'zod';
-import { getChatReply, hasChatProviderConfigured } from '../services/ai.service';
+import { getChatReplyStream, hasChatProviderConfigured } from '../services/ai.service';
 
 export const chatRouter = Router();
 
@@ -30,11 +30,23 @@ chatRouter.post('/chat', async (req, res) => {
     return;
   }
 
+  // SSE from here on — once writeHead(200) fires, a mid-stream failure can
+  // no longer become a clean HTTP error status, so it's emitted as an
+  // `error` frame instead and the client has to treat that as a failure.
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    Connection: 'keep-alive',
+  });
+
   try {
-    const reply = await getChatReply(parsed.data.messages, parsed.data.journey);
-    res.json({ reply });
+    for await (const delta of getChatReplyStream(parsed.data.messages, parsed.data.journey)) {
+      res.write(`data: ${JSON.stringify({ delta })}\n\n`);
+    }
+    res.write('data: [DONE]\n\n');
   } catch (err) {
     console.error('Chat request failed:', err);
-    res.status(502).json({ error: 'Failed to get a response from the AI provider.' });
+    res.write(`data: ${JSON.stringify({ error: 'Failed to get a response from the AI provider.' })}\n\n`);
   }
+  res.end();
 });

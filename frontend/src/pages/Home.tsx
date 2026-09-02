@@ -2,7 +2,7 @@
 
 import { motion } from 'framer-motion';
 import { useCallback, useEffect, useRef, useState, type FormEvent } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import AvatarDock from '../components/AvatarElement/AvatarDock';
 import type { AvatarState } from '../components/AvatarElement/avatarStates';
 import StarfieldBackground from '../components/StarfieldBackground';
@@ -39,6 +39,7 @@ const RESPONDING_HOLD_MS = 2600;
 let nextMessageId = 1;
 
 export function Home() {
+  const navigate = useNavigate();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputText, setInputText] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -89,6 +90,15 @@ export function Home() {
     setInputText('');
     setIsSending(true);
 
+    const assistantId = nextMessageId++;
+    setMessages((prev) => [...prev, { id: assistantId, role: 'assistant', text: '' }]);
+
+    let accumulated = '';
+    const applyText = (text: string) => {
+      accumulated = text;
+      setMessages((prev) => prev.map((m) => (m.id === assistantId ? { ...m, text } : m)));
+    };
+
     try {
       const response = await fetch(`${API_URL}/api/chat`, {
         method: 'POST',
@@ -98,17 +108,52 @@ export function Home() {
           journey: journeyRef.current,
         }),
       });
-      if (!response.ok) throw new Error(`Backend responded with ${response.status}`);
-      const data: { reply: string } = await response.json();
-      setMessages((prev) => [...prev, { id: nextMessageId++, role: 'assistant', text: data.reply }]);
-      speak(data.reply);
+      if (!response.ok || !response.body) throw new Error(`Backend responded with ${response.status}`);
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        const frames = buffer.split('\n\n');
+        buffer = frames.pop() ?? '';
+
+        for (const frame of frames) {
+          const line = frame.trim();
+          if (!line.startsWith('data:')) continue;
+          const payload = line.slice(5).trim();
+          if (payload === '[DONE]' || !payload) continue;
+
+          const parsed: { delta?: string; error?: string } = JSON.parse(payload);
+          if (parsed.delta) {
+            applyText(accumulated + parsed.delta);
+          } else if (parsed.error && !accumulated) {
+            // Only replace with the fallback if nothing real arrived yet —
+            // a partial real answer is more honest than discarding it.
+            applyText(FALLBACK_REPLY);
+          }
+        }
+      }
+
+      if (accumulated) speak(accumulated);
     } catch (err) {
       console.error('Chat request failed:', err);
-      setMessages((prev) => [...prev, { id: nextMessageId++, role: 'assistant', text: FALLBACK_REPLY }]);
+      if (!accumulated) applyText(FALLBACK_REPLY);
     } finally {
       setIsSending(false);
       markResponded();
     }
+  }
+
+  function handleDiagnoseClick() {
+    const symptomText = messages
+      .filter((m) => m.role === 'user')
+      .map((m) => m.text)
+      .join('\n');
+    navigate('/diagnosis', { state: { symptomText } });
   }
 
   // The conversation has started once the user has actually said something —
@@ -139,10 +184,25 @@ export function Home() {
 
       <header className="flex items-center gap-3 border-b border-[#1c2b47] px-6 py-4">
         <span className="font-semibold text-[#e8eefb]">Phronesis</span>
+        <button
+          type="button"
+          onClick={handleDiagnoseClick}
+          aria-label="Run diagnosis"
+          title="Run diagnosis"
+          className="ml-auto flex h-9 w-9 items-center justify-center rounded-full border border-[#3b82f6]/40 text-[#e8eefb] transition-colors hover:bg-[#3b82f6]/15"
+        >
+          <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={1.8} aria-hidden="true">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M4 12h3l2-5 3 10 2-7 2 4h4"
+            />
+          </svg>
+        </button>
         <Link
           to="/account"
           aria-label="Account"
-          className="ml-auto flex h-9 w-9 items-center justify-center rounded-full border border-[#3b82f6]/40 text-[#e8eefb] transition-colors hover:bg-[#3b82f6]/15"
+          className="flex h-9 w-9 items-center justify-center rounded-full border border-[#3b82f6]/40 text-[#e8eefb] transition-colors hover:bg-[#3b82f6]/15"
         >
           <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor" aria-hidden="true">
             <path d="M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10Zm0 2c-4.42 0-8 2.24-8 5v1a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-1c0-2.76-3.58-5-8-5Z" />
@@ -161,7 +221,9 @@ export function Home() {
           aria-hidden={!hasConversation}
         >
           <div className="mx-auto flex max-w-2xl flex-col gap-4 pr-0 sm:pr-24">
-            {messages.map((message) => (
+            {messages
+              .filter((message) => message.text.length > 0)
+              .map((message) => (
               <motion.div
                 key={message.id}
                 initial={{ opacity: 0, y: 8 }}

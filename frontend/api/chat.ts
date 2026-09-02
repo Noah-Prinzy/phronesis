@@ -41,9 +41,13 @@ function buildSystemPrompt(journey?: Journey | null): string {
   return `${BASE_PERSONA}\n\n${JOURNEY_ADDENDUM[journey]}`;
 }
 
-async function getGeminiReply(apiKey: string, messages: ChatTurn[], journey?: Journey | null): Promise<string> {
+async function* getGeminiReplyStream(
+  apiKey: string,
+  messages: ChatTurn[],
+  journey?: Journey | null,
+): AsyncIterable<string> {
   const ai = new GoogleGenAI({ apiKey });
-  const response = await ai.models.generateContent({
+  const stream = await ai.models.generateContentStream({
     model: GEMINI_MODEL,
     contents: messages.map((m) => ({
       // Gemini uses "model" rather than "assistant" for the AI's own turns.
@@ -55,19 +59,28 @@ async function getGeminiReply(apiKey: string, messages: ChatTurn[], journey?: Jo
       maxOutputTokens: MAX_TOKENS,
     },
   });
-  return response.text ?? '';
+  for await (const chunk of stream) {
+    if (chunk.text) yield chunk.text;
+  }
 }
 
-async function getAnthropicReply(apiKey: string, messages: ChatTurn[], journey?: Journey | null): Promise<string> {
+async function* getAnthropicReplyStream(
+  apiKey: string,
+  messages: ChatTurn[],
+  journey?: Journey | null,
+): AsyncIterable<string> {
   const anthropic = new Anthropic({ apiKey });
-  const response = await anthropic.messages.create({
+  const stream = anthropic.messages.stream({
     model: ANTHROPIC_MODEL,
     max_tokens: MAX_TOKENS,
     system: buildSystemPrompt(journey),
     messages: messages.map((m) => ({ role: m.role, content: m.content })),
   });
-  const textBlock = response.content.find((block) => block.type === 'text');
-  return textBlock?.type === 'text' ? textBlock.text : '';
+  for await (const event of stream) {
+    if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+      yield event.delta.text;
+    }
+  }
 }
 
 const chatRequestSchema = z.object({
@@ -104,13 +117,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return;
   }
 
+  // SSE from here on — once writeHead(200) fires, a mid-stream failure can
+  // no longer become a clean HTTP error status, so it's emitted as an
+  // `error` frame instead and the client has to treat that as a failure.
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    Connection: 'keep-alive',
+  });
+
   try {
-    const reply = geminiKey
-      ? await getGeminiReply(geminiKey, parsed.data.messages, parsed.data.journey)
-      : await getAnthropicReply(anthropicKey!, parsed.data.messages, parsed.data.journey);
-    res.status(200).json({ reply });
+    const stream = geminiKey
+      ? getGeminiReplyStream(geminiKey, parsed.data.messages, parsed.data.journey)
+      : getAnthropicReplyStream(anthropicKey!, parsed.data.messages, parsed.data.journey);
+    for await (const delta of stream) {
+      res.write(`data: ${JSON.stringify({ delta })}\n\n`);
+    }
+    res.write('data: [DONE]\n\n');
   } catch (err) {
     console.error('Chat request failed:', err);
-    res.status(502).json({ error: 'Failed to get a response from the AI provider.' });
+    res.write(`data: ${JSON.stringify({ error: 'Failed to get a response from the AI provider.' })}\n\n`);
   }
+  res.end();
 }
