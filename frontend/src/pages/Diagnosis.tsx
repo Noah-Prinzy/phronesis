@@ -8,6 +8,7 @@ import CarHologram from '../components/CarHologram/CarHologram';
 import type { Urgency } from '../components/CarHologram/urgencyColors';
 import StarfieldBackground from '../components/StarfieldBackground';
 import { useVoice } from '../components/Voice/VoiceProvider';
+import { useAuth } from '../context/AuthContext';
 import { getStoredCarProfile } from '../carProfileStorage';
 import { type DiagnosticReport, type UrgencyLevel, setStoredDiagnosticReport } from '../diagnosisStorage';
 import { useMockObd } from '../hooks/useMockObd';
@@ -28,6 +29,7 @@ export function Diagnosis() {
   const navigate = useNavigate();
   const location = useLocation();
   const { speak, isSpeaking } = useVoice();
+  const { getIdToken } = useAuth();
   const obd = useMockObd();
 
   const [symptomText, setSymptomText] = useState(
@@ -59,9 +61,14 @@ export function Diagnosis() {
 
     try {
       const carProfile = getStoredCarProfile();
+      const token = await getIdToken();
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
       const response = await fetch(`${API_URL}/api/diagnosis`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           symptomText: trimmed,
           carProfile: carProfile ?? undefined,

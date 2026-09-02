@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import AvatarElement from '../components/AvatarElement/AvatarElement';
 import StarfieldBackground from '../components/StarfieldBackground';
 import { useVoice } from '../components/Voice/VoiceProvider';
+import { useAuth } from '../context/AuthContext';
 import { setStoredEmail, setStoredJourney, type Journey } from '../profileStorage';
 
 type AuthMode = 'signIn' | 'signUp';
@@ -13,22 +14,18 @@ type Step = 'auth' | 'journey';
 
 const JOURNEY_QUESTION = 'Do you own a car?';
 
-/**
- * Sign-in/sign-up UI, followed by journey detection ("Do you own a car?").
- * There's no auth backend yet, so the sign-in/sign-up/Google step is UI
- * only — nothing here actually creates an account, verifies a password, or
- * talks to any identity provider. The journey choice is real, though: it's
- * saved to localStorage (see `getStoredJourney`) since there's nowhere else
- * to persist it yet, and determines which of the two onward experiences
- * (pre-car vs. post-car) Home eventually branches into.
- */
 export function Onboarding() {
   const navigate = useNavigate();
+  const { signUpWithEmail, signInWithEmail, signInWithGoogle, getIdToken } = useAuth();
+
   const [step, setStep] = useState<Step>('auth');
-  const [authMode, setAuthMode] = useState<AuthMode>('signIn');
+  const [authMode, setAuthMode] = useState<AuthMode>('signUp');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [authError, setAuthError] = useState<string | null>(null);
+  const [authLoading, setAuthLoading] = useState(false);
+
   const { speak, stop, isSpeaking } = useVoice();
 
   useEffect(() => {
@@ -38,23 +35,79 @@ export function Onboarding() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step]);
 
-  function handleAuthSubmit(e: FormEvent) {
+  async function handleAuthSubmit(e: FormEvent) {
     e.preventDefault();
-    if (email.trim()) setStoredEmail(email.trim());
+    if (!email.trim() || !password) return;
+
+    if (authMode === 'signUp' && password !== confirmPassword) {
+      setAuthError('Passwords do not match.');
+      return;
+    }
+
+    setAuthError(null);
+    setAuthLoading(true);
+
+    try {
+      if (authMode === 'signUp') {
+        await signUpWithEmail(email.trim(), password);
+      } else {
+        await signInWithEmail(email.trim(), password);
+      }
+      setStoredEmail(email.trim());
+      setStep('journey');
+    } catch (err: any) {
+      console.error('Authentication failed:', err);
+      setAuthError(err.message || 'Authentication failed. Please check your credentials.');
+    } finally {
+      setAuthLoading(false);
+    }
+  }
+
+  async function handleGoogleSignIn() {
+    setAuthError(null);
+    setAuthLoading(true);
+    try {
+      await signInWithGoogle();
+      setStep('journey');
+    } catch (err: any) {
+      console.error('Google Sign-In failed:', err);
+      setAuthError(err.message || 'Google Sign-In failed.');
+    } finally {
+      setAuthLoading(false);
+    }
+  }
+
+  function handleSkipAuth() {
     setStep('journey');
   }
 
-  function handleJourneyChoice(journey: Journey) {
+  async function handleJourneyChoice(journey: Journey) {
     setStoredJourney(journey);
+
+    // Sync to backend if authenticated
+    try {
+      const token = await getIdToken();
+      if (token) {
+        await fetch('/api/user/sync', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ journey }),
+        });
+      }
+    } catch (err) {
+      console.warn('Could not sync user profile to backend:', err);
+    }
+
     navigate('/home');
   }
 
   return (
-    <div className="relative flex h-screen w-screen items-center justify-center bg-[#050914] px-6">
+    <div className="relative flex h-screen w-screen items-center justify-center bg-[#050914] px-6 overflow-y-auto">
       <StarfieldBackground theme="dark" />
 
-      {/* Plan §4.4: on sign-in/sign-up the avatar minimises to a corner but
-          stays present — the form has the floor, Phronesis is still here. */}
       {step === 'auth' && (
         <div className="pointer-events-none absolute right-6 bottom-6 z-10">
           <div className="pointer-events-auto">
@@ -64,45 +117,51 @@ export function Onboarding() {
       )}
 
       {step === 'auth' && (
-        <div className="w-full max-w-sm">
+        <div className="w-full max-w-sm my-auto">
           <h1 className="mb-1 text-center text-2xl font-bold text-[#e8eefb]">
             {authMode === 'signIn' ? 'Welcome back' : 'Create your account'}
           </h1>
-          <p className="mb-8 text-center text-sm text-[#e8eefb]/60">
+          <p className="mb-6 text-center text-sm text-[#e8eefb]/60">
             {authMode === 'signIn'
-              ? 'Sign in to continue with Phronesis.'
+              ? 'Sign in to sync your vehicle diagnostic history.'
               : 'Sign up to get started with Phronesis.'}
           </p>
 
           <div className="mb-6 flex rounded-lg border border-[#3b82f6]/30 p-1">
             <button
               type="button"
-              onClick={() => setAuthMode('signIn')}
-              className={`flex-1 rounded-md py-2 text-sm font-semibold transition-colors ${
-                authMode === 'signIn' ? 'bg-[#3b82f6] text-white' : 'text-[#e8eefb]'
-              }`}
-            >
-              Sign In
-            </button>
-            <button
-              type="button"
-              onClick={() => setAuthMode('signUp')}
+              onClick={() => {
+                setAuthMode('signUp');
+                setAuthError(null);
+              }}
               className={`flex-1 rounded-md py-2 text-sm font-semibold transition-colors ${
                 authMode === 'signUp' ? 'bg-[#3b82f6] text-white' : 'text-[#e8eefb]'
               }`}
             >
               Sign Up
             </button>
+            <button
+              type="button"
+              onClick={() => {
+                setAuthMode('signIn');
+                setAuthError(null);
+              }}
+              className={`flex-1 rounded-md py-2 text-sm font-semibold transition-colors ${
+                authMode === 'signIn' ? 'bg-[#3b82f6] text-white' : 'text-[#e8eefb]'
+              }`}
+            >
+              Sign In
+            </button>
           </div>
 
-          <form onSubmit={handleAuthSubmit} className="flex flex-col gap-4">
+          <form onSubmit={handleAuthSubmit} className="flex flex-col gap-3">
             <input
               type="email"
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Email address"
-              className="rounded-lg border border-[#3b82f6]/40 px-4 py-3 text-[#e8eefb] outline-none focus:border-[#3b82f6]"
+              className="rounded-lg border border-[#3b82f6]/40 px-4 py-3 text-[#e8eefb] placeholder:text-[#93a6c6]/60 outline-none focus:border-[#3b82f6]"
             />
             <input
               type="password"
@@ -110,7 +169,7 @@ export function Onboarding() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Password"
-              className="rounded-lg border border-[#3b82f6]/40 px-4 py-3 text-[#e8eefb] outline-none focus:border-[#3b82f6]"
+              className="rounded-lg border border-[#3b82f6]/40 px-4 py-3 text-[#e8eefb] placeholder:text-[#93a6c6]/60 outline-none focus:border-[#3b82f6]"
             />
             {authMode === 'signUp' && (
               <input
@@ -119,19 +178,22 @@ export function Onboarding() {
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="Confirm password"
-                className="rounded-lg border border-[#3b82f6]/40 px-4 py-3 text-[#e8eefb] outline-none focus:border-[#3b82f6]"
+                className="rounded-lg border border-[#3b82f6]/40 px-4 py-3 text-[#e8eefb] placeholder:text-[#93a6c6]/60 outline-none focus:border-[#3b82f6]"
               />
             )}
 
+            {authError && <p className="text-xs text-[#ef4444]">{authError}</p>}
+
             <button
               type="submit"
-              className="mt-2 rounded-lg bg-[#3b82f6] px-6 py-3 font-semibold text-white transition-colors hover:bg-[#2f6fd6]"
+              disabled={authLoading}
+              className="mt-1 rounded-lg bg-[#3b82f6] px-6 py-3 font-semibold text-white transition-colors hover:bg-[#2f6fd6] disabled:opacity-60"
             >
-              {authMode === 'signIn' ? 'Sign In' : 'Create Account'}
+              {authLoading ? 'Processing...' : authMode === 'signIn' ? 'Sign In' : 'Create Account'}
             </button>
           </form>
 
-          <div className="my-6 flex items-center gap-3">
+          <div className="my-4 flex items-center gap-3">
             <div className="h-px flex-1 bg-[#1c2b47]" />
             <span className="text-xs font-medium tracking-wide text-[#e8eefb]/50 uppercase">or</span>
             <div className="h-px flex-1 bg-[#1c2b47]" />
@@ -139,8 +201,9 @@ export function Onboarding() {
 
           <button
             type="button"
-            onClick={() => setStep('journey')}
-            className="flex w-full items-center justify-center gap-3 rounded-lg border border-[#3b82f6]/40 px-6 py-3 font-semibold text-[#e8eefb] transition-colors hover:bg-[#3b82f6]/15"
+            onClick={handleGoogleSignIn}
+            disabled={authLoading}
+            className="flex w-full items-center justify-center gap-3 rounded-lg border border-[#3b82f6]/40 px-6 py-3 font-semibold text-[#e8eefb] transition-colors hover:bg-[#3b82f6]/15 disabled:opacity-60"
           >
             <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true">
               <path
@@ -162,6 +225,14 @@ export function Onboarding() {
             </svg>
             Continue with Google
           </button>
+
+          <button
+            type="button"
+            onClick={handleSkipAuth}
+            className="mt-4 w-full text-center text-xs text-[#93a6c6] hover:underline"
+          >
+            Continue as Guest
+          </button>
         </div>
       )}
 
@@ -172,7 +243,6 @@ export function Onboarding() {
           transition={{ duration: 0.4, ease: 'easeOut' }}
           className="flex w-full max-w-sm flex-col items-center gap-8 text-center"
         >
-          {/* Question is voice-only — no on-screen text, just the buttons. */}
           <AvatarElement
             state={isSpeaking ? 'responding' : 'idle'}
             theme="dark"

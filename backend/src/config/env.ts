@@ -22,6 +22,9 @@ const envSchema = z.object({
   SUNBIRD_API_KEY: z.string().optional().default(''),
   PORT: z.coerce.number().int().positive().default(3001),
   CORS_ORIGIN: z.string().default('http://localhost:5173'),
+  FIREBASE_PROJECT_ID: z.string().optional().default('phronesis-51bc9'),
+  FIREBASE_CLIENT_EMAIL: z.string().optional().default(''),
+  FIREBASE_PRIVATE_KEY: z.string().optional().default(''),
 });
 
 const parsed = envSchema.safeParse(process.env);

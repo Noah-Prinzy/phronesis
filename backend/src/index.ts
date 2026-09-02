@@ -6,6 +6,7 @@ import { env } from './config/env';
 import { chatRouter } from './routes/chat';
 import { diagnosisRouter } from './routes/diagnosis';
 import { healthRouter } from './routes/health';
+import { historyRouter } from './routes/history';
 import { ttsRouter } from './routes/tts';
 import { ttsLocalRouter } from './routes/tts-local';
 
@@ -19,6 +20,7 @@ app.use('/api', chatRouter);
 app.use('/api', diagnosisRouter);
 app.use('/api', ttsRouter);
 app.use('/api', ttsLocalRouter);
+app.use('/api', historyRouter);
 
 app.listen(env.PORT, () => {
   console.log(`Phronesis backend listening on http://localhost:${env.PORT}`);

@@ -2,7 +2,9 @@
 
 import { Router } from 'express';
 import { z } from 'zod';
+import { optionalAuth } from '../middleware/auth';
 import { DiagnosisParseError, hasDiagnosisProviderConfigured, runDiagnosis } from '../services/diagnosis.service';
+import { saveDiagnosisReport } from '../services/history.service';
 
 export const diagnosisRouter = Router();
 
@@ -33,7 +35,7 @@ const diagnosisRequestSchema = z.object({
     .optional(),
 });
 
-diagnosisRouter.post('/diagnosis', async (req, res) => {
+diagnosisRouter.post('/diagnosis', optionalAuth, async (req, res) => {
   const parsed = diagnosisRequestSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: 'Invalid request', details: parsed.error.issues });
@@ -47,7 +49,23 @@ diagnosisRouter.post('/diagnosis', async (req, res) => {
 
   try {
     const report = await runDiagnosis(parsed.data);
-    res.json({ report });
+
+    let savedDiagnosisId: string | undefined;
+    if (req.user?.uid) {
+      try {
+        savedDiagnosisId = await saveDiagnosisReport({
+          userId: req.user.uid,
+          symptomText: parsed.data.symptomText,
+          carProfile: parsed.data.carProfile,
+          obdSnapshot: parsed.data.obdSnapshot,
+          report: report as any,
+        });
+      } catch (saveErr) {
+        console.error('Failed to auto-save diagnosis to Firestore:', saveErr);
+      }
+    }
+
+    res.json({ report, diagnosisId: savedDiagnosisId });
   } catch (err) {
     if (err instanceof DiagnosisParseError) {
       console.error('Diagnosis parse failed:', err.message);

@@ -7,6 +7,7 @@ import AvatarDock from '../components/AvatarElement/AvatarDock';
 import type { AvatarState } from '../components/AvatarElement/avatarStates';
 import StarfieldBackground from '../components/StarfieldBackground';
 import { useVoice } from '../components/Voice/VoiceProvider';
+import { useAuth } from '../context/AuthContext';
 import { getStoredJourney, type Journey } from '../profileStorage';
 
 interface ChatMessage {
@@ -50,6 +51,7 @@ export function Home() {
   const journeyRef = useRef<Journey | null>(null);
   const respondingTimer = useRef<number | null>(null);
   const { speak, isSpeaking } = useVoice();
+  const { getIdToken } = useAuth();
 
   useEffect(() => {
     const journey = getStoredJourney();
@@ -100,9 +102,14 @@ export function Home() {
     };
 
     try {
+      const token = await getIdToken();
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
       const response = await fetch(`${API_URL}/api/chat`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({
           messages: nextMessages.map(({ role, text }) => ({ role, content: text })),
           journey: journeyRef.current,

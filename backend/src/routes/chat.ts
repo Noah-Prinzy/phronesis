@@ -2,7 +2,9 @@
 
 import { Router } from 'express';
 import { z } from 'zod';
+import { optionalAuth } from '../middleware/auth';
 import { getChatReplyStream, hasChatProviderConfigured } from '../services/ai.service';
+import { saveChatSession } from '../services/history.service';
 
 export const chatRouter = Router();
 
@@ -18,7 +20,7 @@ const chatRequestSchema = z.object({
   journey: z.enum(['pre-car', 'post-car']).nullable().optional(),
 });
 
-chatRouter.post('/chat', async (req, res) => {
+chatRouter.post('/chat', optionalAuth, async (req, res) => {
   const parsed = chatRequestSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: 'Invalid request', details: parsed.error.issues });
@@ -30,20 +32,35 @@ chatRouter.post('/chat', async (req, res) => {
     return;
   }
 
-  // SSE from here on — once writeHead(200) fires, a mid-stream failure can
-  // no longer become a clean HTTP error status, so it's emitted as an
-  // `error` frame instead and the client has to treat that as a failure.
+  // SSE from here on
   res.writeHead(200, {
     'Content-Type': 'text/event-stream',
     'Cache-Control': 'no-cache',
     Connection: 'keep-alive',
   });
 
+  const fullAssistantReplyChunks: string[] = [];
+
   try {
     for await (const delta of getChatReplyStream(parsed.data.messages, parsed.data.journey)) {
+      fullAssistantReplyChunks.push(delta);
       res.write(`data: ${JSON.stringify({ delta })}\n\n`);
     }
     res.write('data: [DONE]\n\n');
+
+    // Auto-save to Firestore if authenticated
+    if (req.user?.uid) {
+      const fullReply = fullAssistantReplyChunks.join('');
+      const updatedMessages = [
+        ...parsed.data.messages,
+        { role: 'assistant' as const, content: fullReply },
+      ];
+      saveChatSession({
+        userId: req.user.uid,
+        journey: parsed.data.journey || undefined,
+        messages: updatedMessages,
+      }).catch((err) => console.error('Failed to auto-save chat session to Firestore:', err));
+    }
   } catch (err) {
     console.error('Chat request failed:', err);
     res.write(`data: ${JSON.stringify({ error: 'Failed to get a response from the AI provider.' })}\n\n`);
