@@ -1,22 +1,42 @@
 // frontend/src/App.tsx
 
-import { Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes, useNavigate } from 'react-router-dom';
+import Account from './pages/Account';
 import AvatarStudio from './pages/AvatarStudio';
+import Home from './pages/Home';
+import LoadingScreen from './pages/LoadingScreen';
+import NotFound from './pages/NotFound';
+import Onboarding from './pages/Onboarding';
+import Welcome from './pages/Welcome';
+
+/** Wires LoadingScreen's onComplete to real navigation for the /loading route. */
+function LoadingScreenRoute() {
+  const navigate = useNavigate();
+  return <LoadingScreen theme="dark" onComplete={() => navigate('/welcome')} />;
+}
+
+/** Wires Welcome's onComplete to real navigation for the /welcome route. */
+function WelcomeRoute() {
+  const navigate = useNavigate();
+  return <Welcome onComplete={() => navigate('/onboarding')} />;
+}
 
 function App() {
   return (
     <Routes>
+      {/* Root redirects into the entry flow. */}
+      <Route path="/" element={<Navigate to="/loading" replace />} />
+
+      {/* Entry flow: Loading -> Welcome -> Onboarding -> Home */}
+      <Route path="/loading" element={<LoadingScreenRoute />} />
+      <Route path="/welcome" element={<WelcomeRoute />} />
+      <Route path="/onboarding" element={<Onboarding />} />
+      <Route path="/home" element={<Home />} />
+      <Route path="/account" element={<Account />} />
+
       <Route path="/avatar-studio" element={<AvatarStudio />} />
 
-      {/* Main app routes (added later) */}
-      <Route
-        path="/"
-        element={
-          <div className="flex h-screen w-screen items-center justify-center bg-white text-blue-900">
-            Coming soon...
-          </div>
-        }
-      />
+      <Route path="*" element={<NotFound />} />
     </Routes>
   );
 }

@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Avatar_Element · tuning lab</title>
+    <style>
+      :root {
+        --bar: #0d1421;
+        --line: #1e2c47;
+        --ink: #e6edfa;
+        --muted: #8496b5;
+        --accent: #3b82f6;
+      }
+
+      * { box-sizing: border-box; }
+
+      html, body, #root { height: 100%; }
+
+      body {
+        margin: 0;
+        font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        background: #05080f;
+        color: var(--ink);
+      }
+
+      .lab {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 340px;
+        grid-template-rows: auto minmax(0, 1fr);
+        height: 100%;
+      }
+
+      .lab__bar {
+        grid-column: 1 / -1;
+        display: flex;
+        align-items: center;
+        gap: 1.5rem;
+        flex-wrap: wrap;
+        padding: 0.75rem 1.25rem;
+        background: var(--bar);
+        border-bottom: 1px solid var(--line);
+      }
+
+      .lab__brand { display: flex; flex-direction: column; line-height: 1.25; }
+      .lab__brand strong { font-size: 0.95rem; letter-spacing: 0.01em; }
+      .lab__brand span { font-size: 0.7rem; color: var(--muted); }
+
+      .lab__group { display: flex; gap: 1px; margin-left: auto; }
+      .lab__group button {
+        appearance: none;
+        border: 1px solid var(--line);
+        background: transparent;
+        color: var(--muted);
+        font: inherit;
+        font-size: 0.75rem;
+        padding: 0.45rem 0.85rem;
+        cursor: pointer;
+      }
+      .lab__group button:hover { color: var(--ink); }
+      .lab__group button.is-on { background: var(--accent); border-color: var(--accent); color: #fff; }
+      .lab__group + .lab__group { margin-left: 0; }
+
+      /* The stage carries the ground the avatar is judged against. */
+      .lab__stage {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 2.5rem;
+        padding: 2rem;
+        overflow: auto;
+        transition: background 0.3s ease;
+      }
+      .lab--dark .lab__stage { background: #04070d; }
+      .lab--light .lab__stage { background: #ffffff; }
+
+      .lab__hero { display: flex; flex-direction: column; align-items: center; gap: 1rem; }
+
+      .lab__caption { margin: 0; text-align: center; font-size: 0.8rem; line-height: 1.6; }
+      .lab--dark .lab__caption { color: #93a4c2; }
+      .lab--light .lab__caption { color: #64748b; }
+      .lab__caption b { font-weight: 600; }
+
+      .lab__warn {
+        margin: 0;
+        font-size: 0.75rem;
+        color: #e8a33d;
+        max-width: 34ch;
+        text-align: center;
+      }
+
+      .lab__sizes { display: flex; align-items: flex-end; gap: 2.5rem; }
+      .lab__sizes > div { display: flex; flex-direction: column; align-items: center; gap: 0.6rem; }
+      .lab__sizes span { font-size: 0.7rem; color: var(--muted); }
+
+      .lab__panel {
+        border-left: 1px solid var(--line);
+        background: var(--bar);
+        padding: 1rem 1.1rem 2rem;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 0.9rem;
+      }
+
+      .lab__panelHead { margin: 0; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.12em; color: var(--muted); }
+      .lab__panelHead b { color: var(--ink); }
+
+      .lab__switch { display: flex; gap: 0.6rem; align-items: flex-start; font-size: 0.8rem; cursor: pointer; }
+      .lab__switch input { margin-top: 0.2rem; accent-color: var(--accent); }
+      .lab__switch small { display: block; color: var(--muted); font-size: 0.7rem; line-height: 1.45; }
+
+      .lab__field { display: flex; flex-direction: column; gap: 0.25rem; }
+      .lab__row { display: flex; justify-content: space-between; align-items: baseline; }
+      .lab__row label { font-size: 0.78rem; font-family: ui-monospace, Consolas, monospace; }
+      .lab__row output { font-size: 0.72rem; color: var(--accent); font-variant-numeric: tabular-nums; }
+      .lab__field small { color: var(--muted); font-size: 0.66rem; line-height: 1.4; }
+      .lab__field input[type='range'] { width: 100%; accent-color: var(--accent); }
+      .lab__field input[type='range']:disabled { opacity: 0.35; }
+
+      hr { border: 0; border-top: 1px solid var(--line); width: 100%; margin: 0.3rem 0; }
+
+      .lab__copy {
+        appearance: none;
+        border: 1px solid var(--accent);
+        background: transparent;
+        color: var(--accent);
+        font: inherit;
+        font-size: 0.75rem;
+        padding: 0.55rem;
+        cursor: pointer;
+        border-radius: 3px;
+      }
+      .lab__copy:hover { background: var(--accent); color: #fff; }
+
+      .lab__snippet {
+        margin: 0;
+        font-family: ui-monospace, Consolas, monospace;
+        font-size: 0.66rem;
+        line-height: 1.5;
+        color: var(--muted);
+        background: #070d18;
+        border: 1px solid var(--line);
+        border-radius: 3px;
+        padding: 0.6rem;
+        overflow-x: auto;
+        white-space: pre;
+      }
+
+      :focus-visible { outline: 2px solid var(--accent); }
+
+      @media (max-width: 900px) {
+        .lab { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto auto; }
+        .lab__panel { border-left: 0; border-top: 1px solid var(--line); }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="./main.tsx"></script>
+  </body>
+</html>

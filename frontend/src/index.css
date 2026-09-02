@@ -1,22 +1,47 @@
 @import 'tailwindcss';
 
-/* Official Phronesis theme: white background, dark blue -> blue -> white brand gradient */
+/*
+ * Phronesis theme: a night ground with the blue brand ramp on top.
+ *
+ * The app used to ship on white. It moved to dark so the avatar reads the
+ * way it is designed to — a cloud of white points blown out at the core,
+ * which only exists against a dark ground. On white the same cloud has to
+ * invert to navy points and loses the glow entirely, so the ground is not a
+ * cosmetic choice here; it is what the avatar is made of.
+ *
+ * Brand blue (#3b82f6) is unchanged and still carries every action. What
+ * changed is which end of the ramp is the ground and which is the ink.
+ */
 :root {
-  color-scheme: light;
+  color-scheme: dark;
 
-  --color-bg: #ffffff;
-  --color-primary: #1e3a8a;
-  --color-primary-rgb: 30, 58, 138;
-  --color-secondary: #3b82f6;
-  --color-secondary-rgb: 59, 130, 246;
-  --color-accent: #ffffff;
-  --color-accent-rgb: 255, 255, 255;
+  --color-bg: #050914; /* near-black, pulled toward navy rather than neutral */
+  --color-surface: #0c1424; /* raised panels, message bubbles */
+  --color-border: #1c2b47; /* hairlines that read on the ground above */
+
+  --color-ink: #e8eefb; /* primary text */
+  --color-ink-rgb: 232, 238, 251;
+  --color-muted: #93a6c6; /* secondary text — biased blue, not grey */
+
+  --color-primary: #3b82f6; /* brand blue: actions, focus, emphasis */
+  --color-primary-rgb: 59, 130, 246;
+  --color-secondary: #60a5fa; /* lighter blue for links on dark */
+  --color-secondary-rgb: 96, 165, 250;
+  --color-deep: #1e3a8a; /* the original dark blue, now an accent not a ground */
+  --color-deep-rgb: 30, 58, 138;
 }
 
 body {
   margin: 0;
   min-height: 100svh;
   background: var(--color-bg);
-  color: var(--color-primary);
+  color: var(--color-ink);
   font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* The avatar owns the light in this design; keep focus rings from competing
+   while still being unmistakable. */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
 }
