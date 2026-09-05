@@ -1,187 +1,261 @@
-// frontend/src/pages/Account.tsx
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import {
+  Button,
+  Dialog,
+  Group,
+  IconButton,
+  Row,
+  SectionHead,
+  Segmented,
+  Switch,
+} from '../ui'
+import { useJourney } from '../app/journey'
+import { useMediaQuery } from '../app/useMediaQuery'
 
-import { useState, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import AvatarElement from '../components/AvatarElement/AvatarElement';
-import StarfieldBackground from '../components/StarfieldBackground';
-import { useAuth } from '../context/AuthContext';
-import { clearProfile, getStoredJourney, setStoredJourney, type Journey } from '../profileStorage';
-
-const JOURNEY_LABELS: Record<Journey, string> = {
-  'pre-car': "Pre-car — I don't own a car yet",
-  'post-car': 'Post-car — I own a car',
-};
-
-export function Account() {
-  const navigate = useNavigate();
-  const { currentUser, signInWithEmail, signUpWithEmail, signInWithGoogle, logout } = useAuth();
-
-  const [journey, setJourney] = useState<Journey | null>(() => getStoredJourney());
-  const [micOn, setMicOn] = useState(false);
-  const [isSignUp, setIsSignUp] = useState(false);
-  const [emailInput, setEmailInput] = useState('');
-  const [passwordInput, setPasswordInput] = useState('');
-  const [authError, setAuthError] = useState<string | null>(null);
-  const [authLoading, setAuthLoading] = useState(false);
-
-  function handleJourneyChange(next: Journey) {
-    setStoredJourney(next);
-    setJourney(next);
-  }
-
-  async function handleAuthSubmit(e: FormEvent) {
-    e.preventDefault();
-    if (!emailInput || !passwordInput) return;
-    setAuthError(null);
-    setAuthLoading(true);
-
-    try {
-      if (isSignUp) {
-        await signUpWithEmail(emailInput, passwordInput);
-      } else {
-        await signInWithEmail(emailInput, passwordInput);
-      }
-    } catch (err: any) {
-      console.error('Authentication failed:', err);
-      setAuthError(err.message || 'Authentication failed. Please check credentials.');
-    } finally {
-      setAuthLoading(false);
-    }
-  }
-
-  async function handleGoogleSignIn() {
-    setAuthError(null);
-    setAuthLoading(true);
-    try {
-      await signInWithGoogle();
-    } catch (err: any) {
-      console.error('Google Sign-In failed:', err);
-      setAuthError(err.message || 'Google Sign-In failed.');
-    } finally {
-      setAuthLoading(false);
-    }
-  }
-
-  async function handleSignOut() {
-    clearProfile();
-    await logout();
-    navigate('/onboarding');
-  }
-
-  return (
-    <div className="relative flex h-screen w-screen flex-col items-center bg-[#050914] px-6 py-10 overflow-y-auto">
-      <StarfieldBackground theme="dark" />
-
-      <div className="mb-8 flex w-full max-w-sm items-center">
-        <Link to="/home" aria-label="Back to chat" className="text-[#e8eefb]">
-          <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth={2}>
-            <path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </Link>
-        <h1 className="mx-auto text-lg font-bold text-[#e8eefb]">Account</h1>
-      </div>
-
-      <div className="flex w-full max-w-sm flex-col gap-6">
-        {currentUser ? (
-          <div>
-            <p className="mb-1 text-xs font-semibold tracking-wide text-[#e8eefb]/50 uppercase">Firebase Account</p>
-            <p className="text-[#e8eefb] font-medium">{currentUser.email || 'Anonymous User'}</p>
-            <p className="text-xs text-[#93a6c6] mt-1">UID: {currentUser.uid}</p>
-          </div>
-        ) : (
-          <div className="rounded-lg border border-[#1c2b47] bg-[#0c1424] p-5">
-            <h2 className="text-sm font-semibold text-[#e8eefb] mb-3">
-              {isSignUp ? 'Create Phronesis Account' : 'Sign in to Phronesis'}
-            </h2>
-            <form onSubmit={handleAuthSubmit} className="flex flex-col gap-3">
-              <input
-                type="email"
-                placeholder="Email address"
-                value={emailInput}
-                onChange={(e) => setEmailInput(e.target.value)}
-                required
-                className="rounded-lg border border-[#3b82f6]/40 bg-transparent px-3 py-2 text-sm text-[#e8eefb] placeholder:text-[#93a6c6]/60 outline-none"
-              />
-              <input
-                type="password"
-                placeholder="Password"
-                value={passwordInput}
-                onChange={(e) => setPasswordInput(e.target.value)}
-                required
-                className="rounded-lg border border-[#3b82f6]/40 bg-transparent px-3 py-2 text-sm text-[#e8eefb] placeholder:text-[#93a6c6]/60 outline-none"
-              />
-              {authError && <p className="text-xs text-[#ef4444]">{authError}</p>}
-              <button
-                type="submit"
-                disabled={authLoading}
-                className="rounded-lg bg-[#3b82f6] py-2 text-sm font-semibold text-white hover:bg-[#2f6fd6] disabled:opacity-60"
-              >
-                {authLoading ? 'Processing...' : isSignUp ? 'Sign Up' : 'Sign In'}
-              </button>
-            </form>
-
-            <button
-              type="button"
-              onClick={handleGoogleSignIn}
-              disabled={authLoading}
-              className="mt-3 w-full rounded-lg border border-[#3b82f6]/30 bg-transparent py-2 text-sm font-medium text-[#e8eefb] hover:bg-[#3b82f6]/10"
-            >
-              Sign in with Google
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setIsSignUp(!isSignUp)}
-              className="mt-3 text-xs text-[#60a5fa] underline"
-            >
-              {isSignUp ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
-            </button>
-          </div>
-        )}
-
-        <div>
-          <p className="mb-3 text-xs font-semibold tracking-wide text-[#e8eefb]/50 uppercase">Journey</p>
-          <div className="flex flex-col gap-2">
-            {(Object.entries(JOURNEY_LABELS) as [Journey, string][]).map(([value, label]) => (
-              <button
-                key={value}
-                type="button"
-                onClick={() => handleJourneyChange(value)}
-                className={`rounded-lg border px-4 py-3 text-left text-sm font-medium transition-colors ${
-                  journey === value
-                    ? 'border-[#3b82f6] bg-[#3b82f6]/20 text-[#e8eefb]'
-                    : 'border-[#1c2b47] text-[#e8eefb]/70 hover:bg-[#3b82f6]/15'
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {currentUser && (
-          <button
-            type="button"
-            onClick={handleSignOut}
-            className="mt-2 rounded-lg border border-red-400/40 px-6 py-3 font-semibold text-red-300 transition-colors hover:bg-red-500/10"
-          >
-            Sign out
-          </button>
-        )}
-      </div>
-
-      <div className="absolute right-6 bottom-6">
-        <AvatarElement
-          state={micOn ? 'listening' : 'idle'}
-          theme="dark"
-          size={64}
-          micOn={micOn}
-          onMicToggle={setMicOn}
-          pointCount={2400}
-        />
-      </div>
-    </div>
-  );
+/** Mock profile. Goes the way of the other mocks in step 4. */
+const PROFILE = {
+  name: 'Noah',
+  email: 'noahdevsug@gmail.com',
+  initials: 'N',
+  car: { label: '2015 Toyota Premio', plate: 'UAX 123B', km: '86,000 km' },
+  reader: { name: 'ELM327 v1.5', paired: true },
+  threadSince: '4 September',
 }
 
-export default Account;
+export function Account() {
+  const navigate = useNavigate()
+  const wide = useMediaQuery('(min-width: 768px)')
+  const { journey, setJourney } = useJourney()
+
+  const [maintenance, setMaintenance] = useState(true)
+  const [tips, setTips] = useState(false)
+  const [speak, setSpeak] = useState(true)
+  const [confirmDelete, setConfirmDelete] = useState(false)
+
+  const owner = journey !== 'buyer'
+
+  /* ------------------------------------------------------------- sections */
+
+  const you = (
+    <div>
+      <SectionHead>You</SectionHead>
+      <Group>
+        <Row
+          label="Name"
+          sub="What Phronesis calls you when it speaks"
+          value={PROFILE.name}
+          onClick={() => {}}
+        />
+        <Row label="Email" value={PROFILE.email} onClick={() => {}} />
+        <Row label="Phone" value="Add" onClick={() => {}} />
+      </Group>
+    </div>
+  )
+
+  const journeyBlock = (
+    <div>
+      <SectionHead>Journey</SectionHead>
+      <Segmented
+        label="Primary journey"
+        value={owner ? 'owner' : 'buyer'}
+        onChange={(v) => setJourney(v)}
+        options={[
+          { value: 'owner', label: 'I own a car' },
+          { value: 'buyer', label: 'Looking to buy' },
+        ]}
+      />
+      <p className="acct__note">
+        This changes what fills the middle of the navigation. You keep access to
+        both either way.
+      </p>
+    </div>
+  )
+
+  const car = owner ? (
+    <div>
+      <SectionHead>Your car</SectionHead>
+      <Group>
+        <Row
+          label={PROFILE.car.label}
+          sub={`${PROFILE.car.plate} · ${PROFILE.car.km}`}
+          onClick={() => {}}
+        />
+        <Row
+          label="OBD reader"
+          sub={
+            PROFILE.reader.paired
+              ? `${PROFILE.reader.name} · paired`
+              : 'Not paired — you would describe symptoms instead'
+          }
+          trailing={PROFILE.reader.paired ? <span className="acct__dot" /> : undefined}
+          onClick={() => navigate('/pair')}
+        />
+      </Group>
+    </div>
+  ) : null
+
+  const voice = (
+    <div>
+      <SectionHead>Voice</SectionHead>
+      <Group>
+        <Row label="Language" value="English (Uganda)" onClick={() => {}} />
+        <Row
+          label="Speak replies aloud"
+          sub="Off saves data on mobile"
+          trailing={
+            <Switch checked={speak} onChange={setSpeak} label="Speak replies aloud" />
+          }
+        />
+      </Group>
+    </div>
+  )
+
+  const alerts = (
+    <div>
+      <SectionHead>Alerts</SectionHead>
+      <Group>
+        <Row
+          label="Critical faults"
+          sub="Always on. Safety matters more than quiet."
+          trailing={
+            // Deliberately not switchable. A setting that lets someone mute the
+            // one alert that could keep them safe is not a preference.
+            <Switch checked disabled label="Critical faults, always on" />
+          }
+        />
+        <Row
+          label="Maintenance due"
+          trailing={
+            <Switch checked={maintenance} onChange={setMaintenance} label="Maintenance due" />
+          }
+        />
+        <Row
+          label="Tips and suggestions"
+          trailing={<Switch checked={tips} onChange={setTips} label="Tips and suggestions" />}
+        />
+      </Group>
+    </div>
+  )
+
+  const data = (
+    <div>
+      <SectionHead>Your data</SectionHead>
+      <Group>
+        <Row
+          label="Conversation"
+          sub={`One thread since ${PROFILE.threadSince}`}
+          onClick={() => {}}
+        />
+        <Row
+          label={<span className="acct__danger">Delete everything</span>}
+          onClick={() => setConfirmDelete(true)}
+        />
+      </Group>
+    </div>
+  )
+
+  const header = (
+    <div className="acct__profile">
+      <span className="acct__avatar" aria-hidden="true">
+        {PROFILE.initials}
+      </span>
+      <div>
+        <div className="acct__name">{PROFILE.name}</div>
+        <div className="acct__email">{PROFILE.email}</div>
+      </div>
+    </div>
+  )
+
+  const signOut = (
+    <Button variant="secondary" wide onClick={() => navigate('/')}>
+      Sign out
+    </Button>
+  )
+
+  const deleteDialog = (
+    <Dialog
+      open={confirmDelete}
+      onClose={() => setConfirmDelete(false)}
+      title="Delete everything?"
+      actions={
+        <>
+          <Button variant="ghost" onClick={() => setConfirmDelete(false)}>
+            Keep my account
+          </Button>
+          <Button variant="danger" onClick={() => setConfirmDelete(false)}>
+            Delete everything
+          </Button>
+        </>
+      }
+    >
+      <p>This removes your account, your car, your paired reader and every conversation.</p>
+      <p className="acct__dialogFine">
+        {/* OPEN QUESTION — must be answered before this ships. Reviews you have
+            left for mechanics are other people's reputation as much as your
+            data, and the copy cannot honestly promise either outcome until
+            that is decided. See design/01-page-element-map.md. */}
+        What happens to reviews you have left for mechanics is not settled yet —
+        we will tell you here before anything is deleted.
+      </p>
+      <p className="acct__dialogFine">This cannot be undone.</p>
+    </Dialog>
+  )
+
+  /* --------------------------------------------------------------- desktop */
+  if (wide) {
+    return (
+      <main className="acct acct--wide">
+        {header}
+        <div className="acct__grid">
+          <div className="acct__col">
+            {you}
+            {journeyBlock}
+            {car}
+          </div>
+          <div className="acct__col">
+            {voice}
+            {alerts}
+            {data}
+            <div className="acct__signout">{signOut}</div>
+          </div>
+        </div>
+        {deleteDialog}
+      </main>
+    )
+  }
+
+  /* ----------------------------------------------------------------- phone */
+  return (
+    <main className="acct">
+      <header className="acct__bar">
+        <IconButton label="Back" onClick={() => navigate('/home')}>
+          <BackIcon />
+        </IconButton>
+        <span className="acct__title">ACCOUNT</span>
+        <span className="acct__barSpacer" />
+      </header>
+
+      <div className="acct__scroll">
+        {header}
+        {you}
+        {journeyBlock}
+        {car}
+        {voice}
+        {alerts}
+        {data}
+        <div className="acct__signout">{signOut}</div>
+      </div>
+
+      {deleteDialog}
+    </main>
+  )
+}
+
+function BackIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+      <path d="M15 18l-6-6 6-6" />
+    </svg>
+  )
+}

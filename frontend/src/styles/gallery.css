@@ -1,0 +1,235 @@
+/* ============================================================
+   Styles for the style guide itself — the workbench, not the
+   product. Nothing here is imported by a page.
+   ============================================================ */
+
+.page {
+  min-height: 100dvh;
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 60;
+  background: rgb(26 26 28 / 0.88);
+  backdrop-filter: blur(18px);
+  border-bottom: 1px solid var(--line);
+}
+.topbar__in {
+  width: min(1080px, 100% - 2.5rem);
+  margin-inline: auto;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 0.75rem 0;
+  flex-wrap: wrap;
+}
+.wordmark {
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 0.88rem;
+  letter-spacing: 0.15em;
+}
+.wordmark span {
+  color: var(--ember);
+}
+.jump {
+  display: flex;
+  gap: 0.1rem;
+  flex-wrap: wrap;
+  margin-left: auto;
+}
+.jump a {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--muted);
+  text-decoration: none;
+  padding: 0.3rem 0.5rem;
+  border-radius: 5px;
+  transition:
+    color var(--t-hover) var(--ease),
+    background var(--t-hover) var(--ease);
+}
+.jump a:hover {
+  color: var(--ink);
+  background: var(--panel);
+}
+
+.wrap {
+  width: min(1080px, 100% - 2.5rem);
+  margin-inline: auto;
+  padding-bottom: 6rem;
+}
+
+.hero {
+  padding: clamp(2.5rem, 6vw, 4.5rem) 0 1rem;
+}
+.hero h1 {
+  margin: 0 0 1rem;
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: clamp(2rem, 5vw, 3rem);
+  letter-spacing: 0.03em;
+  line-height: 1.05;
+}
+.hero p {
+  margin: 0;
+  color: var(--ink-dim);
+  max-width: 62ch;
+  font-size: 1.0625rem;
+}
+.hero__meta {
+  margin-top: 0.8rem !important;
+  font-size: 0.85rem !important;
+  color: var(--muted) !important;
+}
+.hero code,
+.bench__head code {
+  font-family: var(--mono);
+  font-size: 0.85em;
+  background: var(--panel);
+  padding: 0.1em 0.36em;
+  border-radius: 4px;
+}
+
+.bench {
+  margin-top: clamp(2.5rem, 5vw, 4rem);
+  scroll-margin-top: 4.5rem;
+}
+.bench__head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.9rem;
+  margin-bottom: 1.2rem;
+  flex-wrap: wrap;
+}
+.bench__n {
+  font-family: var(--mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.18em;
+  color: var(--muted);
+}
+.bench__head h2 {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 500;
+  font-size: 1.3rem;
+  letter-spacing: 0.03em;
+}
+.bench__head p {
+  margin: 0;
+  flex: 1;
+  min-width: 16rem;
+  color: var(--ink-dim);
+  font-size: 0.88rem;
+}
+.bench__body {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  overflow: hidden;
+}
+
+.case {
+  background: var(--ground-lift);
+  padding: 0.9rem 1.1rem 1rem;
+  display: flex;
+  gap: 1.1rem;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+.case__label {
+  font-family: var(--mono);
+  font-size: 0.58rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  width: 92px;
+  flex: none;
+  padding-top: 0.6rem;
+}
+.case__stage {
+  flex: 1;
+  min-width: 220px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem 0.9rem;
+  align-items: center;
+}
+
+/* small helpers used only by the gallery's example content */
+.mono {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.8rem;
+}
+.dim {
+  color: var(--muted);
+}
+.rowline {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--mono);
+  font-size: 0.66rem;
+  color: var(--muted);
+  margin-top: 0.25rem;
+}
+.dot-ember {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ember);
+  flex: none;
+}
+.specbox {
+  width: 260px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  padding: 0.3rem 0.8rem;
+}
+.thread {
+  width: 300px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.navdemo {
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  overflow: hidden;
+  background: var(--ground);
+}
+.navdemo--phone {
+  width: 286px;
+}
+.navdemo--rail {
+  display: inline-flex;
+  height: 300px;
+}
+.navdemo--rail .ph-rail {
+  border-right: 0;
+}
+.navdemo--bar {
+  width: 286px;
+  padding-top: 0.5rem;
+}
+
+.foot {
+  margin-top: 4rem;
+  padding-top: 1.4rem;
+  border-top: 1px solid var(--line);
+  font-family: var(--mono);
+  font-size: 0.64rem;
+  color: var(--muted);
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem 2rem;
+}

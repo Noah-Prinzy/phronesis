@@ -1,0 +1,556 @@
+<title>Phronesis Welcome Screen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600&family=IBM+Plex+Sans:wght@300;400;500&family=IBM+Plex+Mono:wght@400&display=swap">
+
+<style>
+/* ============================================================
+   PHRONESIS · frontend_V2 · page 01 — Welcome
+   Tokens are lifted verbatim from the element sheet. Nothing on
+   this page introduces a colour, radius or type size of its own;
+   that is the test of whether the system actually holds.
+   ============================================================ */
+:root {
+  --ground:#1a1a1c; --ground-lift:#202023; --panel:#2a2a2e;
+  --panel-hi:#34343a; --panel-top:#3f3f46; --line:#34343a; --line-hi:#4a4a52;
+  --ink:#f4f4f6; --ink-dim:#a8a8ae; --muted:#6e6e76;
+  --ember:#ff7a2f; --ember-wash:rgba(255,122,47,0.30);
+  --r-pill:999px; --r-card:14px;
+  --ease:cubic-bezier(0.4,0,0.2,1); --ease-out:cubic-bezier(0.16,1,0.3,1);
+  --display:'Orbitron','Eurostile',sans-serif;
+  --ui:'IBM Plex Sans','Segoe UI',system-ui,sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,Consolas,monospace;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font-family:var(--ui); font-size:15px; font-weight:300; line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3{margin:0;text-wrap:balance} p{margin:0}
+
+.wrap{width:min(1180px,100% - 2.5rem);margin-inline:auto;padding-block:clamp(2.5rem,6vw,4rem) 5rem}
+
+.masthead{margin-bottom:2.5rem}
+.eyebrow{
+  font-family:var(--mono);font-size:0.65rem;letter-spacing:0.22em;
+  text-transform:uppercase;color:var(--muted);
+  display:flex;align-items:center;gap:0.9rem;margin-bottom:1rem;
+}
+.eyebrow::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--line-hi),transparent)}
+.masthead h1{
+  font-family:var(--display);font-weight:600;
+  font-size:clamp(1.9rem,4.6vw,2.9rem);letter-spacing:0.03em;line-height:1.06;
+  margin-bottom:0.9rem;
+}
+.masthead p{color:var(--ink-dim);max-width:62ch;font-size:1.0625rem}
+
+.layout{display:grid;grid-template-columns:minmax(0,340px) minmax(0,1fr);gap:clamp(2rem,4vw,3.5rem);align-items:start}
+@media (max-width:860px){.layout{grid-template-columns:minmax(0,1fr)}}
+
+/* ---------- the phone ---------- */
+.device{
+  width:340px;justify-self:center;
+  border:1px solid var(--line-hi);border-radius:30px;
+  background:#000;padding:8px;
+  box-shadow:0 40px 80px -40px #000, 0 0 0 1px rgba(255,255,255,0.03) inset;
+  position:sticky;top:2rem;
+}
+.screen{
+  position:relative;width:100%;height:684px;border-radius:23px;overflow:hidden;
+  background:var(--ground);display:flex;flex-direction:column;
+}
+/* a faint warm horizon, so the ground is not dead flat */
+.screen::before{
+  content:"";position:absolute;inset:auto 0 -12% 0;height:46%;
+  background:radial-gradient(60% 100% at 50% 100%,rgba(255,122,47,0.07),transparent 70%);
+  pointer-events:none;
+}
+
+.statusbar{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:0.7rem 1.15rem 0.2rem;font-family:var(--mono);font-size:0.62rem;
+  color:var(--muted);letter-spacing:0.04em;flex:none;position:relative;z-index:2;
+}
+.statusbar .sig{display:flex;gap:3px;align-items:flex-end}
+.statusbar .sig i{width:2.5px;background:var(--muted);border-radius:1px}
+
+.brandline{
+  text-align:center;font-family:var(--display);font-weight:500;
+  font-size:0.6rem;letter-spacing:0.42em;color:var(--muted);
+  padding:0.5rem 0 0;flex:none;position:relative;z-index:2;
+}
+.brandline{transition:opacity 700ms var(--ease-out)}
+.booting .brandline{opacity:0}
+
+.stage{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:0 1.5rem;gap:1.6rem;position:relative;z-index:2;min-height:0;
+}
+
+.orbwrap{transition:opacity 900ms var(--ease-out),transform 900ms var(--ease-out)}
+.booting .orbwrap{opacity:0;transform:scale(0.94)}
+
+canvas#orb{display:block;width:186px;height:186px}
+
+.speech{
+  text-align:center;max-width:27ch;
+  font-size:0.9375rem;line-height:1.62;color:var(--ink);
+  display:flex;flex-direction:column;gap:0.85rem;
+}
+.speech p{opacity:1}
+.speech .w{
+  display:inline-block;
+  transition:opacity 440ms var(--ease-out),transform 440ms var(--ease-out);
+}
+.speech .w.pending{opacity:0;transform:translateY(5px)}
+.speech .dim{color:var(--ink-dim)}
+
+.actions{
+  padding:0 1.5rem 1.6rem;display:flex;flex-direction:column;gap:0.55rem;
+  align-items:stretch;flex:none;position:relative;z-index:2;
+}
+/* held back only while Phronesis is still speaking; JS removes it */
+.actions.hold{opacity:0;transform:translateY(8px);pointer-events:none}
+.actions{transition:opacity 560ms var(--ease-out),transform 560ms var(--ease-out)}
+
+.homebar{
+  width:110px;height:4px;border-radius:2px;background:var(--line-hi);
+  margin:0 auto 0.55rem;flex:none;opacity:0.7;
+}
+
+/* skip layer — a tap anywhere finishes the reveal */
+.skip{position:absolute;inset:0;z-index:3;cursor:pointer;background:transparent;border:0;padding:0}
+.skip[hidden]{display:none}
+
+/* ---------- system components, verbatim ---------- */
+.btn{
+  font-family:var(--ui);font-weight:500;font-size:0.9375rem;line-height:1;
+  border:1px solid transparent;border-radius:var(--r-pill);
+  padding:0 1.4rem;height:48px;
+  display:inline-flex;align-items:center;justify-content:center;gap:0.5rem;
+  cursor:pointer;white-space:nowrap;position:relative;isolation:isolate;overflow:hidden;
+  -webkit-tap-highlight-color:transparent;
+  transition-property:background,border-color,color,transform;
+  transition-duration:220ms,220ms,220ms,150ms;
+  transition-timing-function:var(--ease-out);
+}
+.btn::after{
+  content:"";position:absolute;inset:0;z-index:-1;border-radius:inherit;
+  background:radial-gradient(circle at var(--px,50%) var(--py,50%),rgba(255,122,47,0.30),rgba(255,122,47,0) 65%);
+  opacity:0;transition:opacity 300ms var(--ease-out);pointer-events:none;
+}
+.btn.is-touch::after{opacity:1;transition-duration:90ms}
+.btn:active{transform:translateY(1px) scale(0.985)}
+.btn:focus-visible{outline:2px solid var(--ember);outline-offset:3px}
+.btn--primary{background:var(--panel-hi);color:var(--ink);border-color:var(--line-hi)}
+.btn--primary:hover{background:var(--panel-top)}
+.btn--ghost{background:transparent;color:var(--ink-dim)}
+.btn--ghost:hover{background:var(--panel);color:var(--ink)}
+
+/* ---------- notes column ---------- */
+.notes{display:flex;flex-direction:column;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:var(--r-card);overflow:hidden}
+.note{background:var(--ground-lift);padding:1.15rem 1.3rem 1.3rem}
+.note h3{
+  font-family:var(--mono);font-size:0.65rem;letter-spacing:0.14em;
+  text-transform:uppercase;color:var(--muted);margin-bottom:0.6rem;
+}
+.note p{font-size:0.9rem;color:var(--ink-dim);line-height:1.6}
+.note p + p{margin-top:0.6rem}
+.note b{color:var(--ink);font-weight:500}
+.note code{font-family:var(--mono);font-size:0.8em;background:var(--panel);padding:0.1em 0.38em;border-radius:4px;color:var(--ink-dim)}
+
+.controls{display:flex;gap:0.5rem;flex-wrap:wrap;margin-top:1.1rem;justify-content:center}
+.ctl{
+  font-family:var(--mono);font-size:0.62rem;letter-spacing:0.12em;text-transform:uppercase;
+  border:1px solid var(--line-hi);background:transparent;color:var(--muted);
+  padding:0.5rem 0.8rem;border-radius:6px;cursor:pointer;
+  transition:color 200ms,background 200ms;
+}
+.ctl:hover{color:var(--ink);background:var(--panel)}
+.ctl:focus-visible{outline:2px solid var(--ember);outline-offset:2px}
+
+footer{
+  margin-top:3.5rem;padding-top:1.4rem;border-top:1px solid var(--line);
+  font-family:var(--mono);font-size:0.65rem;color:var(--muted);
+  display:flex;justify-content:space-between;flex-wrap:wrap;gap:0.5rem 2rem;
+}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:0.001ms !important;animation-iteration-count:1 !important;transition-duration:0.001ms !important}
+  .orbwrap,.brandline,.actions{opacity:1 !important;transform:none !important}
+  .actions.hold{opacity:1 !important;transform:none !important;pointer-events:auto}
+  .speech .w,.speech .w.pending{opacity:1 !important;transform:none !important}
+}
+</style>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <p class="eyebrow">frontend_V2 · page 01</p>
+    <h1>Welcome</h1>
+    <p>
+      First contact. Phronesis introduces itself, speaks while it does, and
+      hands you one way forward. Built entirely from the element sheet — no new
+      colours, radii or type sizes.
+    </p>
+  </header>
+
+  <div class="layout">
+
+    <!-- ============ THE SCREEN ============ -->
+    <div>
+      <div class="device">
+        <div class="screen playing" id="screen">
+          <div class="statusbar">
+            <span>9:41</span>
+            <span style="display:flex;gap:0.5rem;align-items:center;">
+              <span class="sig"><i style="height:4px"></i><i style="height:6px"></i><i style="height:8px"></i><i style="height:10px"></i></span>
+              <span>84%</span>
+            </span>
+          </div>
+
+          <p class="brandline">PHRONESIS</p>
+
+          <div class="stage">
+            <div class="orbwrap"><canvas id="orb" width="372" height="372"></canvas></div>
+            <div class="speech" id="speech"></div>
+          </div>
+
+          <div class="actions" id="actions">
+            <button class="btn btn--primary" type="button">Get started</button>
+            <button class="btn btn--ghost" type="button">I've used Phronesis before</button>
+          </div>
+
+          <div class="homebar"></div>
+
+          <button class="skip" id="skip" aria-label="Show everything now"></button>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button class="ctl" id="replay" type="button">Replay</button>
+        <button class="ctl" id="calm" type="button">Reduced motion</button>
+      </div>
+    </div>
+
+    <!-- ============ NOTES ============ -->
+    <div class="notes">
+      <div class="note">
+        <h3>The gesture conflict</h3>
+        <p>
+          V1 said <b>tap the avatar to continue</b>. In the new system, tapping
+          the avatar means <b>microphone</b> — on Home, on Account, everywhere.
+          Teaching one meaning on the first screen and overriding it on the
+          second is how an app ends up feeling arbitrary.
+        </p>
+        <p>
+          So Welcome gets a real button, and the avatar keeps its meaning
+          intact. Tapping anywhere else still skips the reveal, which is what
+          an impatient returning user actually wants.
+        </p>
+      </div>
+
+      <div class="note">
+        <h3>Speaking, not animating</h3>
+        <p>
+          The words arrive in time with the voice rather than on a decorative
+          timer, and the avatar sits in <code>responding</code> for exactly as
+          long as there are words left. When it finishes, it drops to
+          <code>idle</code> and the buttons rise.
+        </p>
+        <p>
+          In the app the same sequence is driven by the TTS audio, so the ring
+          is reading the real waveform and the reveal tracks real speech. Here
+          it runs on the fallback breath.
+        </p>
+      </div>
+
+      <div class="note">
+        <h3>One action, not four</h3>
+        <p>
+          This screen exists to get you to the next one. A primary
+          <b>Get started</b>, and a quiet route back for people who already
+          have an account — nothing else competes.
+        </p>
+        <p>
+          No journey question here. That belongs in onboarding, where there is
+          room to explain what the answer changes.
+        </p>
+      </div>
+
+      <div class="note">
+        <h3>Copy</h3>
+        <p>
+          Rewritten from V1's three paragraphs, which opened with "I learn with
+          every interaction" — true, but not something a person on their first
+          screen has any reason to care about.
+        </p>
+        <p>
+          What replaced it names the three things the product actually does,
+          and closes by telling you that you can <b>type, speak, or show</b> —
+          because multi-modal input is the thing people least expect and most
+          need to be told about. Revert it if you'd rather keep yours.
+        </p>
+      </div>
+
+      <div class="note">
+        <h3>Still to settle</h3>
+        <p>
+          <b>Language.</b> The plan localises voice per country. If the UI
+          localises too, this screen is where a language picker would live —
+          and it is the one thing that might justify a fourth element.
+        </p>
+        <p>
+          <b>Safe areas.</b> The action buttons sit above a home-indicator gap;
+          real devices need <code>env(safe-area-inset-bottom)</code>.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <span>Phronesis · frontend_V2 · Welcome</span>
+    <span>Built from element sheet tokens — nothing new introduced</span>
+  </footer>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ---------- the words Phronesis says ---------- */
+  var LINES = [
+    { text: "Hey \u2014 I'm Phronesis.", cls: '' },
+    { text: "I help you understand your car: what's wrong with it, what it should cost to fix, and which mechanic near you to trust.", cls: '' },
+    { text: "Tell me what's going on in your own words. Type it, say it, or show me.", cls: 'dim' }
+  ];
+
+  var WORD_MS = 52;        // stagger between words
+  var LINE_GAP_MS = 260;   // the breath between sentences
+  var START_MS = 900;      // after the orb has settled
+
+  var speech = document.getElementById('speech');
+  var actions = document.getElementById('actions');
+  var screen = document.getElementById('screen');
+  var skip = document.getElementById('skip');
+
+  var timers = [];
+  function clearTimers() {
+    for (var i = 0; i < timers.length; i++) window.clearTimeout(timers[i]);
+    timers = [];
+  }
+
+  function build() {
+    speech.innerHTML = '';
+    var all = [];
+    LINES.forEach(function (line) {
+      var p = document.createElement('p');
+      if (line.cls) p.className = line.cls;
+      var words = line.text.split(' ');
+      words.forEach(function (word, i) {
+        var span = document.createElement('span');
+        span.className = 'w pending';
+        span.textContent = word;
+        p.appendChild(span);
+        // a real text node between words: an inline-block swallows its own
+        // trailing space, which is how "I help you" becomes "Ihelpyou"
+        if (i < words.length - 1) p.appendChild(document.createTextNode(' '));
+        all.push(span);
+      });
+      speech.appendChild(p);
+      all.push(null);            // marks a sentence break
+    });
+    return all;
+  }
+
+  function run() {
+    clearTimers();
+    var spans = build();
+
+    screen.classList.add('booting');
+    actions.classList.add('hold');
+    skip.hidden = false;
+    state = 'responding';
+
+    // the orb and wordmark settle first
+    timers.push(window.setTimeout(function () {
+      screen.classList.remove('booting');
+    }, reduced ? 0 : 220));
+
+    // then the words arrive, one per beat, pausing between sentences
+    var at = reduced ? 0 : START_MS;
+    for (var i = 0; i < spans.length; i++) {
+      if (spans[i] === null) { at += reduced ? 0 : LINE_GAP_MS; continue; }
+      (function (el, when) {
+        timers.push(window.setTimeout(function () { el.classList.remove('pending'); }, when));
+      })(spans[i], at);
+      at += reduced ? 0 : WORD_MS;
+    }
+
+    // and when it stops speaking, the way forward appears
+    timers.push(window.setTimeout(function () {
+      state = 'idle';
+      actions.classList.remove('hold');
+      skip.hidden = true;
+    }, reduced ? 0 : at + 260));
+  }
+
+  function finishNow() {
+    // an impatient tap: show everything at once, stop speaking
+    clearTimers();
+    screen.classList.remove('booting');
+    var words = speech.querySelectorAll('.w.pending');
+    for (var i = 0; i < words.length; i++) words[i].classList.remove('pending');
+    state = 'idle';
+    actions.classList.remove('hold');
+    skip.hidden = true;
+  }
+
+  skip.addEventListener('click', finishNow);
+  document.getElementById('replay').addEventListener('click', run);
+
+  document.getElementById('calm').addEventListener('click', function () {
+    reduced = !reduced;
+    this.textContent = reduced ? 'Full motion' : 'Reduced motion';
+    run();
+  });
+
+  /* ================= the Halo avatar =================
+     Same renderer as the element sheet, trimmed to the two states this
+     screen uses. Idle and responding only — nothing here listens. */
+  var HALO = {
+    idle:       { travel: 0.30, tighten: 1.00, bright: 0.80, breath: 0.020, inner: 0.45, react: 0 },
+    responding: { travel: 0.30, tighten: 1.02, bright: 1.20, breath: 0.022, inner: 0.60, react: 1 }
+  };
+  var state = 'responding';
+  var SEG = 300;
+
+  var el = document.getElementById('orb');
+  var ctx = el.getContext('2d');
+  var motes = [];
+  for (var m = 0; m < 60; m++) {
+    motes.push({ lon: Math.random() * 6.2832, rad: Math.random(), seed: Math.random() });
+  }
+
+  function lumAt(a, t, sp) {
+    var v = Math.sin(a - t * sp) * 0.5
+          + Math.sin(a * 2.0 + t * sp * 0.61 + 1.9) * 0.32
+          + Math.sin(a * 3.0 - t * sp * 0.37 + 4.1) * 0.18;
+    return Math.pow((v + 1) / 2, 1.7);
+  }
+
+  var pulses = [], lastPulse = 0, lastLevel = 0;
+
+  function drawHalo(t) {
+    var h = HALO[state];
+    var W = el.width, H = el.height, cx = W / 2, cy = H / 2;
+    var unit = Math.min(W, H) / 440;
+    ctx.clearRect(0, 0, W, H);
+
+    // no audio attached on this screen: the fallback breath stands in for speech
+    var level = h.react ? 0.10 + Math.abs(Math.sin(t * 1.1)) * 0.10 : 0;
+
+    var R = Math.min(W, H) * 0.33 * h.tighten * (1 + Math.sin(t * 0.7) * h.breath + level * 0.10);
+    var glow = h.bright * (1 + level * 0.8);
+    var tilt = 0.34 + Math.sin(t * 0.23) * 0.16;
+    var lean = Math.sin(t * 0.17) * 0.22;
+
+    var g = ctx.createRadialGradient(cx, cy, R * 0.25, cx, cy, R * 1.75);
+    g.addColorStop(0, 'rgba(255,122,47,' + (0.17 * glow).toFixed(3) + ')');
+    g.addColorStop(0.5, 'rgba(255,122,47,' + (0.06 * glow).toFixed(3) + ')');
+    g.addColorStop(1, 'rgba(255,122,47,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(cx, cy, R * 1.75, 0, 6.2832); ctx.fill();
+
+    var coreR = R * (0.16 + Math.sin(t * 0.9 + 1.2) * 0.025 + level * 0.07);
+    var g2 = ctx.createRadialGradient(cx, cy, 0, cx, cy, coreR * 3.2);
+    g2.addColorStop(0, 'rgba(255,250,244,' + (0.5 * glow).toFixed(3) + ')');
+    g2.addColorStop(0.3, 'rgba(255,214,170,' + (0.13 * glow).toFixed(3) + ')');
+    g2.addColorStop(1, 'rgba(255,160,90,0)');
+    ctx.fillStyle = g2;
+    ctx.beginPath(); ctx.arc(cx, cy, coreR * 3.2, 0, 6.2832); ctx.fill();
+
+    if (state === 'responding' && level - lastLevel > 0.008 && t - lastPulse > 0.9) {
+      pulses.push(t); lastPulse = t;
+    }
+    lastLevel = level;
+
+    for (var q = pulses.length - 1; q >= 0; q--) {
+      var age = (t - pulses[q]) / 1.7;
+      if (age > 1) { pulses.splice(q, 1); continue; }
+      ctx.save();
+      ctx.translate(cx, cy); ctx.rotate(lean); ctx.scale(1, tilt);
+      ctx.beginPath(); ctx.arc(0, 0, R * (1 + age * 0.8), 0, 6.2832);
+      ctx.strokeStyle = 'rgba(255,240,225,' + (0.26 * (1 - age)).toFixed(3) + ')';
+      ctx.lineWidth = unit * 1.5 * (1 - age * 0.5);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    for (var ring = 0; ring < 2; ring++) {
+      var rr = ring === 0 ? R : R * 0.66;
+      var dir = ring === 0 ? 1 : -0.7;
+      var amp = ring === 0 ? 1 : h.inner * 0.6;
+      var segs = ring === 0 ? SEG : Math.round(SEG * 0.55);
+
+      for (var i = 0; i < segs; i++) {
+        var a = (i / segs) * 6.2832;
+        var lum = lumAt(a, t, h.travel * dir) * amp * glow;
+        var jit = 1 + Math.sin(a * 9 + t * 0.9) * 0.010 + Math.sin(a * 17 - t * 1.3) * 0.006;
+        var ex = Math.cos(a) * rr * jit;
+        var ey = Math.sin(a) * rr * jit * tilt;
+        var sx = cx + ex * Math.cos(lean) - ey * Math.sin(lean);
+        var sy = cy + ex * Math.sin(lean) + ey * Math.cos(lean);
+        var depth = (Math.sin(a) + 1) / 2;
+        var al = (0.05 + lum * 0.85) * (0.45 + depth * 0.55);
+        if (al <= 0.015) continue;
+        if (al > 1) al = 1;
+        var size = unit * (0.5 + lum * 2.3) * (0.6 + depth * 0.4);
+        var col = lum > 0.72 ? '255,247,236' : (lum > 0.4 ? '226,230,240' : '138,144,158');
+        ctx.fillStyle = 'rgba(' + col + ',' + al.toFixed(3) + ')';
+        ctx.beginPath(); ctx.arc(sx, sy, size, 0, 6.2832); ctx.fill();
+      }
+    }
+
+    for (var k = 0; k < motes.length; k++) {
+      var mo = motes[k];
+      var ma = (mo.lon + t * 0.12) % 6.2832;
+      var mr = R * (1.02 + mo.rad * 0.22) * (1 + Math.sin(t * 0.5 + mo.seed * 6.283) * 0.05);
+      var mex = Math.cos(ma) * mr, mey = Math.sin(ma) * mr * tilt;
+      ctx.fillStyle = 'rgba(240,238,236,' + (0.06 + lumAt(ma, t, h.travel) * 0.30).toFixed(3) + ')';
+      ctx.beginPath();
+      ctx.arc(cx + mex * Math.cos(lean) - mey * Math.sin(lean),
+              cy + mex * Math.sin(lean) + mey * Math.cos(lean),
+              unit * (0.4 + mo.seed * 0.7), 0, 6.2832);
+      ctx.fill();
+    }
+  }
+
+  var t0 = performance.now();
+  drawHalo(0);                                  // paint before the first frame
+  (function loop(now) {
+    drawHalo((now - t0) / 1000);
+    requestAnimationFrame(loop);
+  })(t0);
+
+  /* ---------- press is light ---------- */
+  document.addEventListener('pointerdown', function (e) {
+    var b = e.target.closest('.btn');
+    if (!b) return;
+    var r = b.getBoundingClientRect();
+    b.style.setProperty('--px', (((e.clientX - r.left) / r.width) * 100).toFixed(1) + '%');
+    b.style.setProperty('--py', (((e.clientY - r.top) / r.height) * 100).toFixed(1) + '%');
+    b.classList.add('is-touch');
+  }, true);
+  ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (ev) {
+    document.addEventListener(ev, function () {
+      var lit = document.querySelectorAll('.is-touch');
+      for (var i = 0; i < lit.length; i++) lit[i].classList.remove('is-touch');
+    }, true);
+  });
+
+  run();
+})();
+</script>

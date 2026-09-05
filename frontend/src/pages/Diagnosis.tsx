@@ -1,189 +1,202 @@
-// frontend/src/pages/Diagnosis.tsx
+import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { Button, IconButton, SectionHead, SeverityBadge, Spinner, Tabs } from '../ui'
+import { Hologram } from '../diagnosis/HologramLazy'
+import { FindingCard } from '../components/FindingCard'
+import { mockScan } from '../data/findings'
+import type { ScanResult, Scenario } from '../data/findings'
+import { useMediaQuery } from '../app/useMediaQuery'
 
-import { useEffect, useState, type FormEvent } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import AvatarElement from '../components/AvatarElement/AvatarElement';
-import type { AvatarState } from '../components/AvatarElement/avatarStates';
-import CarHologram from '../components/CarHologram/CarHologram';
-import type { Urgency } from '../components/CarHologram/urgencyColors';
-import StarfieldBackground from '../components/StarfieldBackground';
-import { useVoice } from '../components/Voice/VoiceProvider';
-import { useAuth } from '../context/AuthContext';
-import { getStoredCarProfile } from '../carProfileStorage';
-import { type DiagnosticReport, type UrgencyLevel, setStoredDiagnosticReport } from '../diagnosisStorage';
-import { useMockObd } from '../hooks/useMockObd';
-import { addStoredNotification } from '../notificationStorage';
-
-const FALLBACK_ERROR = "Sorry, I couldn't run that diagnosis just now. Check the backend is reachable and try again.";
-
-// Empty by default — see Home.tsx for the full explanation of this pattern.
-const API_URL = import.meta.env.VITE_API_URL ?? '';
-
-function urgencyLevelToHologram(level: UrgencyLevel): Urgency {
-  if (level === 'critical') return 'critical';
-  if (level === 'high' || level === 'medium') return 'warning';
-  return 'healthy';
-}
-
+/**
+ * Diagnosis.
+ *
+ * Grey until something is wrong. A clean scan carries no colour at all — not
+ * green, because "nothing wrong" is the app's default state and spending a hue
+ * on it would make the palette shout about the ordinary.
+ */
 export function Diagnosis() {
-  const navigate = useNavigate();
-  const location = useLocation();
-  const { speak, isSpeaking } = useVoice();
-  const { getIdToken } = useAuth();
-  const obd = useMockObd();
+  const navigate = useNavigate()
+  const wide = useMediaQuery('(min-width: 768px)')
 
-  const [symptomText, setSymptomText] = useState(
-    () => (location.state as { symptomText?: string } | null)?.symptomText ?? '',
-  );
-  const [isSending, setIsSending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [report, setReport] = useState<DiagnosticReport | null>(null);
+  const [scan, setScan] = useState<ScanResult | null>(null)
+  const [scanning, setScanning] = useState(true)
+  const [selected, setSelected] = useState<string | null>(null)
+  const [tab, setTab] = useState<'findings' | 'live'>('findings')
+  // Review scaffolding: lets both scan outcomes be seen. Goes with the mock.
+  const [scenario, setScenario] = useState<Scenario>('faults')
 
   useEffect(() => {
-    if (report?.urgencyLevel === 'critical') {
-      addStoredNotification({
-        type: 'alert',
-        title: 'Critical issue detected',
-        message: report.issue,
-        relatedData: { reportCreatedAt: report.createdAt },
-      });
+    let cancelled = false
+    setScanning(true)
+    mockScan(scenario).then((r) => {
+      if (cancelled) return
+      setScan(r)
+      setScanning(false)
+    })
+    return () => {
+      cancelled = true
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [report]);
+  }, [scenario])
 
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
-    const trimmed = symptomText.trim();
-    if (!trimmed || isSending) return;
-
-    setIsSending(true);
-    setError(null);
-
-    try {
-      const carProfile = getStoredCarProfile();
-      const token = await getIdToken();
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-      const response = await fetch(`${API_URL}/api/diagnosis`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          symptomText: trimmed,
-          carProfile: carProfile ?? undefined,
-          obdSnapshot: obd.snapshot,
-        }),
-      });
-      if (!response.ok) throw new Error(`Backend responded with ${response.status}`);
-
-      const data: { report: Omit<DiagnosticReport, 'createdAt'> } = await response.json();
-      const fullReport: DiagnosticReport = { ...data.report, createdAt: new Date().toISOString() };
-      setReport(fullReport);
-      setStoredDiagnosticReport(fullReport);
-
-      speak(
-        `${fullReport.issue}. Likely cause: ${fullReport.rootCause}. This is a ${fullReport.urgencyLevel} priority issue — ${fullReport.timeline}.`,
-      );
-    } catch (err) {
-      console.error('Diagnosis request failed:', err);
-      setError(FALLBACK_ERROR);
-    } finally {
-      setIsSending(false);
-    }
+  function rescan() {
+    setScan(null)
+    setSelected(null)
+    setScenario((s) => (s === 'faults' ? 'clean' : 'faults'))
   }
 
-  const hologramUrgency: Urgency = report ? urgencyLevelToHologram(report.urgencyLevel) : obd.urgency;
-  const avatarState: AvatarState = isSending ? 'thinking' : isSpeaking ? 'responding' : 'idle';
+  const findings = scan?.findings ?? []
+  const mustFix = findings.filter((f) => f.urgent)
+  const canWait = findings.filter((f) => !f.urgent)
+  const clean = !scanning && findings.length === 0
 
-  return (
-    <div className="relative flex h-screen w-screen flex-col bg-[#050914] px-6 py-8">
-      <StarfieldBackground theme="dark" />
+  const list = (
+    <>
+      {scanning && (
+        <p className="diag__status">
+          <Spinner size={12} /> Reading the engine…
+        </p>
+      )}
 
-      <div className="mb-6 flex w-full max-w-4xl items-center">
-        <Link to="/home" aria-label="Back to chat" className="text-[#e8eefb]">
-          <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth={2}>
-            <path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
-        </Link>
-        <h1 className="mx-auto text-lg font-bold text-[#e8eefb]">Diagnosis</h1>
-      </div>
-
-      <div className="mx-auto grid w-full max-w-4xl flex-1 grid-cols-1 gap-8 overflow-y-auto md:grid-cols-2">
-        <div className="flex flex-col items-center gap-4">
-          <CarHologram urgency={hologramUrgency} size="min(70vw, 320px)" />
-
-          <div className="w-full max-w-xs rounded-lg border border-[#1c2b47] bg-[#0c1424] p-4 text-xs text-[#93a6c6]">
-            <p className="mb-2 font-semibold tracking-wide text-[#60a5fa] uppercase">Simulated OBD Data</p>
-            <div className="grid grid-cols-2 gap-x-3 gap-y-1">
-              <span>RPM</span>
-              <span className="text-right text-[#e8eefb]">{obd.snapshot.rpm}</span>
-              <span>Coolant</span>
-              <span className="text-right text-[#e8eefb]">{obd.snapshot.temperature}°C</span>
-              <span>Battery</span>
-              <span className="text-right text-[#e8eefb]">{obd.snapshot.batteryVoltage}V</span>
-              <span>DTC Codes</span>
-              <span className="text-right text-[#e8eefb]">{obd.snapshot.dtcCodes.join(', ') || 'None'}</span>
-            </div>
-          </div>
+      {clean && (
+        <div className="diag__clear">
+          <SeverityBadge level="clear" />
+          <p className="diag__clearBody">
+            No faults found. Everything I can read is inside its normal range.
+          </p>
+          <p className="diag__stamp">last scan · {scan?.at}</p>
         </div>
+      )}
 
-        <div className="flex flex-col gap-4">
-          <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-            <label className="text-xs font-semibold tracking-wide text-[#60a5fa] uppercase" htmlFor="symptoms">
-              Describe what you're noticing
-            </label>
-            <textarea
-              id="symptoms"
-              value={symptomText}
-              onChange={(e) => setSymptomText(e.target.value)}
-              rows={5}
-              placeholder="e.g. Knocking sound from the engine when accelerating uphill"
-              disabled={isSending}
-              className="rounded-lg border border-[#3b82f6]/45 bg-transparent px-4 py-3 text-sm text-[#e8eefb] placeholder:text-[#93a6c6]/70 outline-none focus:border-[#3b82f6] disabled:opacity-60"
+      {mustFix.length > 0 && (
+        <>
+          <SectionHead>Must fix</SectionHead>
+          {mustFix.map((f) => (
+            <FindingCard
+              key={f.id}
+              finding={f}
+              selected={selected === f.id}
+              onSelect={(id) => setSelected(id === selected ? null : id)}
+              showExplanation={wide}
             />
-            <button
-              type="submit"
-              disabled={isSending || !symptomText.trim()}
-              className="rounded-lg bg-[#3b82f6] px-6 py-3 font-semibold text-white transition-colors hover:bg-[#2f6fd6] disabled:opacity-60"
-            >
-              {isSending ? 'Running Diagnosis...' : 'Run Diagnosis'}
-            </button>
-            {error && <p className="text-xs text-[#f0b45f]">{error}</p>}
-          </form>
+          ))}
+        </>
+      )}
 
-          {report && (
-            <div className="flex flex-col gap-3 rounded-lg border border-[#1c2b47] bg-[#0c1424] p-4">
-              <div className="flex items-center justify-between">
-                <h2 className="text-sm font-semibold text-[#e8eefb]">{report.issue}</h2>
-                <span
-                  className="rounded-full px-2 py-1 text-[10px] font-bold tracking-wide uppercase"
-                  style={{ color: '#050914', backgroundColor: report.urgencyLevel === 'critical' ? '#ef4444' : '#f0b45f' }}
-                >
-                  {report.urgencyLevel}
-                </span>
-              </div>
-              <p className="text-xs text-[#93a6c6]">{report.rootCause}</p>
-              <p className="text-xs text-[#93a6c6]">
-                Estimated cost: ${report.costEstimateLow}-${report.costEstimateHigh} · {report.timeline}
-              </p>
-              <button
-                type="button"
-                onClick={() => navigate('/solutions')}
-                className="mt-1 self-start rounded-lg border border-[#3b82f6]/40 px-4 py-2 text-sm font-semibold text-[#e8eefb] transition-colors hover:bg-[#3b82f6]/15"
-              >
-                View Solutions
-              </button>
-            </div>
-          )}
+      {canWait.length > 0 && (
+        <>
+          <SectionHead>Can wait</SectionHead>
+          {canWait.map((f) => (
+            <FindingCard
+              key={f.id}
+              finding={f}
+              selected={selected === f.id}
+              onSelect={(id) => setSelected(id === selected ? null : id)}
+              showExplanation={wide}
+            />
+          ))}
+        </>
+      )}
+    </>
+  )
+
+  const holo = (
+    <Hologram
+      findings={scanning ? [] : findings}
+      selectedId={selected}
+      onSelect={setSelected}
+      scanning={scanning}
+      vehicle="2015 TOYOTA PREMIO · UAX 123B"
+    />
+  )
+
+  /* --------------------------------------------------------------- desktop */
+  if (wide) {
+    return (
+      <main className="diag diag--wide">
+        {/* The columns live inside the container, not on it: an @container
+            rule cannot style its own container, so the row/column flip has to
+            happen one level down. */}
+        <div className="diag__cols">
+          <div className="diag__stage">{holo}</div>
+
+          <section className="diag__panel">
+          <div className="diag__panelHead">
+            <Tabs
+              label="Diagnosis view"
+              value={tab}
+              onChange={setTab}
+              options={[
+                { value: 'findings', label: 'Findings' },
+                { value: 'live', label: 'Live data' },
+              ]}
+            />
+            <IconButton label="Scan again" onClick={rescan} disabled={scanning}>
+              <RefreshIcon />
+            </IconButton>
+          </div>
+
+          <div className="diag__list">
+            {tab === 'findings' ? (
+              list
+            ) : (
+              <p className="diag__status">Live OBD readouts land here in step 4.</p>
+            )}
+          </div>
+
+            {findings.length > 0 && (
+              <Button size="lg" wide onClick={() => navigate('/solutions')}>
+                What will this cost to fix?
+              </Button>
+            )}
+          </section>
         </div>
-      </div>
+      </main>
+    )
+  }
 
-      <div className="absolute right-6 bottom-6">
-        <AvatarElement state={avatarState} theme="dark" size={64} interactive={false} captureMic={false} pointCount={2400} />
-      </div>
-    </div>
-  );
+  /* ----------------------------------------------------------------- phone */
+  return (
+    <main className="diag">
+      <header className="diag__bar">
+        <IconButton label="Back" onClick={() => navigate('/home')}>
+          <BackIcon />
+        </IconButton>
+        <span className="diag__title">DIAGNOSIS</span>
+        <IconButton label="Scan again" onClick={rescan} disabled={scanning}>
+          <RefreshIcon />
+        </IconButton>
+      </header>
+
+      <div className="diag__stage diag__stage--phone">{holo}</div>
+
+      <div className="diag__list">{list}</div>
+
+      {findings.length > 0 && (
+        <div className="diag__actions">
+          <Button size="lg" wide onClick={() => navigate('/solutions')}>
+            What will this cost?
+          </Button>
+        </div>
+      )}
+    </main>
+  )
 }
 
-export default Diagnosis;
+/* -------------------------------------------------------------------- icons */
+
+function BackIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+      <path d="M15 18l-6-6 6-6" />
+    </svg>
+  )
+}
+
+function RefreshIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+      <path d="M20 11a8 8 0 1 0-.6 4" />
+      <path d="M20 4v7h-7" />
+    </svg>
+  )
+}

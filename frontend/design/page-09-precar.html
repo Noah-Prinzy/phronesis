@@ -1,0 +1,843 @@
+<title>Phronesis Pre-Car Journey</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600&family=IBM+Plex+Sans:wght@300;400;500&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+<style>
+/* ============================================================
+   PHRONESIS · pre-car journey · Discover and Compare
+   Same tokens, same shell. Two slots swap, nothing else.
+   ============================================================ */
+:root{
+  --ground:#1a1a1c;--ground-lift:#202023;--panel:#2a2a2e;
+  --panel-hi:#34343a;--panel-top:#3f3f46;--line:#34343a;--line-hi:#4a4a52;
+  --ink:#f4f4f6;--ink-dim:#a8a8ae;--muted:#6e6e76;
+  --ember:#ff7a2f;--ember-wash:rgba(255,122,47,0.30);
+  --r-pill:999px;--r-card:14px;--r-input:10px;--r-tile:8px;
+  --ease:cubic-bezier(0.4,0,0.2,1);--ease-out:cubic-bezier(0.16,1,0.3,1);
+  --display:'Orbitron','Eurostile',sans-serif;
+  --ui:'IBM Plex Sans','Segoe UI',system-ui,sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,Consolas,monospace;
+  --glass:linear-gradient(180deg,rgba(255,255,255,0.07),rgba(255,255,255,0.025));
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--ui);
+  font-size:15px;font-weight:300;line-height:1.6;-webkit-font-smoothing:antialiased}
+h1,h2,h3,h4{margin:0;text-wrap:balance}p{margin:0}
+
+.topbar{position:sticky;top:0;z-index:60;background:rgba(26,26,28,0.88);
+  backdrop-filter:blur(18px);border-bottom:1px solid var(--line)}
+.topbar__in{width:min(1240px,100% - 2.5rem);margin-inline:auto;display:flex;
+  align-items:center;gap:1.2rem;padding:0.75rem 0;flex-wrap:wrap}
+.brand{font-family:var(--display);font-weight:600;font-size:0.88rem;letter-spacing:0.15em}
+.brand span{color:var(--ember)}
+.switcher{display:flex;padding:3px;gap:3px;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-pill);position:relative;margin-left:auto}
+.switcher__thumb{position:absolute;top:3px;bottom:3px;left:0;border-radius:var(--r-pill);
+  background:var(--panel-top);transition:transform 320ms var(--ease-out),width 320ms var(--ease-out)}
+.switcher button{border:0;background:transparent;cursor:pointer;font-family:var(--ui);
+  font-size:0.78rem;font-weight:500;color:var(--ink-dim);padding:0.42rem 1rem;
+  border-radius:var(--r-pill);position:relative;z-index:1;transition:color 220ms;min-height:34px}
+.switcher button[aria-pressed="true"]{color:var(--ink)}
+.jump{display:flex;gap:0.1rem;flex-wrap:wrap}
+.jump a{font-family:var(--mono);font-size:0.62rem;letter-spacing:0.09em;text-transform:uppercase;
+  color:var(--muted);text-decoration:none;padding:0.3rem 0.45rem;border-radius:5px;
+  transition:color 200ms,background 200ms}
+.jump a:hover{color:var(--ink);background:var(--panel)}
+
+.wrap{width:min(1240px,100% - 2.5rem);margin-inline:auto;padding-bottom:6rem}
+.hero{padding:clamp(2.5rem,6vw,4.5rem) 0 1.5rem}
+.hero h1{font-family:var(--display);font-weight:600;font-size:clamp(2rem,5vw,3.2rem);
+  letter-spacing:0.03em;line-height:1.05;margin-bottom:1rem}
+.hero p{color:var(--ink-dim);max-width:64ch;font-size:1.0625rem}
+
+.slots{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--line);
+  border:1px solid var(--line);border-radius:var(--r-card);overflow:hidden;margin-top:2rem}
+.slot{background:var(--ground-lift);padding:0.8rem 0.7rem 0.9rem;text-align:center}
+.slot .k{font-family:var(--mono);font-size:0.55rem;letter-spacing:0.14em;color:var(--muted);display:block}
+.slot .a{font-size:0.82rem;color:var(--muted);display:block;margin-top:0.4rem;text-decoration:line-through;
+  text-decoration-color:var(--line-hi)}
+.slot .b{font-family:var(--display);font-size:0.8rem;font-weight:500;letter-spacing:0.03em;display:block;margin-top:0.2rem}
+.slot--same .a{text-decoration:none;color:var(--ink-dim)}
+.slot--same .b{display:none}
+.slot--swap{background:var(--panel)}
+.slot--swap .b{color:var(--ember)}
+
+section{margin-top:clamp(3rem,6vw,4.5rem);scroll-margin-top:5rem}
+.sechead{display:flex;align-items:baseline;gap:0.9rem;margin-bottom:1.4rem;flex-wrap:wrap}
+.sechead .n{font-family:var(--mono);font-size:0.62rem;letter-spacing:0.18em;color:var(--muted)}
+.sechead h2{font-family:var(--display);font-weight:500;font-size:1.35rem;letter-spacing:0.03em}
+.sechead p{color:var(--ink-dim);font-size:0.9rem;flex:1;min-width:14rem}
+
+.view[hidden]{display:none}
+.gallery{display:grid;gap:2rem}
+#phoneView .gallery{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+.plate{display:flex;flex-direction:column;gap:0.75rem;min-width:0}
+.plate__cap{display:flex;align-items:baseline;gap:0.6rem}
+.plate__cap b{font-family:var(--display);font-size:0.78rem;letter-spacing:0.1em;font-weight:600}
+.plate__cap span{font-family:var(--mono);font-size:0.6rem;color:var(--muted)}
+
+.device{width:300px;justify-self:center;border:1px solid var(--line-hi);border-radius:28px;
+  background:#000;padding:7px;box-shadow:0 30px 60px -35px #000}
+.screen{position:relative;width:100%;height:600px;border-radius:22px;overflow:hidden;
+  background:var(--ground);display:flex;flex-direction:column;font-size:14px}
+
+.deskframe{overflow-x:auto;overflow-y:hidden;padding-bottom:0.4rem;scrollbar-color:var(--line-hi) transparent}
+.deskframe .browser{width:1120px}
+.is-tablet .deskframe .browser{width:834px}
+.is-tablet .desk{height:1000px}
+.browser{border:1px solid var(--line-hi);border-radius:12px;overflow:hidden;background:#000;
+  box-shadow:0 30px 60px -40px #000}
+.browser__bar{display:flex;align-items:center;gap:0.8rem;padding:0.5rem 0.8rem;
+  background:var(--panel);border-bottom:1px solid var(--line)}
+.dots{display:flex;gap:5px}.dots i{width:8px;height:8px;border-radius:50%;background:var(--line-hi)}
+.browser__url{font-family:var(--mono);font-size:0.62rem;color:var(--muted)}
+.desk{position:relative;height:560px;background:var(--ground);display:flex;overflow:hidden;
+  font-size:14px;container-type:inline-size}
+
+/* the same two breakpoints as the post-car journey */
+@container (max-width:900px){
+  .disc-body{flex-direction:column}
+  .disc-list{flex:0 0 300px!important;border-right:0!important;
+    border-bottom:1px solid var(--line);overflow-y:auto!important}
+  .disc-detail{flex:1 1 auto!important;overflow-y:auto!important}
+  .cmp-market{grid-template-columns:1fr!important;overflow-y:auto!important}
+}
+
+.statusbar{display:flex;justify-content:space-between;align-items:center;
+  padding:0.55rem 1rem 0.25rem;font-family:var(--mono);font-size:0.56rem;
+  color:var(--muted);letter-spacing:0.04em;flex:none;z-index:3;position:relative}
+.sig{display:flex;gap:2px;align-items:flex-end}.sig i{width:2px;background:var(--muted);border-radius:1px}
+.appbar{display:flex;align-items:center;gap:0.5rem;padding:0.15rem 0.7rem 0.4rem;flex:none;position:relative;z-index:3}
+.appbar .ttl{font-family:var(--display);font-weight:600;font-size:0.6rem;letter-spacing:0.22em;flex:1;text-align:center}
+.appbar .mark{font-family:var(--display);font-weight:600;font-size:0.6rem;letter-spacing:0.22em}
+.icb{width:30px;height:30px;flex:none;border-radius:50%;border:0;background:transparent;
+  color:var(--ink-dim);display:grid;place-items:center;cursor:pointer;
+  position:relative;isolation:isolate;overflow:hidden;transition:background 200ms,color 200ms}
+.icb:hover{background:var(--panel);color:var(--ink)}
+
+.tabbar{display:flex;flex:none;border-top:1px solid var(--line);background:rgba(32,32,35,0.75);
+  backdrop-filter:blur(16px);z-index:3}
+.tab{flex:1;border:0;background:none;cursor:pointer;padding:0.42rem 0.1rem 0.48rem;display:flex;
+  flex-direction:column;align-items:center;gap:0.18rem;color:var(--muted);font-size:0.52rem;
+  position:relative;transition:color 200ms}
+.tab[aria-current="page"]{color:var(--ink)}
+.tab::before{content:"";position:absolute;top:0;left:50%;transform:translateX(-50%);
+  width:18px;height:2px;border-radius:0 0 2px 2px;background:transparent}
+.tab[aria-current="page"]::before{background:var(--ember);box-shadow:0 0 9px 0 var(--ember-wash)}
+.homebar{width:96px;height:3.5px;border-radius:2px;background:var(--line-hi);margin:0.3rem auto 0.42rem;flex:none;opacity:0.7}
+
+.rail{width:64px;flex:none;border-right:1px solid var(--line);background:var(--ground-lift);
+  display:flex;flex-direction:column;align-items:center;gap:0.35rem;padding:0.8rem 0.5rem}
+.rail .mk{font-family:var(--display);font-size:0.62rem;font-weight:600;letter-spacing:0.06em;color:var(--ember);margin-bottom:0.5rem}
+.rail button{width:44px;height:42px;border-radius:11px;border:0;background:transparent;color:var(--muted);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;
+  font-size:0.5rem;position:relative;transition:background 200ms,color 200ms}
+.rail button:hover{background:var(--panel);color:var(--ink-dim)}
+.rail button[aria-current="page"]{background:var(--panel-hi);color:var(--ink)}
+.rail button[aria-current="page"]::before{content:"";position:absolute;left:-0.5rem;top:50%;
+  transform:translateY(-50%);width:2px;height:18px;border-radius:2px;background:var(--ember);
+  box-shadow:0 0 9px 0 var(--ember-wash)}
+
+.btn{font-family:var(--ui);font-weight:500;font-size:0.8rem;line-height:1;border:1px solid transparent;
+  border-radius:var(--r-pill);padding:0 1rem;height:38px;display:inline-flex;align-items:center;
+  justify-content:center;gap:0.4rem;cursor:pointer;white-space:nowrap;position:relative;isolation:isolate;
+  overflow:hidden;-webkit-tap-highlight-color:transparent;
+  transition:background 220ms,border-color 220ms,color 220ms,transform 150ms}
+.btn::after,.chip::after,.icb::after,.row::after,.vcard::after{content:"";position:absolute;inset:0;
+  z-index:-1;border-radius:inherit;
+  background:radial-gradient(circle at var(--px,50%) var(--py,50%),rgba(255,122,47,0.30),rgba(255,122,47,0) 65%);
+  opacity:0;transition:opacity 300ms var(--ease-out);pointer-events:none}
+.is-touch::after{opacity:1!important;transition-duration:90ms!important}
+.btn:active{transform:translateY(1px) scale(0.985)}
+.btn:focus-visible,.chip:focus-visible{outline:2px solid var(--ember);outline-offset:3px}
+.btn--primary{background:var(--panel-hi);color:var(--ink);border-color:var(--line-hi)}
+.btn--primary:hover{background:var(--panel-top)}
+.btn--secondary{background:transparent;color:var(--ink);border-color:var(--line-hi)}
+.btn--secondary:hover{background:var(--panel)}
+.btn--ghost{background:transparent;color:var(--ink-dim)}
+.btn--ghost:hover{background:var(--panel);color:var(--ink)}
+.btn--wide{width:100%}
+
+.chip{display:inline-flex;align-items:center;gap:0.35rem;font-size:0.72rem;padding:0.32rem 0.7rem;
+  border-radius:var(--r-pill);border:1px solid var(--line-hi);background:var(--panel);color:var(--ink-dim);
+  cursor:pointer;position:relative;isolation:isolate;overflow:hidden;transition:background 200ms,color 200ms}
+.chip:hover{background:var(--panel-hi);color:var(--ink)}
+.chip[aria-pressed="true"]{background:var(--panel-top);color:var(--ink)}
+
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-card);
+  padding:0.65rem 0.75rem;display:flex;flex-direction:column;gap:0.4rem}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.dim{color:var(--muted)}.tiny{font-size:0.7rem}
+.searchfield{height:34px;border:1px solid var(--line-hi);background:var(--panel);
+  border-radius:var(--r-pill);display:flex;align-items:center;gap:0.45rem;padding:0 0.7rem;
+  font-size:0.76rem;color:var(--muted)}
+
+/* ---- NEW ATOM · vehicle card ---- */
+.vcard{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-card);
+  padding:0.6rem 0.7rem;display:flex;flex-direction:column;gap:0.35rem;cursor:pointer;
+  text-align:left;font-family:var(--ui);color:var(--ink);position:relative;isolation:isolate;
+  overflow:hidden;transition:background 200ms,border-color 200ms}
+.vcard:hover{background:var(--panel-hi);border-color:var(--line-hi)}
+.vcard[aria-selected="true"]{background:var(--panel-hi);border-color:var(--line-hi)}
+.vcard__top{display:flex;align-items:baseline;gap:0.5rem}
+.vcard__name{font-size:0.82rem;font-weight:500;flex:1;min-width:0}
+.vcard__price{font-family:var(--mono);font-size:0.8rem}
+.vcard__meta{display:flex;gap:0.5rem;font-family:var(--mono);font-size:0.62rem;color:var(--muted);flex-wrap:wrap}
+
+/* ---- NEW ATOM · spec row ---- */
+.spec{display:flex;align-items:baseline;gap:0.7rem;padding:0.34rem 0;border-bottom:1px solid var(--line);font-size:0.78rem}
+.spec:last-child{border-bottom:0}
+.spec dt{color:var(--muted);flex:1;min-width:0;font-weight:300}
+.spec dd{margin:0;font-family:var(--mono);font-size:0.74rem;text-align:right}
+
+/* ---- NEW ATOM · price band ---- */
+.band{position:relative;height:8px;border-radius:4px;margin:0.55rem 0 0.3rem;
+  background:linear-gradient(90deg,var(--panel-top),var(--line-hi))}
+.band__avg{position:absolute;top:-3px;bottom:-3px;width:1px;background:var(--ink-dim);opacity:0.65}
+.band__me{position:absolute;top:50%;width:11px;height:11px;border-radius:50%;background:var(--ember);
+  transform:translate(-50%,-50%);box-shadow:0 0 11px 1px var(--ember-wash)}
+.band__ends{display:flex;justify-content:space-between;font-family:var(--mono);font-size:0.6rem;color:var(--muted)}
+
+/* ---- NEW ATOM · pro / con ---- */
+.pc{display:flex;flex-direction:column;gap:0.22rem;margin:0;padding:0;list-style:none}
+.pc li{display:flex;gap:0.45rem;align-items:flex-start;font-size:0.74rem;line-height:1.45}
+.pc li::before{content:"";width:5px;height:5px;border-radius:50%;flex:none;margin-top:0.42rem}
+.pc li.pro{color:var(--ink)}
+.pc li.pro::before{background:var(--ink)}
+.pc li.con{color:var(--muted)}
+.pc li.con::before{border:1px solid var(--muted)}
+
+/* ---- NEW ATOM · budget slider ---- */
+.slider{position:relative;height:3px;border-radius:2px;background:var(--panel-top);margin:0.75rem 0.5rem}
+.slider i{position:absolute;top:0;bottom:0;background:var(--ember);border-radius:2px;box-shadow:0 0 8px var(--ember-wash)}
+.slider b{position:absolute;top:50%;width:14px;height:14px;border-radius:50%;background:var(--ink);
+  transform:translate(-50%,-50%);border:2px solid var(--ground);box-shadow:0 1px 5px rgba(0,0,0,0.6)}
+
+/* ---- NEW ATOM · comparison table ---- */
+.cmpwrap{overflow-x:auto;overflow-y:auto;flex:1;min-height:0;scrollbar-color:var(--line-hi) transparent}
+.cmp{border-collapse:separate;border-spacing:0;width:100%;font-size:0.76rem}
+.cmp th,.cmp td{padding:0.42rem 0.55rem;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.cmp thead th{position:sticky;top:0;z-index:2;background:var(--ground-lift);font-weight:500;
+  font-size:0.78rem;border-bottom:1px solid var(--line-hi)}
+.cmp .lab{position:sticky;left:0;z-index:1;background:var(--ground);color:var(--muted);
+  font-weight:300;font-family:var(--ui);white-space:nowrap;
+  font-size:0.7rem;min-width:104px;border-right:1px solid var(--line)}
+.cmp thead .lab{z-index:3;background:var(--ground-lift)}
+.cmp td{font-family:var(--mono);font-size:0.72rem;white-space:nowrap}
+.cmp .pick th{padding-top:0.6rem}
+.cmp col.best{background:rgba(255,255,255,0.022)}
+
+.subtabs{display:flex;gap:1rem;border-bottom:1px solid var(--line);padding:0 0.1rem;flex:none}
+.subtab{border:0;background:none;cursor:pointer;font-family:var(--ui);font-size:0.8rem;color:var(--muted);
+  padding:0.35rem 0 0.42rem;position:relative;transition:color 200ms}
+.subtab[aria-selected="true"]{color:var(--ink)}
+.subtab::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;border-radius:2px;background:transparent;
+  transition:background 220ms}
+.subtab[aria-selected="true"]::after{background:var(--ember);box-shadow:0 0 9px 0 var(--ember-wash)}
+
+.holo{position:relative;background:#0e0e10;border-radius:var(--r-card);overflow:hidden;border:1px solid var(--line)}
+.holo canvas{display:block;width:100%;height:100%;cursor:grab}
+.holo canvas:active{cursor:grabbing}
+.holo__veh{position:absolute;left:0.7rem;top:0.6rem;font-family:var(--mono);font-size:0.58rem;color:var(--muted);letter-spacing:0.06em}
+.holo__hint{position:absolute;left:0.7rem;bottom:0.6rem;font-family:var(--mono);font-size:0.58rem;color:var(--muted);letter-spacing:0.06em}
+
+.notes{display:flex;flex-direction:column;gap:1px;background:var(--line);border:1px solid var(--line);
+  border-radius:var(--r-card);overflow:hidden;margin-top:2.5rem}
+.note{background:var(--ground-lift);padding:1.1rem 1.25rem 1.25rem}
+.note h3{font-family:var(--mono);font-size:0.62rem;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);margin-bottom:0.55rem}
+.note p{font-size:0.9rem;color:var(--ink-dim);line-height:1.6}
+.note p+p{margin-top:0.55rem}
+.note b{color:var(--ink);font-weight:500}
+footer{margin-top:4rem;padding-top:1.4rem;border-top:1px solid var(--line);font-family:var(--mono);
+  font-size:0.64rem;color:var(--muted);display:flex;justify-content:space-between;flex-wrap:wrap;gap:0.5rem 2rem}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.001ms!important;transition-duration:.001ms!important}}
+</style>
+
+<div class="topbar">
+  <div class="topbar__in">
+    <span class="brand">PHR<span>O</span>NESIS</span>
+    <nav class="jump"><a href="#discover">Discover</a><a href="#compare">Compare</a><a href="#market">Market</a></nav>
+    <span class="switcher" id="switcher">
+      <span class="switcher__thumb"></span>
+      <button type="button" aria-pressed="true" data-view="phone">Phone</button>
+      <button type="button" aria-pressed="false" data-view="tablet">Tablet</button>
+      <button type="button" aria-pressed="false" data-view="desk">Desktop</button>
+    </span>
+  </div>
+</div>
+
+<div class="wrap">
+  <header class="hero">
+    <h1>Before the car.</h1>
+    <p>
+      The pre-car journey is not a second app. It is the same shell with two
+      slots swapped &mdash; Diagnosis becomes Discover, Solutions becomes
+      Compare, and everything else stays exactly where it was.
+    </p>
+    <div class="slots">
+      <div class="slot slot--same"><span class="k">01</span><span class="a">Home</span></div>
+      <div class="slot slot--swap"><span class="k">02</span><span class="a">Diagnosis</span><span class="b">DISCOVER</span></div>
+      <div class="slot slot--swap"><span class="k">03</span><span class="a">Solutions</span><span class="b">COMPARE</span></div>
+      <div class="slot slot--same"><span class="k">04</span><span class="a">Maps</span></div>
+      <div class="slot slot--same"><span class="k">05</span><span class="a">Account</span></div>
+    </div>
+  </header>
+
+  <!-- ===================== PHONE ===================== -->
+  <div class="view" id="phoneView">
+
+    <section id="discover">
+      <div class="sechead"><span class="n">02</span><h2>Discover</h2>
+        <p>Browse or ask. The spec sheet reuses the Diagnosis hologram with the
+        fault markers removed &mdash; same car, different question.</p></div>
+      <div class="gallery">
+
+        <div class="plate">
+          <div class="plate__cap"><b>BROWSE</b><span>search &middot; filter &middot; budget</span></div>
+          <div class="device"><div class="screen">
+            <div class="statusbar"><span>9:41</span><span class="sig"><i style="height:3px"></i><i style="height:5px"></i><i style="height:7px"></i><i style="height:9px"></i></span></div>
+            <div class="appbar"><span class="mark">PHRONESIS</span>
+              <span class="mono tiny" style="margin-left:auto;border:1px solid var(--line);background:var(--panel);border-radius:var(--r-pill);padding:0.15rem 0.5rem;color:var(--muted);font-size:0.55rem">Looking to buy</span></div>
+            <div style="padding:0 0.7rem;display:flex;flex-direction:column;gap:0.4rem;flex:none">
+              <div class="searchfield"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>Make, model, or ask me</div>
+              <div style="display:flex;gap:0.28rem;overflow:hidden">
+                <button class="chip" style="font-size:0.64rem" aria-pressed="true" type="button">Sedan</button>
+                <button class="chip" style="font-size:0.64rem" type="button">2010&ndash;2016</button>
+                <button class="chip" style="font-size:0.64rem" type="button">Petrol</button>
+              </div>
+              <div>
+                <div style="display:flex;justify-content:space-between" class="mono tiny dim"><span>BUDGET</span><span>up to UGX 22M</span></div>
+                <div class="slider"><i style="left:0;width:62%"></i><b style="left:62%"></b></div>
+              </div>
+            </div>
+            <div style="flex:1;min-height:0;overflow:hidden;padding:0.45rem 0.7rem;display:flex;flex-direction:column;gap:0.4rem">
+              <button class="vcard" type="button">
+                <span class="vcard__top"><span class="vcard__name">Toyota Premio 2014</span><span class="vcard__price">18.5M</span></span>
+                <span class="vcard__meta"><span>1.8L</span><span>petrol</span><span>14.2 km/L</span><span>Japan</span></span>
+                <span class="tiny dim" style="line-height:1.4">Common, cheap to run, parts everywhere in Kampala.</span>
+              </button>
+              <button class="vcard" type="button">
+                <span class="vcard__top"><span class="vcard__name">Honda Fit 2013</span><span class="vcard__price">13.2M</span></span>
+                <span class="vcard__meta"><span>1.3L</span><span>petrol</span><span>18.6 km/L</span><span>Japan</span></span>
+              </button>
+              <button class="vcard" type="button">
+                <span class="vcard__top"><span class="vcard__name">Nissan Note 2015</span><span class="vcard__price">15.9M</span></span>
+                <span class="vcard__meta"><span>1.2L</span><span>petrol</span><span>20.1 km/L</span><span>Japan</span></span>
+              </button>
+            </div>
+            <nav class="tabbar" data-tabbar data-active="1"></nav><div class="homebar"></div>
+          </div></div>
+        </div>
+
+        <div class="plate">
+          <div class="plate__cap"><b>SPEC SHEET</b><span>hologram reused, no fault markers</span></div>
+          <div class="device"><div class="screen">
+            <div class="statusbar"><span>9:41</span><span class="sig"><i style="height:3px"></i><i style="height:5px"></i><i style="height:7px"></i><i style="height:9px"></i></span></div>
+            <div class="appbar"><button class="icb" type="button"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 18l-6-6 6-6"/></svg></button><span class="ttl">DISCOVER</span>
+              <button class="icb" type="button"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 4v16M4 12h16"/></svg></button></div>
+            <div class="holo" style="height:140px;margin:0 0.7rem;flex:none">
+              <canvas data-holo data-mode="clean"></canvas><span class="holo__veh">TOYOTA PREMIO 2014</span></div>
+            <div style="flex:1;min-height:0;overflow:hidden;padding:0.5rem 0.7rem;display:flex;flex-direction:column;gap:0.45rem">
+              <div style="display:flex;align-items:baseline;gap:0.5rem">
+                <span style="font-size:0.88rem;font-weight:500;flex:1">Toyota Premio 2014</span>
+                <span class="mono" style="font-size:0.85rem">UGX 18.5M</span></div>
+              <div class="subtabs" style="font-size:0.74rem">
+                <button class="subtab" aria-selected="true" type="button">Specs</button>
+                <button class="subtab" type="button">Parts</button>
+                <button class="subtab" type="button">Safety</button></div>
+              <dl style="margin:0">
+                <div class="spec"><dt>Engine</dt><dd>1.8L 2ZR-FE</dd></div>
+                <div class="spec"><dt>Transmission</dt><dd>CVT</dd></div>
+                <div class="spec"><dt>Fuel consumption</dt><dd>14.2 km/L</dd></div>
+                <div class="spec"><dt>Tank</dt><dd>60 L</dd></div>
+                <div class="spec"><dt>Country</dt><dd>Japan</dd></div>
+              </dl>
+            </div>
+            <div style="padding:0 0.7rem 0.45rem;display:flex;gap:0.35rem">
+              <button class="btn btn--secondary" style="flex:1;height:34px;font-size:0.74rem" type="button">Add to compare</button>
+              <button class="btn btn--primary" style="flex:1;height:34px;font-size:0.74rem" type="button">Where to buy</button></div>
+            <nav class="tabbar" data-tabbar data-active="1"></nav><div class="homebar"></div>
+          </div></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="compare">
+      <div class="sechead"><span class="n">03</span><h2>Compare</h2>
+        <p>Three at most, because a fourth column stops being a comparison and
+        becomes a spreadsheet. On a phone the table scrolls sideways and the
+        label column stays put.</p></div>
+      <div class="gallery">
+
+        <div class="plate">
+          <div class="plate__cap"><b>COMPARE TAB</b><span>sticky label column</span></div>
+          <div class="device"><div class="screen">
+            <div class="statusbar"><span>9:41</span><span class="sig"><i style="height:3px"></i><i style="height:5px"></i><i style="height:7px"></i><i style="height:9px"></i></span></div>
+            <div class="appbar"><button class="icb" type="button"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 18l-6-6 6-6"/></svg></button><span class="ttl">COMPARE</span><span style="width:30px"></span></div>
+            <div style="padding:0 0.7rem;flex:none">
+              <div class="subtabs">
+                <button class="subtab" aria-selected="true" type="button">Compare</button>
+                <button class="subtab" type="button">Market</button></div></div>
+            <div class="cmpwrap" style="margin:0 0.7rem">
+              <table class="cmp">
+                <colgroup><col><col class="best"><col><col></colgroup>
+                <thead><tr><th class="lab"></th><th>Premio</th><th>Fit</th><th>Note</th></tr></thead>
+                <tbody>
+                  <tr><td class="lab">Asking</td><td>18.5M</td><td>13.2M</td><td>15.9M</td></tr>
+                  <tr><td class="lab">Year</td><td>2014</td><td>2013</td><td>2015</td></tr>
+                  <tr><td class="lab">Engine</td><td>1.8L</td><td>1.3L</td><td>1.2L</td></tr>
+                  <tr><td class="lab">Consumption</td><td>14.2</td><td>18.6</td><td>20.1</td></tr>
+                  <tr><td class="lab">Tank</td><td>60 L</td><td>40 L</td><td>41 L</td></tr>
+                  <tr><td class="lab">Transmission</td><td>CVT</td><td>CVT</td><td>CVT</td></tr>
+                  <tr><td class="lab">Parts here</td><td>common</td><td>common</td><td>fair</td></tr>
+                  <tr><td class="lab">vs market</td><td>&minus;4%</td><td>+2%</td><td>&minus;1%</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div style="padding:0.45rem 0.7rem;flex:none">
+              <div class="card" style="gap:0.3rem">
+                <span class="mono tiny dim" style="letter-spacing:0.12em">HONDA FIT</span>
+                <ul class="pc">
+                  <li class="pro">Cheapest to buy and to run</li>
+                  <li class="pro">Parts are everywhere</li>
+                  <li class="con">Smallest tank &mdash; more stops</li>
+                </ul>
+              </div>
+            </div>
+            <nav class="tabbar" data-tabbar data-active="2"></nav><div class="homebar"></div>
+          </div></div>
+        </div>
+
+        <div class="plate">
+          <div class="plate__cap"><b>MARKET TAB</b><span>a price is a position, not a colour</span></div>
+          <div class="device"><div class="screen">
+            <div class="statusbar"><span>9:41</span><span class="sig"><i style="height:3px"></i><i style="height:5px"></i><i style="height:7px"></i><i style="height:9px"></i></span></div>
+            <div class="appbar"><button class="icb" type="button"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 18l-6-6 6-6"/></svg></button><span class="ttl">COMPARE</span><span style="width:30px"></span></div>
+            <div style="padding:0 0.7rem;flex:none">
+              <div class="subtabs">
+                <button class="subtab" type="button">Compare</button>
+                <button class="subtab" aria-selected="true" type="button">Market</button></div></div>
+            <div style="flex:1;min-height:0;overflow:hidden;padding:0.5rem 0.7rem;display:flex;flex-direction:column;gap:0.5rem">
+              <div class="card">
+                <div style="display:flex;align-items:baseline;gap:0.5rem">
+                  <span style="font-size:0.8rem;font-weight:500;flex:1">Toyota Premio 2014</span>
+                  <span class="mono tiny" style="color:var(--ember)">4% below</span></div>
+                <div class="band"><span class="band__avg" style="left:58%"></span><span class="band__me" style="left:46%"></span></div>
+                <div class="band__ends"><span>16.2M</span><span>market 19.3M</span><span>23.0M</span></div>
+              </div>
+              <div>
+                <div class="mono tiny dim" style="letter-spacing:0.12em;margin-bottom:0.3rem">12-MONTH TREND</div>
+                <div class="card" style="padding:0.5rem 0.6rem">
+                  <canvas data-spark width="520" height="150" style="width:100%;height:62px;display:block"></canvas>
+                  <div style="display:flex;justify-content:space-between" class="mono tiny dim"><span>Sep 24</span><span>falling 6%</span><span>Sep 25</span></div>
+                </div>
+              </div>
+              <div>
+                <div class="mono tiny dim" style="letter-spacing:0.12em;margin-bottom:0.3rem">BY REGION</div>
+                <div class="card" style="gap:0.15rem">
+                  <div class="spec"><dt style="font-family:var(--ui)">Kampala</dt><dd>19.3M</dd></div>
+                  <div class="spec"><dt style="font-family:var(--ui)">Nairobi</dt><dd>17.1M</dd></div>
+                  <div class="spec"><dt style="font-family:var(--ui)">Mombasa</dt><dd>16.4M</dd></div>
+                </div>
+                <p class="tiny dim" style="line-height:1.45;margin-top:0.3rem">Import duty and transport usually eat a Mombasa saving. Ask me to work it out.</p>
+              </div>
+            </div>
+            <nav class="tabbar" data-tabbar data-active="2"></nav><div class="homebar"></div>
+          </div></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- ===================== DESKTOP / TABLET ===================== -->
+  <div class="view" id="deskView" hidden>
+
+    <section>
+      <div class="sechead"><span class="n">02</span><h2>Discover</h2>
+        <p>List and spec sheet side by side. <b>Drag the car.</b> Below 900px
+        the list moves above the detail &mdash; the same rule Diagnosis uses.</p></div>
+      <div class="deskframe"><div class="browser"><div class="browser__bar"><span class="dots"><i></i><i></i><i></i></span><span class="browser__url">phronesis.app/discover</span></div>
+        <div class="desk">
+          <nav class="rail" data-rail data-active="1"></nav>
+          <div class="disc-body" style="flex:1;min-width:0;display:flex">
+            <div class="disc-list" style="width:300px;flex:none;border-right:1px solid var(--line);padding:0.9rem;display:flex;flex-direction:column;gap:0.5rem;overflow:hidden">
+              <div class="searchfield"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>Make, model, or ask me</div>
+              <div style="display:flex;gap:0.28rem;flex-wrap:wrap">
+                <button class="chip" style="font-size:0.66rem" aria-pressed="true" type="button">Sedan</button>
+                <button class="chip" style="font-size:0.66rem" type="button">2010&ndash;2016</button></div>
+              <div>
+                <div style="display:flex;justify-content:space-between" class="mono tiny dim"><span>BUDGET</span><span>up to 22M</span></div>
+                <div class="slider"><i style="left:0;width:62%"></i><b style="left:62%"></b></div></div>
+              <button class="vcard" aria-selected="true" type="button">
+                <span class="vcard__top"><span class="vcard__name">Toyota Premio 2014</span><span class="vcard__price">18.5M</span></span>
+                <span class="vcard__meta"><span>1.8L</span><span>14.2 km/L</span></span></button>
+              <button class="vcard" type="button">
+                <span class="vcard__top"><span class="vcard__name">Honda Fit 2013</span><span class="vcard__price">13.2M</span></span>
+                <span class="vcard__meta"><span>1.3L</span><span>18.6 km/L</span></span></button>
+              <button class="vcard" type="button">
+                <span class="vcard__top"><span class="vcard__name">Nissan Note 2015</span><span class="vcard__price">15.9M</span></span>
+                <span class="vcard__meta"><span>1.2L</span><span>20.1 km/L</span></span></button>
+            </div>
+            <div class="disc-detail" style="flex:1;min-width:0;padding:0.9rem 1rem;display:flex;flex-direction:column;gap:0.6rem;overflow:hidden">
+              <div style="display:flex;align-items:baseline;gap:0.6rem">
+                <span style="font-size:1.05rem;font-weight:500;flex:1">Toyota Premio 2014</span>
+                <span class="mono" style="font-size:0.95rem">UGX 18.5M</span></div>
+              <div class="holo" style="flex:1;min-height:150px">
+                <canvas data-holo data-mode="clean"></canvas>
+                <span class="holo__veh">TOYOTA PREMIO 2014 &middot; 1.8L</span>
+                <span class="holo__hint">drag to orbit</span></div>
+              <div class="subtabs">
+                <button class="subtab" aria-selected="true" type="button">Specs</button>
+                <button class="subtab" type="button">Parts</button>
+                <button class="subtab" type="button">Safety</button>
+                <button class="subtab" type="button">Warranty</button></div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 1.4rem">
+                <dl style="margin:0">
+                  <div class="spec"><dt>Engine</dt><dd>1.8L 2ZR-FE</dd></div>
+                  <div class="spec"><dt>Transmission</dt><dd>CVT</dd></div>
+                  <div class="spec"><dt>Consumption</dt><dd>14.2 km/L</dd></div>
+                  <div class="spec"><dt>Tank</dt><dd>60 L</dd></div></dl>
+                <dl style="margin:0">
+                  <div class="spec"><dt>Country</dt><dd>Japan</dd></div>
+                  <div class="spec"><dt>Length</dt><dd>4,595 mm</dd></div>
+                  <div class="spec"><dt>Airbags</dt><dd>6</dd></div>
+                  <div class="spec"><dt>Parts here</dt><dd>common</dd></div></dl>
+              </div>
+              <div style="display:flex;gap:0.4rem;margin-top:auto">
+                <button class="btn btn--secondary" type="button">Add to compare</button>
+                <button class="btn btn--primary" type="button">Where to buy</button></div>
+            </div>
+          </div>
+        </div></div></div>
+    </section>
+
+    <section>
+      <div class="sechead"><span class="n">03</span><h2>Compare</h2>
+        <p>Three columns and the pros and cons underneath each. No column is
+        marked &ldquo;winner&rdquo; &mdash; the recommendation is something the
+        avatar says, not something the table decides.</p></div>
+      <div class="deskframe"><div class="browser"><div class="browser__bar"><span class="dots"><i></i><i></i><i></i></span><span class="browser__url">phronesis.app/compare</span></div>
+        <div class="desk">
+          <nav class="rail" data-rail data-active="2"></nav>
+          <div style="flex:1;min-width:0;padding:0.9rem 1.1rem;display:flex;flex-direction:column;gap:0.6rem;overflow:hidden">
+            <div class="subtabs">
+              <button class="subtab" aria-selected="true" type="button">Compare</button>
+              <button class="subtab" type="button">Market</button></div>
+            <div class="cmpwrap">
+              <table class="cmp" style="font-size:0.8rem">
+                <colgroup><col><col class="best"><col><col></colgroup>
+                <thead><tr><th class="lab"></th><th>Toyota Premio 2014</th><th>Honda Fit 2013</th><th>Nissan Note 2015</th></tr></thead>
+                <tbody>
+                  <tr><td class="lab">Asking price</td><td>UGX 18,500,000</td><td>UGX 13,200,000</td><td>UGX 15,900,000</td></tr>
+                  <tr><td class="lab">vs market</td><td>&minus;4%</td><td>+2%</td><td>&minus;1%</td></tr>
+                  <tr><td class="lab">Engine</td><td>1.8L 2ZR-FE</td><td>1.3L L13A</td><td>1.2L HR12DE</td></tr>
+                  <tr><td class="lab">Transmission</td><td>CVT</td><td>CVT</td><td>CVT</td></tr>
+                  <tr><td class="lab">Consumption</td><td>14.2 km/L</td><td>18.6 km/L</td><td>20.1 km/L</td></tr>
+                  <tr><td class="lab">Tank</td><td>60 L</td><td>40 L</td><td>41 L</td></tr>
+                  <tr><td class="lab">Length</td><td>4,595 mm</td><td>3,900 mm</td><td>4,100 mm</td></tr>
+                  <tr><td class="lab">Airbags</td><td>6</td><td>4</td><td>4</td></tr>
+                  <tr><td class="lab">Country</td><td>Japan</td><td>Japan</td><td>Japan</td></tr>
+                  <tr><td class="lab">Parts here</td><td>common</td><td>common</td><td>fair</td></tr>
+                  <tr class="pick"><td class="lab" style="vertical-align:top">Trade-offs</td>
+                    <td><ul class="pc"><li class="pro">Most space and the safest</li><li class="pro">Parts everywhere</li><li class="con">Thirstiest of the three</li></ul></td>
+                    <td><ul class="pc"><li class="pro">Cheapest to buy and run</li><li class="pro">Easy in Kampala traffic</li><li class="con">Smallest tank</li></ul></td>
+                    <td><ul class="pc"><li class="pro">Best consumption</li><li class="pro">Newest of the three</li><li class="con">Parts are harder to find</li></ul></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div style="display:flex;gap:0.4rem;justify-content:flex-end;flex:none">
+              <button class="btn btn--ghost" type="button">Clear</button>
+              <button class="btn btn--primary" type="button">Where can I see these?</button></div>
+          </div>
+        </div></div></div>
+    </section>
+
+    <section id="market">
+      <div class="sechead"><span class="n">03b</span><h2>Compare &middot; Market</h2>
+        <p>A tab, not a page &mdash; a price only means something next to a
+        specific car. Zero hue: the band is the monochrome ramp and ember marks
+        where this car sits on it.</p></div>
+      <div class="deskframe"><div class="browser"><div class="browser__bar"><span class="dots"><i></i><i></i><i></i></span><span class="browser__url">phronesis.app/compare?tab=market</span></div>
+        <div class="desk">
+          <nav class="rail" data-rail data-active="2"></nav>
+          <div style="flex:1;min-width:0;padding:0.9rem 1.1rem;display:flex;flex-direction:column;gap:0.7rem;overflow:hidden">
+            <div class="subtabs">
+              <button class="subtab" type="button">Compare</button>
+              <button class="subtab" aria-selected="true" type="button">Market</button></div>
+            <div class="cmp-market" style="display:grid;grid-template-columns:1.1fr 1fr;gap:1rem;min-height:0;overflow:hidden">
+              <div style="display:flex;flex-direction:column;gap:0.55rem;min-height:0">
+                <div class="card">
+                  <div style="display:flex;align-items:baseline;gap:0.5rem">
+                    <span style="font-size:0.85rem;font-weight:500;flex:1">Toyota Premio 2014</span>
+                    <span class="mono tiny" style="color:var(--ember)">4% below market</span></div>
+                  <div class="band"><span class="band__avg" style="left:58%"></span><span class="band__me" style="left:46%"></span></div>
+                  <div class="band__ends"><span>16.2M</span><span>market 19.3M</span><span>23.0M</span></div>
+                </div>
+                <div class="card">
+                  <div style="display:flex;align-items:baseline;gap:0.5rem">
+                    <span style="font-size:0.85rem;font-weight:500;flex:1">Honda Fit 2013</span>
+                    <span class="mono tiny dim">2% above market</span></div>
+                  <div class="band"><span class="band__avg" style="left:50%"></span><span class="band__me" style="left:56%"></span></div>
+                  <div class="band__ends"><span>11.4M</span><span>market 12.9M</span><span>15.1M</span></div>
+                </div>
+                <div class="card" style="flex:1;min-height:0">
+                  <div class="mono tiny dim" style="letter-spacing:0.12em">12-MONTH TREND &middot; PREMIO 2014</div>
+                  <canvas data-spark width="900" height="260" style="width:100%;height:110px;display:block"></canvas>
+                  <div style="display:flex;justify-content:space-between" class="mono tiny dim"><span>Sep 2024</span><span>falling 6% year on year</span><span>Sep 2025</span></div>
+                </div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:0.55rem;min-height:0">
+                <div class="card">
+                  <div class="mono tiny dim" style="letter-spacing:0.12em;margin-bottom:0.15rem">BY REGION &middot; PREMIO 2014</div>
+                  <div class="spec"><dt style="font-family:var(--ui)">Kampala</dt><dd>UGX 19,300,000</dd></div>
+                  <div class="spec"><dt style="font-family:var(--ui)">Nairobi</dt><dd>UGX 17,100,000</dd></div>
+                  <div class="spec"><dt style="font-family:var(--ui)">Mombasa</dt><dd>UGX 16,400,000</dd></div>
+                  <div class="spec"><dt style="font-family:var(--ui)">Dar es Salaam</dt><dd>UGX 16,900,000</dd></div>
+                </div>
+                <div class="card">
+                  <div class="mono tiny dim" style="letter-spacing:0.12em">WORTH IMPORTING?</div>
+                  <p class="tiny dim" style="line-height:1.55">Mombasa looks 2.9M cheaper, but duty, transport and registration come to roughly 3.4M. You would lose about 500,000 &mdash; and the warranty.</p>
+                  <p class="tiny dim" style="line-height:1.55">That changes above about 25M, where the duty stops scaling with the price.</p>
+                </div>
+                <div class="card" style="margin-top:auto">
+                  <div style="display:flex;align-items:center;gap:0.5rem">
+                    <span style="width:26px;height:26px;border-radius:8px;background:var(--panel-hi);display:grid;place-items:center;color:var(--ember);flex:none"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2l7 19-7-4-7 4z"/></svg></span>
+                    <span style="flex:1;font-size:0.8rem">Tell me if a Premio drops under 17M</span>
+                    <button class="btn btn--secondary" style="height:30px;font-size:0.72rem" type="button">Alert me</button></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div></div></div>
+    </section>
+  </div>
+
+  <div class="notes">
+    <div class="note">
+      <h3>Seven new atoms, forty reused</h3>
+      <p>
+        New here: <b>spec row, vehicle card, comparison table, price band,
+        trend sparkline, budget slider, pro/con list.</b> Everything else on
+        these screens &mdash; buttons, chips, cards, tabs, search, rail, tab
+        bar, the hologram, the avatar &mdash; is the post-car library unchanged.
+      </p>
+      <p>
+        That ratio is the whole argument for building components before pages.
+        A second journey costs seven atoms instead of a second frontend.
+      </p>
+    </div>
+    <div class="note">
+      <h3>No colour, on purpose</h3>
+      <p>
+        Nothing in the pre-car journey is critical or a warning, so <b>red and
+        amber never appear here</b>. Price is expressed as a position on the
+        monochrome ramp with ember marking where a car sits &mdash; and there is
+        no green for &ldquo;good deal&rdquo;, consistent with removing green
+        everywhere else.
+      </p>
+      <p>
+        This sharpens the rule instead of straining it: red and amber exist in
+        Phronesis only where safety is at stake.
+      </p>
+    </div>
+    <div class="note">
+      <h3>What gates this, and it is not the screens</h3>
+      <p>
+        Post-car generates its own data &mdash; the OBD reads codes, the user
+        describes symptoms. <b>Pre-car has no such source.</b> Discover and
+        Compare are only as good as a vehicle-spec and Ugandan market-price
+        corpus that does not exist yet, and the regional comparison needs
+        cross-border listing data maintained continuously, not scraped once.
+      </p>
+      <p>
+        Every number on these screens is invented. That is fine for a mockup and
+        fatal in production, which is why Phase 3 should be gated on the data,
+        not on the design.
+      </p>
+    </div>
+  </div>
+
+  <footer>
+    <span>Phronesis &middot; frontend_V2 &middot; pre-car journey &middot; Phase 3</span>
+    <span>Two slots swap &middot; seven new atoms &middot; zero hue</span>
+  </footer>
+</div>
+
+<script>
+(function(){
+  'use strict';
+  var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  var sw=document.getElementById('switcher'), thumb=sw.querySelector('.switcher__thumb');
+  function placeThumb(a){
+    var on=sw.querySelector('button[aria-pressed="true"]'); if(!on) return;
+    if(!a) thumb.style.transition='none';
+    thumb.style.width=on.offsetWidth+'px';
+    thumb.style.transform='translateX('+(on.offsetLeft-3)+'px)';
+    if(!a){ void thumb.offsetWidth; thumb.style.transition=''; }
+  }
+  sw.addEventListener('click',function(e){
+    var b=e.target.closest('button'); if(!b) return;
+    sw.querySelectorAll('button').forEach(function(o){o.setAttribute('aria-pressed',String(o===b));});
+    placeThumb(true);
+    var v=b.dataset.view;
+    document.getElementById('phoneView').hidden = v!=='phone';
+    document.getElementById('deskView').hidden  = v==='phone';
+    document.body.classList.toggle('is-tablet', v==='tablet');
+    resizeAll();
+    window.scrollTo({top:0,behavior:'smooth'});
+  });
+  placeThumb(false);
+
+  /* the pre-car nav: slots 2 and 3 differ, the rest is the post-car shell */
+  var NAV=[
+    ['Home','M3 10.5L12 3l9 7.5|M5 9.5V21h14V9.5'],
+    ['Discover','CIRCLE|M20 20l-3.5-3.5'],
+    ['Compare','M4 18V9|M10 18V5|M16 18v-6|M22 18h-20'],
+    ['Map','M12 21s7-5.5 7-11a7 7 0 10-14 0c0 5.5 7 11 7 11z|DOT'],
+    ['Account','HEAD|M5 20c1.2-3.4 3.8-5.1 7-5.1s5.8 1.7 7 5.1']
+  ];
+  function icon(spec,size){
+    var parts=spec.split('|').map(function(d){
+      if(d==='CIRCLE') return '<circle cx="11" cy="11" r="7"/>';
+      if(d==='DOT') return '<circle cx="12" cy="10" r="2.4"/>';
+      if(d==='HEAD') return '<circle cx="12" cy="8" r="3.4"/>';
+      return '<path d="'+d+'"/>';
+    }).join('');
+    return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7">'+parts+'</svg>';
+  }
+  document.querySelectorAll('[data-tabbar]').forEach(function(n){
+    var a=+n.dataset.active;
+    n.innerHTML=NAV.map(function(t,i){
+      return '<button class="tab" type="button"'+(i===a?' aria-current="page"':'')+'>'+icon(t[1],16)+t[0]+'</button>';}).join('');
+  });
+  document.querySelectorAll('[data-rail]').forEach(function(n){
+    var a=+n.dataset.active;
+    n.innerHTML='<span class="mk">PH</span>'+NAV.map(function(t,i){
+      return '<button type="button"'+(i===a?' aria-current="page"':'')+' aria-label="'+t[0]+'">'+icon(t[1],17)+'<span>'+t[0]+'</span></button>';}).join('');
+  });
+
+  /* sub-tabs actually switch */
+  document.querySelectorAll('.subtabs').forEach(function(g){
+    g.addEventListener('click',function(e){
+      var b=e.target.closest('.subtab'); if(!b) return;
+      g.querySelectorAll('.subtab').forEach(function(o){o.setAttribute('aria-selected',String(o===b));});
+    });
+  });
+
+  /* press is light */
+  document.addEventListener('pointerdown',function(e){
+    var el=e.target.closest('.btn,.chip,.icb,.tab,.vcard,.card');
+    if(!el) return;
+    var r=el.getBoundingClientRect();
+    el.style.setProperty('--px',(((e.clientX-r.left)/r.width)*100).toFixed(1)+'%');
+    el.style.setProperty('--py',(((e.clientY-r.top)/r.height)*100).toFixed(1)+'%');
+    el.classList.add('is-touch');
+  },true);
+  ['pointerup','pointercancel','pointerleave'].forEach(function(ev){
+    document.addEventListener(ev,function(){
+      document.querySelectorAll('.is-touch').forEach(function(el){el.classList.remove('is-touch');});},true);
+  });
+
+  /* ---------------- trend sparkline · one stroke, no axes ---------------- */
+  var sparks=[].slice.call(document.querySelectorAll('[data-spark]'));
+  var SERIES=[100,99.2,99.6,98.1,97.4,97.9,96.3,95.5,95.9,94.8,94.2,94.4,94.0];
+  function drawSpark(cv){
+    var c=cv.getContext('2d'),W=cv.width,H=cv.height,pad=H*0.16;
+    c.clearRect(0,0,W,H);
+    var lo=Math.min.apply(null,SERIES), hi=Math.max.apply(null,SERIES), span=hi-lo||1;
+    var pts=SERIES.map(function(v,i){
+      return [ (i/(SERIES.length-1))*(W-2)+1, H-pad-((v-lo)/span)*(H-pad*2) ];});
+    // area under the line, so the fall reads without a second colour
+    var g=c.createLinearGradient(0,0,0,H);
+    g.addColorStop(0,'rgba(226,230,240,0.13)'); g.addColorStop(1,'rgba(226,230,240,0)');
+    c.beginPath(); c.moveTo(pts[0][0],H);
+    pts.forEach(function(p){c.lineTo(p[0],p[1]);});
+    c.lineTo(pts[pts.length-1][0],H); c.closePath(); c.fillStyle=g; c.fill();
+    c.beginPath(); c.moveTo(pts[0][0],pts[0][1]);
+    for(var i=1;i<pts.length;i++) c.lineTo(pts[i][0],pts[i][1]);
+    c.strokeStyle='rgba(232,236,245,0.85)'; c.lineWidth=Math.max(2,H*0.016);
+    c.lineJoin='round'; c.lineCap='round'; c.stroke();
+    var last=pts[pts.length-1];
+    c.beginPath(); c.arc(last[0],last[1],Math.max(3,H*0.026),0,6.2832);
+    c.fillStyle='#ff7a2f'; c.shadowColor='#ff7a2f'; c.shadowBlur=H*0.08; c.fill(); c.shadowBlur=0;
+  }
+
+  /* ---------------- the car, reused from Diagnosis ---------------- */
+  var holos=[];
+  function buildCar(){
+    var g=new THREE.Group(), EDGE=0xe6ebf5, FILL=0xffffff;
+    function part(w,h,d,x,y,z){
+      var geo=new THREE.BoxGeometry(w,h,d);
+      // Object3D.position is read-only — set through it, never over it.
+      var m=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:FILL,transparent:true,opacity:0.045}));
+      m.position.set(x,y,z); g.add(m);
+      var l=new THREE.LineSegments(new THREE.EdgesGeometry(geo),new THREE.LineBasicMaterial({color:EDGE,transparent:true,opacity:0.55}));
+      l.position.set(x,y,z); g.add(l);
+    }
+    part(1.85,0.62,4.20, 0,0.42,0); part(1.62,0.58,1.95, 0,0.98,-0.18);
+    part(1.74,0.30,1.15, 0,0.36,-1.72); part(1.74,0.34,0.95, 0,0.40,1.72);
+    var wheel=new THREE.CylinderGeometry(0.42,0.42,0.26,18);
+    [[-0.95,-1.35],[0.95,-1.35],[-0.95,1.42],[0.95,1.42]].forEach(function(p){
+      var l=new THREE.LineSegments(new THREE.EdgesGeometry(wheel),new THREE.LineBasicMaterial({color:EDGE,transparent:true,opacity:0.4}));
+      l.rotation.z=Math.PI/2; l.position.set(p[0],0.30,p[1]); g.add(l);});
+    var grid=new THREE.GridHelper(9,14,0x3a3a42,0x2a2a30);
+    grid.material.transparent=true; grid.material.opacity=0.32; grid.position.y=-0.02; g.add(grid);
+    return g;  // showroom mode: no fault markers, ever
+  }
+  document.querySelectorAll('[data-holo]').forEach(function(cv){
+    if(typeof THREE==='undefined') return;
+    var b=cv.parentElement.getBoundingClientRect();
+    var w=Math.max(240,b.width||300), h=Math.max(130,b.height||160);
+    var r=new THREE.WebGLRenderer({canvas:cv,alpha:true,antialias:true,preserveDrawingBuffer:true});
+    r.setPixelRatio(Math.min(window.devicePixelRatio||1,2)); r.setSize(w,h,false);
+    cv.style.width='100%'; cv.style.height='100%';
+    var sc=new THREE.Scene(), cam=new THREE.PerspectiveCamera(34,w/h,0.1,100);
+    var car=buildCar(); sc.add(car);
+    var sweep=new THREE.Mesh(new THREE.PlaneGeometry(3.2,0.5),
+      new THREE.MeshBasicMaterial({color:0xc8ccd6,transparent:true,opacity:0.12,side:THREE.DoubleSide}));
+    sweep.rotation.x=-Math.PI/2; sc.add(sweep);
+    var st={cv:cv,r:r,sc:sc,cam:cam,car:car,sweep:sweep,rot:0.6,drag:false,lx:0,ly:0,tilt:0.35,w:w,h:h};
+    holos.push(st);
+    cv.addEventListener('pointerdown',function(e){st.drag=true;st.lx=e.clientX;st.ly=e.clientY;cv.setPointerCapture(e.pointerId);});
+    cv.addEventListener('pointermove',function(e){
+      if(!st.drag) return;
+      st.rot+=(e.clientX-st.lx)*0.008;
+      st.tilt=Math.max(0.06,Math.min(1.1,st.tilt+(e.clientY-st.ly)*0.005));
+      st.lx=e.clientX; st.ly=e.clientY;});
+    ['pointerup','pointercancel'].forEach(function(ev){cv.addEventListener(ev,function(){st.drag=false;});});
+  });
+  function sizeHolo(st){
+    var b=st.cv.parentElement.getBoundingClientRect();
+    if(!b.width||!b.height) return;
+    if(Math.abs(b.width-st.w)<1&&Math.abs(b.height-st.h)<1) return;
+    st.w=b.width; st.h=b.height;
+    st.r.setSize(b.width,b.height,false);
+    st.cam.aspect=b.width/b.height; st.cam.updateProjectionMatrix();
+  }
+  function drawHolo(st,now){
+    sizeHolo(st);
+    if(!st.drag) st.rot+=0.0032;
+    st.car.rotation.y=st.rot;
+    st.cam.position.set(0,1.4+st.tilt*3.2,6.07); st.cam.lookAt(0,0.55,0);
+    st.sweep.position.set(0,0.02,Math.sin(now*0.0009)*2.3);
+    st.r.render(st.sc,st.cam);
+  }
+
+  function paint(now){
+    for(var i=0;i<sparks.length;i++) drawSpark(sparks[i]);
+    for(var j=0;j<holos.length;j++) drawHolo(holos[j],now);
+  }
+  function tick(now){ paint(now); if(!reduced) requestAnimationFrame(tick); }
+  function resizeAll(){
+    for(var j=0;j<holos.length;j++) sizeHolo(holos[j]);
+    placeThumb(false);
+    paint(performance.now());   // a hidden tab may never send a frame
+  }
+  window.addEventListener('resize',resizeAll);
+  paint(performance.now());
+  requestAnimationFrame(tick);
+})();
+</script>

@@ -1,93 +1,64 @@
-// frontend/src/pages/Welcome.tsx
-
-import { motion } from 'framer-motion';
-import { useEffect, useState } from 'react';
-import AvatarElement from '../components/AvatarElement/AvatarElement';
-import StarfieldBackground from '../components/StarfieldBackground';
-import { useVoice } from '../components/Voice/VoiceProvider';
-
-export interface WelcomeProps {
-  /** Called once, when it's time to move to Onboarding. */
-  onComplete?: () => void;
-}
-
-const INTRO_TEXT =
-  "Hey there, my name is Phronesis. I'm your AI car diagnostic assistant. Whether you're looking to buy your first car, understand what's wrong with your current ride, or find trusted mechanics in your area — I'm here to help. I learn with every interaction, so the more you tell me, the better I can serve you.";
-
-// Roughly how long the intro takes to say, so the tap becomes available
-// around when it finishes — voice-only now, no on-screen text.
-const WORD_STAGGER_S = 0.06;
-const WORD_ANIM_DURATION_S = 0.4;
-const FADE_OUT_DURATION_S = 0.5;
-
-function wordCount(text: string): number {
-  return text.trim().split(/\s+/).length;
-}
-
-function revealDurationS(text: string): number {
-  return WORD_STAGGER_S * Math.max(0, wordCount(text) - 1) + WORD_ANIM_DURATION_S;
-}
+import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { Button } from '../ui'
+import { Halo } from '../avatar/Halo'
 
 /**
- * Phronesis' introduction: speaks a short welcome message (no on-screen
- * text — voice-only), then waits for the user to tap the avatar to
- * continue to Onboarding.
+ * Welcome. One action, and the avatar introduces itself.
+ *
+ * The avatar sits in `responding` while the introduction is revealing, then
+ * settles to `idle` — so the first thing a user sees the ring do is the thing
+ * it does when it speaks.
  */
-export function Welcome({ onComplete }: WelcomeProps) {
-  const [showHint, setShowHint] = useState(false);
-  const [fadeOut, setFadeOut] = useState(false);
-  const { speak, stop, isSpeaking } = useVoice();
+export function Welcome() {
+  const navigate = useNavigate()
+  const [shown, setShown] = useState(false)
+  const [speaking, setSpeaking] = useState(true)
 
   useEffect(() => {
-    const timer = setTimeout(() => setShowHint(true), revealDurationS(INTRO_TEXT) * 1000);
-    return () => clearTimeout(timer);
-  }, []);
-
-  useEffect(() => {
-    speak(INTRO_TEXT);
-    return () => stop();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  function handleAvatarTap() {
-    if (!showHint || fadeOut) return;
-    setFadeOut(true);
-  }
-
-  useEffect(() => {
-    if (!fadeOut) return;
-    const timer = setTimeout(() => onComplete?.(), FADE_OUT_DURATION_S * 1000);
-    return () => clearTimeout(timer);
-  }, [fadeOut, onComplete]);
+    const on = window.setTimeout(() => setShown(true), 40)
+    const quiet = window.setTimeout(() => setSpeaking(false), 3400)
+    return () => {
+      window.clearTimeout(on)
+      window.clearTimeout(quiet)
+    }
+  }, [])
 
   return (
-    <motion.div
-      className="relative flex h-screen w-screen flex-col items-center justify-center gap-8 bg-[#050914] px-6 text-center"
-      animate={{ opacity: fadeOut ? 0 : 1 }}
-      transition={{ duration: FADE_OUT_DURATION_S, ease: 'easeInOut' }}
-    >
-      <StarfieldBackground theme="dark" />
+    <main className="screen welcome" data-shown={shown}>
+      <p className="welcome__mark">PHRONESIS</p>
 
-      <button
-        type="button"
-        onClick={handleAvatarTap}
-        disabled={!showHint}
-        aria-label={showHint ? 'Tap to continue' : 'Phronesis'}
-        className={showHint ? 'cursor-pointer' : 'cursor-default'}
-      >
-        {/* interactive={false} on purpose: on this screen a tap advances the
-            flow, so the wrapping button owns the gesture. The mic toggle
-            starts on Home, where there is something to say. */}
-        <AvatarElement
-          state={isSpeaking || !showHint ? 'responding' : 'idle'}
-          theme="dark"
-          size="clamp(220px, 60vw, 400px)"
-          interactive={false}
-          captureMic={false}
-        />
-      </button>
-    </motion.div>
-  );
+      <div className="welcome__body">
+        <Halo size={150} state={speaking ? 'responding' : 'idle'} />
+        {/*
+          Real text nodes between the spans, not `inline-block` siblings.
+          An inline-block swallows its trailing space, and the sentence renders
+          as "Ihelpyouunderstandyourcar".
+        */}
+        <p className="welcome__line">
+          <span className="reveal" style={{ ['--i' as string]: 0 }}>
+            Hey — I&rsquo;m Phronesis.
+          </span>{' '}
+          <span className="reveal" style={{ ['--i' as string]: 1 }}>
+            I help you understand your car:
+          </span>{' '}
+          <span className="reveal" style={{ ['--i' as string]: 2 }}>
+            what&rsquo;s wrong, what it should cost,
+          </span>{' '}
+          <span className="reveal" style={{ ['--i' as string]: 3 }}>
+            and which mechanic to trust.
+          </span>
+        </p>
+      </div>
+
+      <div className="welcome__actions">
+        <Button variant="primary" size="lg" wide onClick={() => navigate('/start')}>
+          Get started
+        </Button>
+        <Button variant="ghost" wide onClick={() => navigate('/join')}>
+          I&rsquo;ve used Phronesis before
+        </Button>
+      </div>
+    </main>
+  )
 }
-
-export default Welcome;

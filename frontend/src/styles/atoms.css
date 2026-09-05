@@ -1,0 +1,1176 @@
+/* ============================================================
+   PHRONESIS · atom styles
+   One class per atom, one atom per class. If a page needs a
+   different-looking button, it gets a variant here — never an
+   override at the call site. That drift is what V1 taught us.
+   ============================================================ */
+
+/* ---------------------------------------------- press is light
+   Everything clickable warms from the point of contact. One
+   delegated pointerdown listener sets --px/--py; see usePressLight.
+   The bloom sits on ::after at z-index -1 so it never tints text. */
+.ph-pressable {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.ph-pressable::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: radial-gradient(
+    circle at var(--px, 50%) var(--py, 50%),
+    var(--ember-wash),
+    rgb(255 122 47 / 0) 65%
+  );
+  opacity: 0;
+  transition: opacity 300ms var(--ease-out);
+  pointer-events: none;
+}
+
+.ph-pressable[data-touch='true']::after {
+  opacity: 1;
+  transition-duration: 90ms;
+}
+
+/* --------------------------------------------------------- button */
+.ph-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  font-family: var(--ui);
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  border: 1px solid transparent;
+  border-radius: var(--r-pill);
+  transition:
+    background var(--t-hover) var(--ease),
+    border-color var(--t-hover) var(--ease),
+    color var(--t-hover) var(--ease),
+    transform var(--t-press) var(--ease);
+}
+
+.ph-btn:active:not(:disabled) {
+  transform: translateY(1px) scale(0.985);
+}
+
+.ph-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.ph-btn[data-size='sm'] {
+  height: 32px;
+  padding-inline: 0.8rem;
+  font-size: 0.76rem;
+}
+.ph-btn[data-size='md'] {
+  height: 38px;
+  padding-inline: 1rem;
+  font-size: 0.8rem;
+}
+.ph-btn[data-size='lg'] {
+  height: 44px;
+  padding-inline: 1.35rem;
+  font-size: 0.88rem;
+}
+
+.ph-btn[data-variant='primary'] {
+  background: var(--panel-hi);
+  color: var(--ink);
+  border-color: var(--line-hi);
+}
+.ph-btn[data-variant='primary']:hover:not(:disabled) {
+  background: var(--panel-top);
+}
+
+.ph-btn[data-variant='secondary'] {
+  background: transparent;
+  color: var(--ink);
+  border-color: var(--line-hi);
+}
+.ph-btn[data-variant='secondary']:hover:not(:disabled) {
+  background: var(--panel);
+}
+
+.ph-btn[data-variant='ghost'] {
+  background: transparent;
+  color: var(--ink-dim);
+}
+.ph-btn[data-variant='ghost']:hover:not(:disabled) {
+  background: var(--panel);
+  color: var(--ink);
+}
+
+/* Danger is the one place a button carries hue, because the action
+   is irreversible and that is a safety matter. */
+.ph-btn[data-variant='danger'] {
+  background: transparent;
+  color: var(--critical);
+  border-color: rgb(255 77 77 / 0.45);
+}
+.ph-btn[data-variant='danger']:hover:not(:disabled) {
+  background: rgb(255 77 77 / 0.1);
+}
+
+.ph-btn[data-wide='true'] {
+  width: 100%;
+}
+
+.ph-btn[data-loading='true'] {
+  color: transparent;
+  pointer-events: none;
+}
+.ph-btn__spin {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--ink);
+}
+
+/* ---------------------------------------------------- icon button */
+.ph-icb {
+  display: grid;
+  place-items: center;
+  flex: none;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink-dim);
+  cursor: pointer;
+  transition:
+    background var(--t-hover) var(--ease),
+    color var(--t-hover) var(--ease),
+    transform var(--t-press) var(--ease);
+}
+.ph-icb:hover:not(:disabled) {
+  background: var(--panel);
+  color: var(--ink);
+}
+.ph-icb:active:not(:disabled) {
+  transform: scale(0.92);
+}
+.ph-icb:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.ph-icb[data-size='sm'] {
+  width: 28px;
+  height: 28px;
+}
+.ph-icb[data-size='md'] {
+  width: 32px;
+  height: 32px;
+}
+.ph-icb[data-size='lg'] {
+  width: 40px;
+  height: 40px;
+}
+.ph-icb[data-variant='filled'] {
+  background: var(--panel-top);
+  color: var(--ink);
+}
+.ph-icb[data-variant='filled']:hover:not(:disabled) {
+  background: var(--line-hi);
+}
+
+/* ----------------------------------------------------------- chip */
+.ph-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: var(--ui);
+  font-size: 0.72rem;
+  padding: 0.32rem 0.7rem;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--line-hi);
+  background: var(--panel);
+  color: var(--ink-dim);
+  cursor: pointer;
+  transition:
+    background var(--t-hover) var(--ease),
+    color var(--t-hover) var(--ease);
+}
+.ph-chip:hover:not(:disabled) {
+  background: var(--panel-hi);
+  color: var(--ink);
+}
+.ph-chip[aria-pressed='true'] {
+  background: var(--panel-top);
+  color: var(--ink);
+}
+.ph-chip:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* ------------------------------------------------- severity badge */
+.ph-sev {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.32rem;
+  flex: none;
+  font-family: var(--mono);
+  font-size: 0.55rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0.22rem 0.48rem 0.22rem 0.38rem;
+  border-radius: 5px;
+  border: 1px solid currentColor;
+}
+.ph-sev__dot {
+  width: 4.5px;
+  height: 4.5px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: none;
+}
+.ph-sev[data-level='critical'] {
+  color: var(--critical);
+  background: rgb(255 77 77 / 0.09);
+}
+.ph-sev[data-level='high'] {
+  color: var(--high);
+  background: rgb(255 138 61 / 0.09);
+}
+.ph-sev[data-level='warning'] {
+  color: var(--warning);
+  background: rgb(245 165 36 / 0.09);
+}
+/* "Nothing wrong" is the default state of the app. It gets no hue. */
+.ph-sev[data-level='clear'],
+.ph-sev[data-level='routine'] {
+  color: var(--muted);
+  background: rgb(255 255 255 / 0.035);
+}
+
+/* ----------------------------------------------------------- card */
+.ph-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  padding: 0.7rem 0.8rem;
+}
+.ph-card[data-interactive='true'] {
+  cursor: pointer;
+  text-align: left;
+  font-family: var(--ui);
+  color: var(--ink);
+  transition:
+    background var(--t-hover) var(--ease),
+    border-color var(--t-hover) var(--ease),
+    transform var(--t-press) var(--ease);
+}
+.ph-card[data-interactive='true']:hover {
+  background: var(--panel-hi);
+  border-color: var(--line-hi);
+}
+.ph-card[data-interactive='true']:active {
+  transform: translateY(1px);
+}
+.ph-card[data-selected='true'] {
+  background: var(--panel-hi);
+  border-color: var(--line-hi);
+}
+
+/* -------------------------------------------------------- surface */
+.ph-sheet {
+  background: var(--glass);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-line);
+  border-radius: var(--r-sheet) var(--r-sheet) 0 0;
+  padding: 0.5rem 0.9rem 0.7rem;
+}
+.ph-sheet__grip {
+  width: 30px;
+  height: 3.5px;
+  border-radius: 2px;
+  background: var(--line-hi);
+  margin: 0 auto 0.5rem;
+}
+
+/* ------------------------------------------------------- divider */
+.ph-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.55rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.ph-divider::before,
+.ph-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+.ph-divider[data-label='false']::after {
+  display: none;
+}
+
+/* --------------------------------------------------- section head */
+.ph-sechead {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0 0.1rem 0.25rem;
+  font-family: var(--mono);
+  font-size: 0.55rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.ph-sechead::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
+/* ---------------------------------------------------------- field */
+.ph-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.ph-field__label {
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+.ph-field__req {
+  color: var(--ember);
+  margin-left: 0.15rem;
+}
+.ph-field__hint {
+  font-size: 0.68rem;
+  color: var(--muted);
+  line-height: 1.45;
+}
+.ph-field__error {
+  font-size: 0.68rem;
+  color: var(--critical);
+  line-height: 1.45;
+}
+
+.ph-input {
+  width: 100%;
+  height: 38px;
+  padding: 0 0.75rem;
+  font-family: var(--ui);
+  font-size: 0.82rem;
+  font-weight: 300;
+  color: var(--ink);
+  background: var(--panel);
+  border: 1px solid var(--line-hi);
+  border-radius: var(--r-input);
+  transition:
+    border-color var(--t-hover) var(--ease),
+    background var(--t-hover) var(--ease);
+}
+.ph-input::placeholder {
+  color: var(--muted);
+}
+.ph-input:hover:not(:disabled) {
+  border-color: var(--panel-top);
+}
+.ph-input:focus {
+  outline: none;
+  border-color: var(--ember);
+  box-shadow: 0 0 0 3px var(--ember-wash);
+}
+.ph-input:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.ph-input[aria-invalid='true'] {
+  border-color: var(--critical);
+}
+.ph-input[data-multiline='true'] {
+  height: auto;
+  min-height: 84px;
+  padding: 0.55rem 0.75rem;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+/* ------------------------------------------------------- select */
+.ph-select-wrap {
+  position: relative;
+  display: block;
+}
+.ph-select {
+  appearance: none;
+  padding-right: 2rem;
+  cursor: pointer;
+}
+.ph-select-wrap__caret {
+  position: absolute;
+  right: 0.7rem;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: var(--ink-dim);
+  display: grid;
+  place-items: center;
+}
+
+/* -------------------------------------------------- search field */
+.ph-search {
+  position: relative;
+  display: block;
+}
+.ph-search__icon {
+  position: absolute;
+  left: 0.7rem;
+  top: 50%;
+  transform: translateY(-50%);
+  pointer-events: none;
+  color: var(--muted);
+  display: grid;
+  place-items: center;
+}
+.ph-search .ph-input {
+  height: 34px;
+  padding-left: 2rem;
+  border-radius: var(--r-pill);
+  font-size: 0.78rem;
+}
+
+/* --------------------------------------------------------- switch */
+.ph-switch {
+  width: 36px;
+  height: 21px;
+  flex: none;
+  padding: 0;
+  border-radius: var(--r-pill);
+  background: var(--panel-top);
+  border: 1px solid var(--line-hi);
+  position: relative;
+  cursor: pointer;
+  transition:
+    background var(--t-hover) var(--ease),
+    border-color var(--t-hover) var(--ease);
+}
+.ph-switch::before {
+  content: '';
+  position: absolute;
+  top: 1.5px;
+  left: 1.5px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--ink-dim);
+  transition:
+    transform var(--t-move) var(--ease-spring),
+    background var(--t-hover) var(--ease);
+}
+.ph-switch[aria-checked='true'] {
+  background: var(--ember);
+  border-color: var(--ember);
+}
+.ph-switch[aria-checked='true']::before {
+  transform: translateX(15px);
+  background: #fff;
+}
+.ph-switch:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ----------------------------------------------- checkbox / radio */
+.ph-choice {
+  display: inline-flex;
+  align-items: flex-start;
+  gap: 0.55rem;
+  cursor: pointer;
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+.ph-choice input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.ph-choice__box {
+  width: 17px;
+  height: 17px;
+  flex: none;
+  margin-top: 0.1rem;
+  border: 1px solid var(--line-hi);
+  background: var(--panel);
+  display: grid;
+  place-items: center;
+  transition:
+    background var(--t-hover) var(--ease),
+    border-color var(--t-hover) var(--ease);
+}
+.ph-choice__box[data-shape='check'] {
+  border-radius: 5px;
+}
+.ph-choice__box[data-shape='radio'] {
+  border-radius: 50%;
+}
+.ph-choice:hover .ph-choice__box {
+  border-color: var(--panel-top);
+}
+.ph-choice input:checked + .ph-choice__box {
+  border-color: var(--ember);
+}
+.ph-choice input:focus-visible + .ph-choice__box {
+  outline: 2px solid var(--ember);
+  outline-offset: 2px;
+}
+.ph-choice input:disabled + .ph-choice__box {
+  opacity: 0.45;
+}
+
+/* the tick draws itself */
+.ph-choice__tick {
+  stroke: var(--ember);
+  stroke-width: 2.4;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 18;
+  stroke-dashoffset: 18;
+  transition: stroke-dashoffset var(--t-move) var(--ease-out);
+}
+.ph-choice input:checked + .ph-choice__box .ph-choice__tick {
+  stroke-dashoffset: 0;
+}
+
+/* the dot springs in */
+.ph-choice__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ember);
+  transform: scale(0);
+  transition: transform var(--t-move) var(--ease-spring);
+}
+.ph-choice input:checked + .ph-choice__box .ph-choice__dot {
+  transform: scale(1);
+}
+
+/* --------------------------------------------- segmented control */
+.ph-seg {
+  display: flex;
+  padding: 3px;
+  gap: 3px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  position: relative;
+}
+.ph-seg__thumb {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  left: 0;
+  border-radius: var(--r-pill);
+  background: var(--panel-top);
+  transition:
+    transform var(--t-move) var(--ease-out),
+    width var(--t-move) var(--ease-out);
+  pointer-events: none;
+}
+.ph-seg__opt {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font-family: var(--ui);
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--ink-dim);
+  padding: 0.42rem 1rem;
+  border-radius: var(--r-pill);
+  position: relative;
+  z-index: 1;
+  min-height: 34px;
+  transition: color var(--t-hover) var(--ease);
+}
+.ph-seg__opt[aria-checked='true'] {
+  color: var(--ink);
+}
+
+/* ---------------------------------------------------------- tabs */
+.ph-tabs {
+  display: flex;
+  gap: 1rem;
+  border-bottom: 1px solid var(--line);
+  padding: 0 0.1rem;
+  flex: none;
+}
+.ph-tab {
+  border: 0;
+  background: none;
+  cursor: pointer;
+  font-family: var(--ui);
+  font-size: 0.8rem;
+  color: var(--muted);
+  padding: 0.35rem 0 0.42rem;
+  position: relative;
+  transition: color var(--t-hover) var(--ease);
+}
+.ph-tab[aria-selected='true'] {
+  color: var(--ink);
+}
+.ph-tab::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  border-radius: 2px;
+  background: transparent;
+  transition: background var(--t-hover) var(--ease);
+}
+.ph-tab[aria-selected='true']::after {
+  background: var(--ember);
+  box-shadow: 0 0 9px 0 var(--ember-wash);
+}
+
+/* --------------------------------------------------------- slider */
+.ph-slider {
+  width: 100%;
+  appearance: none;
+  background: transparent;
+  height: 20px;
+  cursor: pointer;
+}
+.ph-slider::-webkit-slider-runnable-track {
+  height: 3px;
+  border-radius: 2px;
+  background: linear-gradient(
+    to right,
+    var(--ember) 0 var(--fill, 50%),
+    var(--panel-top) var(--fill, 50%) 100%
+  );
+}
+.ph-slider::-moz-range-track {
+  height: 3px;
+  border-radius: 2px;
+  background: var(--panel-top);
+}
+.ph-slider::-moz-range-progress {
+  height: 3px;
+  border-radius: 2px;
+  background: var(--ember);
+}
+.ph-slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  margin-top: -5.5px;
+  border-radius: 50%;
+  background: var(--ink);
+  border: 2px solid var(--ground);
+  box-shadow: 0 1px 5px rgb(0 0 0 / 0.6);
+  transition: transform var(--t-press) var(--ease);
+}
+.ph-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: var(--ink);
+  border: 2px solid var(--ground);
+  box-shadow: 0 1px 5px rgb(0 0 0 / 0.6);
+}
+.ph-slider:active::-webkit-slider-thumb {
+  transform: scale(1.15);
+}
+.ph-slider:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* ---------------------------------------------------- star rating */
+.ph-stars {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.06em;
+  color: var(--ember);
+  font-size: 0.75rem;
+  line-height: 1;
+}
+.ph-stars__off {
+  color: var(--line-hi);
+}
+.ph-stars button {
+  border: 0;
+  background: none;
+  padding: 0 0.06em;
+  cursor: pointer;
+  color: inherit;
+  font-size: inherit;
+  line-height: 1;
+  transition: transform var(--t-press) var(--ease);
+}
+.ph-stars button:hover {
+  transform: scale(1.18);
+}
+
+/* ---------------------------------------------- meter / progress */
+.ph-meter {
+  height: 3px;
+  border-radius: 2px;
+  background: var(--panel-top);
+  overflow: hidden;
+}
+.ph-meter__fill {
+  display: block;
+  height: 100%;
+  background: var(--ink-dim);
+  border-radius: 2px;
+  transition: width var(--t-move) var(--ease-out);
+}
+.ph-meter[data-tone='ember'] .ph-meter__fill {
+  background: var(--ember);
+  box-shadow: 0 0 10px var(--ember-wash);
+}
+
+/* parts vs labour, or any two-part total */
+.ph-split {
+  display: flex;
+  height: 5px;
+  border-radius: 3px;
+  overflow: hidden;
+  background: var(--panel-top);
+}
+.ph-split__seg {
+  display: block;
+  height: 100%;
+}
+
+/* steps, as on onboarding */
+.ph-steps {
+  display: flex;
+  gap: 5px;
+}
+.ph-steps__seg {
+  flex: 1;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--line-hi);
+  transition: background var(--t-move) var(--ease);
+}
+.ph-steps__seg[data-state='done'] {
+  background: var(--muted);
+}
+.ph-steps__seg[data-state='current'] {
+  background: var(--ember);
+  box-shadow: 0 0 8px var(--ember-wash);
+}
+
+/* --------------------------------------------------------- spinner */
+.ph-spinner {
+  display: inline-block;
+  border-radius: 50%;
+  border: 2px solid rgb(244 244 246 / 0.2);
+  border-top-color: var(--ink-dim);
+  animation: ph-spin 0.7s linear infinite;
+}
+@keyframes ph-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* -------------------------------------------------------- skeleton */
+.ph-skeleton {
+  background: linear-gradient(90deg, var(--panel) 25%, var(--panel-hi) 37%, var(--panel) 63%);
+  background-size: 400% 100%;
+  animation: ph-shimmer 1.4s var(--ease) infinite;
+  border-radius: var(--r-tile);
+}
+@keyframes ph-shimmer {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0 50%;
+  }
+}
+
+/* ------------------------------------------------------ empty state */
+.ph-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  text-align: center;
+  padding: 1.6rem 1.4rem;
+  color: var(--ink-dim);
+}
+.ph-empty__title {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--ink);
+}
+.ph-empty__body {
+  font-size: 0.78rem;
+  line-height: 1.55;
+  max-width: 32ch;
+  color: var(--muted);
+}
+
+/* ------------------------------------------------------------ row */
+.ph-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 0.55rem 0.7rem;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink);
+  font-family: var(--ui);
+  font-size: 0.82rem;
+  transition:
+    background var(--t-hover) var(--ease),
+    transform var(--t-press) var(--ease);
+}
+.ph-row:last-child {
+  border-bottom: 0;
+}
+.ph-row[data-interactive='true'] {
+  cursor: pointer;
+}
+.ph-row[data-interactive='true']:hover {
+  background: var(--panel-hi);
+}
+.ph-row[data-interactive='true']:active {
+  transform: translateY(1px);
+}
+.ph-row__label {
+  flex: 1;
+  min-width: 0;
+}
+.ph-row__sub {
+  display: block;
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+.ph-row__value {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--muted);
+}
+
+.ph-group {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  overflow: hidden;
+}
+
+/* ------------------------------------------------------ spec row */
+.ph-spec {
+  display: flex;
+  align-items: baseline;
+  gap: 0.7rem;
+  padding: 0.34rem 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 0.8rem;
+}
+.ph-spec:last-child {
+  border-bottom: 0;
+}
+.ph-spec__key {
+  flex: 1;
+  min-width: 0;
+  color: var(--muted);
+  font-weight: 300;
+}
+.ph-spec__val {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 0.76rem;
+  text-align: right;
+}
+
+/* --------------------------------------------------- message bubble */
+.ph-bubble {
+  max-width: 86%;
+  padding: 0.55rem 0.8rem;
+  border-radius: 14px;
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+.ph-bubble[data-from='user'] {
+  margin-left: auto;
+  background: var(--panel-top);
+  border-bottom-right-radius: 4px;
+}
+.ph-bubble[data-from='assistant'] {
+  margin-right: auto;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-bottom-left-radius: 4px;
+}
+.ph-bubble__caret {
+  display: inline-block;
+  width: 2px;
+  height: 0.95em;
+  margin-left: 1px;
+  vertical-align: text-bottom;
+  background: var(--ember);
+  animation: ph-blink 1s steps(2, start) infinite;
+}
+@keyframes ph-blink {
+  to {
+    visibility: hidden;
+  }
+}
+
+/* --------------------------------------------------------- toast */
+.ph-toast {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: var(--r-card);
+  background: var(--glass);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-line);
+  font-size: 0.8rem;
+  box-shadow: 0 12px 30px -14px #000;
+}
+.ph-toast__stripe {
+  width: 2px;
+  align-self: stretch;
+  border-radius: 2px;
+  background: var(--muted);
+  flex: none;
+}
+.ph-toast[data-level='critical'] .ph-toast__stripe {
+  background: var(--critical);
+}
+.ph-toast[data-level='warning'] .ph-toast__stripe {
+  background: var(--warning);
+}
+.ph-toast[data-level='ember'] .ph-toast__stripe {
+  background: var(--ember);
+  box-shadow: 0 0 8px var(--ember-wash);
+}
+
+/* --------------------------------------------------------- tab bar / rail
+   One nav, two presentations. Both read their items from the same array;
+   only the shape differs. */
+.ph-tabbar {
+  display: flex;
+  flex: none;
+  border-top: 1px solid var(--line);
+  background: rgb(32 32 35 / 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+.ph-tabbar__item {
+  flex: 1;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  padding: 0.42rem 0.1rem 0.48rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.18rem;
+  color: var(--muted);
+  font-family: var(--ui);
+  font-size: 0.55rem;
+  transition: color var(--t-hover) var(--ease);
+}
+.ph-tabbar__item[aria-current='page'] {
+  color: var(--ink);
+}
+.ph-tabbar__item::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 18px;
+  height: 2px;
+  border-radius: 0 0 2px 2px;
+  background: transparent;
+  transition: background var(--t-hover) var(--ease);
+}
+.ph-tabbar__item[aria-current='page']::before {
+  background: var(--ember);
+  box-shadow: 0 0 9px 0 var(--ember-wash);
+}
+
+.ph-rail {
+  width: 64px;
+  flex: none;
+  border-right: 1px solid var(--line);
+  background: var(--ground-lift);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.8rem 0.5rem;
+}
+.ph-rail__mark {
+  font-family: var(--display);
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  color: var(--ember);
+  margin-bottom: 0.5rem;
+}
+.ph-rail__item {
+  width: 44px;
+  height: 42px;
+  border: 0;
+  border-radius: 11px;
+  background: transparent;
+  color: var(--muted);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  cursor: pointer;
+  font-family: var(--ui);
+  font-size: 0.5rem;
+  transition:
+    background var(--t-hover) var(--ease),
+    color var(--t-hover) var(--ease);
+}
+.ph-rail__item:hover {
+  background: var(--panel);
+  color: var(--ink-dim);
+}
+.ph-rail__item[aria-current='page'] {
+  background: var(--panel-hi);
+  color: var(--ink);
+}
+.ph-rail__item[aria-current='page']::before {
+  content: '';
+  position: absolute;
+  left: -0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 2px;
+  height: 18px;
+  border-radius: 2px;
+  background: var(--ember);
+  box-shadow: 0 0 9px 0 var(--ember-wash);
+}
+
+/* --------------------------------------------------------------- app bar */
+.ph-appbar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.15rem 0.7rem 0.4rem;
+  flex: none;
+}
+.ph-appbar__title {
+  flex: 1;
+  text-align: center;
+  font-family: var(--display);
+  font-weight: 600;
+  font-size: 0.6rem;
+  letter-spacing: 0.22em;
+}
+.ph-appbar__spacer {
+  width: 32px;
+  flex: none;
+}
+
+/* The rail's active marker sits on the rail edge, outside the button box.
+   `.ph-pressable` clips by default; the bloom does not actually need that
+   clip (a background is already bounded by the border-box), so the rail can
+   safely opt out and let the marker show. */
+.ph-rail__item {
+  overflow: visible;
+}
+
+/* ------------------------------------------------------------- static tag
+   A chip's appearance without a chip's behaviour. For labels inside a control
+   that is already a button, where a nested <button> would be invalid markup. */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--ui);
+  font-size: 0.64rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--line-hi);
+  background: var(--panel-hi);
+  color: var(--ink-dim);
+  white-space: nowrap;
+}
+
+/* --------------------------------------------------------------- dialog
+   Native <dialog>. The platform handles focus trapping, the top layer,
+   Escape and page inertness — all things hand-rolled modals get wrong. */
+.ph-dialog {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--ink);
+  max-width: min(400px, calc(100vw - 2rem));
+  width: 100%;
+}
+.ph-dialog::backdrop {
+  background: rgb(10 10 12 / 0.65);
+  backdrop-filter: blur(3px);
+}
+.ph-dialog__panel {
+  background: var(--ground-lift);
+  border: 1px solid var(--line-hi);
+  border-radius: var(--r-sheet);
+  padding: 1.1rem 1.2rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  box-shadow: 0 30px 60px -25px #000;
+}
+.ph-dialog__title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 500;
+}
+.ph-dialog__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-size: 0.84rem;
+  line-height: 1.55;
+  color: var(--ink-dim);
+}
+.ph-dialog__body p {
+  margin: 0;
+}
+.ph-dialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.4rem;
+  margin-top: 0.3rem;
+  flex-wrap: wrap;
+}
