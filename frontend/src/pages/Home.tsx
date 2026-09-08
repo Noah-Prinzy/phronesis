@@ -1,19 +1,47 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Bubble, Button, Chip, IconButton } from '../ui'
+import { Bubble, Button, Chip, IconButton, SpokenText } from '../ui'
 import { Halo } from '../avatar/Halo'
-import type { HaloState } from '../avatar/renderer'
+import type { HaloState } from '../avatar/Halo'
 import { useMicLevel } from '../avatar/useMicLevel'
+import { useDictation } from '../app/useDictation'
+import { IconMic, IconSend, IconSpark } from '../icons'
 import { useJourney } from '../app/journey'
+import { useRem } from '../app/useRootFontSize'
+import { firstNameOf, useAuth } from '../app/auth'
+import { useSpeak } from '../app/useSpeak'
+import { useFocus } from '../app/focus'
+import { ApiError, streamChat } from '../lib/api'
+import type { ChatMessage } from '../lib/api'
+import type { CarPart } from '../data/findings'
 
-/** The avatar canvas is always this size; docking is a pure CSS transform. */
-const BASE = 132
+/**
+ * Home is a conversation, not a form.
+ *
+ * Three states, and the chrome thins out as it gets more personal:
+ *
+ *   fresh     — nothing said yet. Big orb, a greeting, some openers.
+ *   speaking  — the user is talking. The openers go; their words appear
+ *               under the orb as the recogniser hears them.
+ *   thread    — there is a conversation. Compact header, messages.
+ *
+ * Phronesis' replies are deliberately NOT painted as they stream in. The
+ * text is held back until she actually starts speaking, and then arrives in
+ * time with her voice — otherwise the answer is finished on screen while she
+ * is still saying the first sentence, which reads as her narrating something
+ * already written. The short replies her persona produces make the wait small.
+ */
+
+/** The orb's two sizes, in rem. It is the same mounted element either way — the
+    size prop changes and CSS transitions the box, so the video never remounts
+    and the loop never restarts mid-conversation. */
+const ORB_HERO = 7.6
+const ORB_DOCKED = 2.4
 
 interface Msg {
   id: number
   from: 'user' | 'assistant'
   text: string
-  streaming?: boolean
 }
 
 /** A routing offer the assistant makes, rather than a jump it performs. */
@@ -24,8 +52,41 @@ interface RouteOffer {
   cta: string
 }
 
+function offerFor(owner: boolean): RouteOffer {
+  return owner
+    ? {
+        title: 'Want me to look at the live data?',
+        note: 'I can pull the codes and check what the car itself reports.',
+        to: '/diagnosis',
+        cta: 'Open Diagnosis',
+      }
+    : {
+        title: 'Want these side by side?',
+        note: 'Specs, running costs and what they should cost here.',
+        to: '/compare',
+        cta: 'Open Compare',
+      }
+}
+
 const OWNER_CHIPS = ["It's making a noise", 'Warning light', 'Is this safe to drive?']
 const BUYER_CHIPS = ['What car under 20M?', 'Compare two cars', 'Is this price fair?']
+
+/**
+ * Which car part a reply was about, guessed from its own words.
+ *
+ * The AI backend carries no structured metadata alongside the text, so this is
+ * necessarily a text match rather than a real classification. Good enough to
+ * point the hologram in the right direction when the owner follows the
+ * "Open Diagnosis" offer; wrong far less often than it is silent.
+ */
+function partFromText(text: string): CarPart | null {
+  if (/\brear\b.{0,12}\bbrake|\bbrake.{0,12}\brear\b/i.test(text)) return 'rear-brakes'
+  if (/\bbrake/i.test(text)) return 'front-brakes'
+  if (/\bengine\b/i.test(text)) return 'engine'
+  if (/\bcabin\b|\bair filter\b|\bhvac\b/i.test(text)) return 'cabin'
+  if (/\bbattery\b/i.test(text)) return 'battery'
+  return null
+}
 
 export function Home() {
   const navigate = useNavigate()
@@ -36,65 +97,74 @@ export function Home() {
   const [offer, setOffer] = useState<RouteOffer | null>(null)
   const [draft, setDraft] = useState('')
   const [thinking, setThinking] = useState(false)
-  const [micOn, setMicOn] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  /** What the recogniser has heard so far this utterance. */
+  const [heard, setHeard] = useState('')
+  /** The reply currently being spoken, revealed in time with the voice. */
+  const [speakingId, setSpeakingId] = useState<number | null>(null)
 
-  const { levelRef, status: micStatus } = useMicLevel(micOn)
+  const { getToken, user, status: authStatus } = useAuth()
+  const firstName = firstNameOf(user)
+  const { talking, speak: speakLine, stop: stopSpeaking, progress } = useSpeak()
+  const { setPart } = useFocus()
 
-  const docked = msgs.length > 0
-  const speaking = msgs.some((m) => m.streaming)
+  /**
+   * How she opens.
+   *
+   * Spoken, and written as she says it — the name included, so the one thing
+   * the account step exists to collect is actually used out loud rather than
+   * just printed in a heading.
+   */
+  const opener = owner
+    ? `${firstName ? `Hey ${firstName}. ` : ''}What's your car been doing? Sounds, warning lights — anything that feels off.`
+    : `${firstName ? `Hey ${firstName}. ` : ''}What are you looking for? Tell me your budget and what you'll use it for.`
+
+  // Greet on arrival, once. Waits for auth to settle first, or she would say
+  // the line before the name has loaded and greet a stranger.
+  const greeted = useRef(false)
+  useEffect(() => {
+    if (greeted.current || authStatus === 'loading') return
+    greeted.current = true
+    speakLine(opener)
+  }, [authStatus, opener, speakLine])
+
+  /* ---------------------------------------------------------- speech in
+     `send` is a hoisted function declaration and the hook re-reads these
+     callbacks every render, so this always calls the current one. */
+  const {
+    supported: canDictate,
+    listening,
+    error: micError,
+    start: listen,
+    stop: stopListening,
+  } = useDictation({
+    onInterim: (text) => setHeard(text),
+    onFinal: (text) => void send(text),
+  })
+
+  // Amplitude for the orb, only while the recogniser is actually open.
+  const { levelRef } = useMicLevel(listening)
+
+  // Whatever was heard belongs to one utterance. When the mic closes — sent
+  // or abandoned — it should not linger under the orb.
+  useEffect(() => {
+    if (!listening) setHeard('')
+  }, [listening])
+
+  const mode = msgs.length > 0 ? 'thread' : listening ? 'speaking' : 'fresh'
+  const docked = mode === 'thread'
+  const orbSize = useRem(docked ? ORB_DOCKED : ORB_HERO)
+
+  /** True while her reply is still arriving on screen with her voice. */
+  const revealing = speakingId !== null && progress < 1
 
   const state: HaloState = thinking
     ? 'thinking'
-    : speaking
+    : talking || revealing
       ? 'responding'
-      : micOn
+      : listening
         ? 'listening'
         : 'idle'
-
-  /* ---------------------------------------------------------------- docking
-     The avatar lives in one absolutely-positioned layer and is moved between
-     two measured slots. It is never re-parented, so it never remounts, and the
-     target is measured at the moment of the move rather than latched ahead of
-     time — which is exactly how V1's docking broke. */
-
-  const stage = useRef<HTMLDivElement>(null)
-  const heroSlot = useRef<HTMLDivElement>(null)
-  const micSlot = useRef<HTMLDivElement>(null)
-  const layer = useRef<HTMLDivElement>(null)
-
-  const place = useCallback(function place() {
-    const host = stage.current
-    const el = layer.current
-    const slot = docked ? micSlot.current : heroSlot.current
-    if (!host || !el || !slot) return
-    const s = slot.getBoundingClientRect()
-    const h = host.getBoundingClientRect()
-    // A zero-size target means layout has not settled. Retry on the next
-    // frame rather than giving up — a silent bail here parks the avatar at
-    // its previous position forever, which is precisely how this broke once.
-    if (s.width === 0 || h.width === 0) {
-      requestAnimationFrame(place)
-      return
-    }
-    const scale = s.width / BASE
-    const x = s.left - h.left + s.width / 2
-    const y = s.top - h.top + s.height / 2
-    el.style.transform = `translate(${x}px, ${y}px) translate(-50%, -50%) scale(${scale})`
-  }, [docked])
-
-  useLayoutEffect(() => {
-    place()
-    // Re-measure on anything that can move the slots: the keyboard opening,
-    // the thread growing, an orientation change.
-    const ro = new ResizeObserver(place)
-    if (stage.current) ro.observe(stage.current)
-    if (micSlot.current) ro.observe(micSlot.current)
-    window.addEventListener('resize', place)
-    return () => {
-      ro.disconnect()
-      window.removeEventListener('resize', place)
-    }
-  }, [place])
 
   /* ------------------------------------------------------------ the thread */
 
@@ -102,93 +172,172 @@ export function Home() {
   useEffect(() => {
     const t = threadRef.current
     if (t) t.scrollTop = t.scrollHeight
-  }, [msgs, offer])
+    // progress is in here on purpose: the reply grows as she speaks it, so
+    // the thread has to keep following it down.
+  }, [msgs, offer, heard, progress])
 
   const idRef = useRef(1)
-  const timers = useRef<number[]>([])
-  useEffect(() => () => timers.current.forEach(window.clearTimeout), [])
+  const abortRef = useRef<AbortController | null>(null)
+  useEffect(() => () => abortRef.current?.abort(), [])
 
   /**
-   * Stands in for the assistant until step 4 wires the real one. It exists to
-   * exercise the states the page has to render — thinking, streaming, and the
-   * routing offer — not to be clever.
+   * Sends a turn and streams the reply.
+   *
+   * The whole thread goes up each time, not just the new line — the endpoint
+   * is stateless, so the conversation only exists because we keep sending it.
    */
-  function send(text: string) {
+  async function send(text: string) {
     const body = text.trim()
-    if (!body) return
+    if (!body || thinking) return
     setDraft('')
+    setHeard('')
     setOffer(null)
-    setMicOn(false)
+    setError(null)
+    // Release the previous reply to full opacity before the next one starts,
+    // or it would sit frozen at however far her voice had got.
+    setSpeakingId(null)
+    stopSpeaking()
+
     const mine: Msg = { id: idRef.current++, from: 'user', text: body }
+    // Build the wire history from what is on screen *plus* this turn, rather
+    // than reading state back after setMsgs — that read would be one render
+    // behind and would silently drop the newest message.
+    const history: ChatMessage[] = [
+      ...msgs.map((m) => ({ role: m.from, content: m.text })),
+      { role: 'user' as const, content: body },
+    ]
     setMsgs((m) => [...m, mine])
     setThinking(true)
 
-    const reply = owner
-      ? 'A rattle only under braking usually means the pads are worn down to the wear indicator — that metal tab is designed to make exactly that noise.'
-      : 'Under 20M in Kampala, the honest shortlist is a Premio, a Fit and a Note. They differ mostly in running cost, not purchase price.'
+    const replyId = idRef.current++
+    let full = ''
+    const controller = new AbortController()
+    abortRef.current = controller
 
-    timers.current.push(
-      window.setTimeout(() => {
-        setThinking(false)
-        const id = idRef.current++
-        setMsgs((m) => [...m, { id, from: 'assistant', text: reply, streaming: true }])
-        timers.current.push(
-          window.setTimeout(() => {
-            setMsgs((m) => m.map((x) => (x.id === id ? { ...x, streaming: false } : x)))
-            setOffer(
-              owner
-                ? {
-                    title: 'This looks like a brake fault.',
-                    note: 'I can pull the live data and check the pads.',
-                    to: '/diagnosis',
-                    cta: 'Open Diagnosis',
-                  }
-                : {
-                    title: 'I can line those three up.',
-                    note: 'Specs, running costs and what they should cost here.',
-                    to: '/compare',
-                    cta: 'Open Compare',
-                  },
-            )
-          }, 1400),
-        )
-      }, 900),
-    )
+    try {
+      const token = await getToken()
+      // Collected, not painted. The reply appears when she says it.
+      await streamChat({
+        messages: history,
+        journey,
+        token,
+        signal: controller.signal,
+        onDelta: (delta) => {
+          full += delta
+        },
+      })
+
+      const reply = full.trim()
+      if (!reply) return
+
+      setMsgs((m) => [...m, { id: replyId, from: 'assistant', text: reply }])
+      setSpeakingId(replyId)
+      setOffer(offerFor(owner))
+      speakLine(reply)
+      // Only owners have a Diagnosis page for this to point at.
+      if (owner) {
+        const part = partFromText(reply)
+        if (part) setPart(part)
+      }
+    } catch (err) {
+      if (controller.signal.aborted) return
+      // Roll the whole turn back: drop the user's message and put their text
+      // back in the composer.
+      //
+      // Keeping an unanswered user turn looks kinder but leaves two
+      // consecutive user roles in the history that every later request
+      // re-sends — a malformed conversation some providers reject outright.
+      setMsgs((m) => m.filter((x) => x.id !== mine.id))
+      setDraft(body)
+      setError(
+        err instanceof ApiError ? err.message : 'I could not reach the server. Is it running?',
+      )
+    } finally {
+      setThinking(false)
+      abortRef.current = null
+    }
   }
 
   const chips = owner ? OWNER_CHIPS : BUYER_CHIPS
 
   return (
-    <main className="home" ref={stage}>
-      <header className="home__bar">
-        <span className="home__mark">PHRONESIS</span>
-        <span className="home__car">{owner ? '2015 Premio' : 'Looking to buy'}</span>
-      </header>
+    <main id="main" className="home" data-mode={mode}>
+      {/* The orb keeps this one slot in the tree at every size, so changing
+          mode resizes it rather than remounting the video. */}
+      <div className="home__stage">
+        <Halo
+          size={orbSize}
+          state={state}
+          levelRef={levelRef}
+          onActivate={() => (listening ? stopListening() : listen())}
+          label={listening ? 'Stop listening' : 'Talk to Phronesis'}
+        />
 
-      {docked ? (
+        {mode === 'thread' && (
+          <>
+            <span className="home__mark">PHRONESIS</span>
+            <span className="home__car">{owner ? '2015 Premio' : 'Looking to buy'}</span>
+          </>
+        )}
+
+        {mode === 'speaking' && (
+          <SpokenText text={heard || '…'} live className="home__heard" />
+        )}
+
+        {mode === 'fresh' && (
+          <>
+            <SpokenText text={opener} progress={progress} className="home__opener" />
+            <div className="home__chips">
+              {chips.map((c) => (
+                <Chip key={c} onClick={() => send(c)}>
+                  {c}
+                </Chip>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+
+      {docked && (
         <div className="home__thread" ref={threadRef}>
           {msgs.map((m) => (
-            <Bubble key={m.id} from={m.from} streaming={m.streaming}>
-              {m.text}
+            <Bubble key={m.id} from={m.from}>
+              {m.id === speakingId ? (
+                <SpokenText text={m.text} progress={progress} />
+              ) : (
+                m.text
+              )}
             </Bubble>
           ))}
 
+          {/* Their voice, forming into the message it is about to become. */}
+          {listening && heard && (
+            <Bubble from="user" className="ph-bubble--forming">
+              <SpokenText text={heard} live />
+            </Bubble>
+          )}
+
           {thinking && (
             <p className="home__thinking" aria-live="polite">
-              Thinking…
+              <span className="home__dots" aria-hidden="true">
+                <i />
+                <i />
+                <i />
+              </span>
+              Thinking
             </p>
           )}
 
-          {offer && (
+          {/* Held back until she has finished saying it — buttons appearing
+              mid-sentence would talk over her. */}
+          {offer && !revealing && (
             <div className="offer">
-              <div className="offer__head">
-                <span className="offer__icon" aria-hidden="true">
-                  <ClockIcon />
-                </span>
-                <span>
-                  <span className="offer__title">{offer.title}</span>
-                  <span className="offer__note">{offer.note}</span>
-                </span>
+              <span className="offer__icon" aria-hidden="true">
+                <IconSpark size={15} />
+              </span>
+              <div className="offer__text">
+                <span className="offer__title">{offer.title}</span>
+                <span className="offer__note">{offer.note}</span>
               </div>
               <div className="offer__actions">
                 <Button size="sm" onClick={() => navigate(offer.to)}>
@@ -201,91 +350,62 @@ export function Home() {
             </div>
           )}
         </div>
-      ) : (
-        <div className="home__hero">
-          {/* Reserves the space the avatar occupies; the avatar itself lives
-              in the layer below and is transformed onto this box. */}
-          <div className="home__heroSlot" ref={heroSlot} style={{ width: BASE, height: BASE }} />
-          <p className="home__prompt">
-            {owner
-              ? "What's going on with your car? Sounds, warning lights — describe it."
-              : 'What are you looking for? Budget, use, anything you already like.'}
+      )}
+
+      <div className="home__foot">
+        {error && (
+          <p className="home__error" role="alert">
+            {error}
           </p>
-          <div className="home__chips">
-            {chips.map((c) => (
-              <Chip key={c} onClick={() => send(c)}>
-                {c}
-              </Chip>
-            ))}
-          </div>
-        </div>
-      )}
+        )}
+        {micError === 'denied' && (
+          <p className="home__note" role="status">
+            I can&rsquo;t hear you — the microphone is blocked. You can still type.
+          </p>
+        )}
+        {micError === 'no-speech' && (
+          <p className="home__note" role="status">
+            I didn&rsquo;t catch that. Try again, or type it instead.
+          </p>
+        )}
+        {micError === 'failed' && (
+          <p className="home__note" role="status">
+            Something went wrong with the microphone. Typing works just as well.
+          </p>
+        )}
 
-      <form
-        className="composer"
-        onSubmit={(e) => {
-          e.preventDefault()
-          send(draft)
-        }}
-      >
-        <div
-          className="composer__mic"
-          ref={micSlot}
-          style={{ width: docked ? 34 : 0, height: 34 }}
-          aria-hidden="true"
-        />
-        <input
-          className="composer__input"
-          value={draft}
-          onChange={(e) => setDraft(e.currentTarget.value)}
-          placeholder={docked ? 'Message Phronesis…' : 'Describe it, or tap the orb'}
-          aria-label="Message Phronesis"
-        />
-        <IconButton label="Send" variant="filled" type="submit" onClick={() => send(draft)}>
-          <ArrowIcon />
-        </IconButton>
-      </form>
+        <form
+          className="composer"
+          onSubmit={(e) => {
+            e.preventDefault()
+            send(draft)
+          }}
+        >
+          <IconButton
+            label={listening ? 'Stop listening' : 'Speak instead of typing'}
+            title={canDictate ? undefined : 'This browser cannot listen — try Chrome or Edge'}
+            className={listening ? 'composer__mic--on' : undefined}
+            disabled={!canDictate}
+            onClick={() => (listening ? stopListening() : listen())}
+          >
+            <IconMic />
+          </IconButton>
 
-      {micStatus === 'blocked' && (
-        <p className="home__micnote" role="status">
-          I can&rsquo;t hear you — the microphone is blocked. You can still type.
-        </p>
-      )}
-      {micStatus === 'unavailable' && (
-        <p className="home__micnote" role="status">
-          No microphone on this device. Typing works just as well.
-        </p>
-      )}
+          <input
+            className="composer__input"
+            value={draft}
+            onChange={(e) => setDraft(e.currentTarget.value)}
+            placeholder={
+              listening ? 'Listening…' : docked ? 'Message Phronesis…' : 'Describe it, or tap the orb'
+            }
+            aria-label="Message Phronesis"
+          />
 
-      {/* One avatar, one mount, moved by transform. */}
-      <div className="home__layer" ref={layer}>
-        <Halo
-          size={BASE}
-          state={state}
-          levelRef={levelRef}
-          onActivate={() => setMicOn((v) => !v)}
-          label={micOn ? 'Turn the microphone off' : 'Turn the microphone on'}
-        />
+          <IconButton label="Send" variant="filled" type="submit" disabled={!draft.trim()}>
+            <IconSend />
+          </IconButton>
+        </form>
       </div>
     </main>
-  )
-}
-
-/* -------------------------------------------------------------------- icons */
-
-function ArrowIcon() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-      <path d="M4 12h15M13 6l6 6-6 6" />
-    </svg>
-  )
-}
-
-function ClockIcon() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-      <circle cx="12" cy="12" r="8" />
-      <path d="M12 8v4l3 2" />
-    </svg>
   )
 }

@@ -41,7 +41,7 @@ export function Button({
       data-size={size}
       data-wide={wide || undefined}
       data-loading={loading || undefined}
-      className={cx('ph-btn', 'ph-pressable', className)}
+      className={cx('ph-btn', className)}
     >
       {iconLeft}
       {children}
@@ -79,7 +79,7 @@ export function IconButton({
       title={label}
       data-size={size}
       data-variant={variant}
-      className={cx('ph-icb', 'ph-pressable', className)}
+      className={cx('ph-icb', className)}
     >
       {children}
     </button>

@@ -1,14 +1,18 @@
 import { EmptyState } from '../ui'
 
 /**
- * A named stand-in for a hub page that is not built yet. It exists so the nav
- * is honestly clickable — a tab that 404s teaches the wrong thing about the
- * app during review.
+ * A route that exists but has nothing behind it yet. Says so plainly rather
+ * than showing an empty shell the user has to interpret.
  */
 export function Placeholder({ title, body }: { title: string; body: string }) {
   return (
-    <div className="soon">
-      <EmptyState title={title} body={body} />
-    </div>
+    <main id="main" className="page">
+      <header className="page__head">
+        <h1 className="page__title">{title}</h1>
+      </header>
+      <div className="page__body" style={{ justifyContent: 'center' }}>
+        <EmptyState title="Not built yet" body={body} />
+      </div>
+    </main>
   )
 }

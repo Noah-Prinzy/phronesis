@@ -13,12 +13,14 @@ import { Placeholder } from '../pages/Placeholder'
 import { StyleGuide } from '../styleguide/StyleGuide'
 
 /**
- * The entry flow, exactly as design/03-breakpoints.md describes it:
+ * The entry flow:
  *
- *   /  →  /welcome  →  /start  →  /join  →  /pair  →  /home
+ *   /  →  /welcome  →  /start  →  /join  →  /home
  *
- * `/pair` is owner-only and redirects a buyer straight to /home, which is what
- * makes the two-step buyer flow real rather than a claim on a progress bar.
+ * Two required steps, not four. The name is collected on `/join` alongside the
+ * account rather than on a screen of its own, and `/pair` — which is optional,
+ * skippable and mocked — is no longer in the flow at all. It stays routable
+ * because Account links to it.
  *
  * Everything under AppLayout is the hub: it carries the nav, and the nav's
  * slots 2 and 3 swap with the journey.

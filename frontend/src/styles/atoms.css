@@ -1,44 +1,21 @@
 /* ============================================================
-   PHRONESIS · atom styles
+   PHRONESIS · atoms
    One class per atom, one atom per class. If a page needs a
-   different-looking button, it gets a variant here — never an
-   override at the call site. That drift is what V1 taught us.
+   different-looking button it gets a variant here — never an
+   override at the call site.
+
+   House style, in three rules:
+     1. Separation is a hairline, not a shadow or a gap.
+     2. Emphasis is the accent, and the accent is a thin line or
+        a small mark — never a large fill. The one exception is
+        the primary button, which is bright ink on graphite.
+     3. Press is a flat step plus a 1px sink. Nothing blooms,
+        nothing glows for decoration.
    ============================================================ */
-
-/* ---------------------------------------------- press is light
-   Everything clickable warms from the point of contact. One
-   delegated pointerdown listener sets --px/--py; see usePressLight.
-   The bloom sits on ::after at z-index -1 so it never tints text. */
-.ph-pressable {
-  position: relative;
-  isolation: isolate;
-  overflow: hidden;
-  -webkit-tap-highlight-color: transparent;
-}
-
-.ph-pressable::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  border-radius: inherit;
-  background: radial-gradient(
-    circle at var(--px, 50%) var(--py, 50%),
-    var(--ember-wash),
-    rgb(255 122 47 / 0) 65%
-  );
-  opacity: 0;
-  transition: opacity 300ms var(--ease-out);
-  pointer-events: none;
-}
-
-.ph-pressable[data-touch='true']::after {
-  opacity: 1;
-  transition-duration: 90ms;
-}
 
 /* --------------------------------------------------------- button */
 .ph-btn {
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -46,10 +23,11 @@
   font-family: var(--ui);
   font-weight: 500;
   line-height: 1;
+  letter-spacing: 0.005em;
   white-space: nowrap;
   cursor: pointer;
   border: 1px solid transparent;
-  border-radius: var(--r-pill);
+  border-radius: var(--r);
   transition:
     background var(--t-hover) var(--ease),
     border-color var(--t-hover) var(--ease),
@@ -58,54 +36,57 @@
 }
 
 .ph-btn:active:not(:disabled) {
-  transform: translateY(1px) scale(0.985);
+  transform: translateY(1px);
 }
 
 .ph-btn:disabled {
-  opacity: 0.4;
+  opacity: 0.38;
   cursor: not-allowed;
 }
 
 .ph-btn[data-size='sm'] {
-  height: 32px;
+  height: 2.133rem;
   padding-inline: 0.8rem;
-  font-size: 0.76rem;
+  font-size: 0.78rem;
 }
 .ph-btn[data-size='md'] {
-  height: 38px;
+  height: 2.533rem;
   padding-inline: 1rem;
-  font-size: 0.8rem;
+  font-size: 0.83rem;
 }
 .ph-btn[data-size='lg'] {
-  height: 44px;
-  padding-inline: 1.35rem;
+  height: 2.933rem;
+  padding-inline: 1.4rem;
   font-size: 0.88rem;
 }
 
+/* The one high-contrast surface in the app. A CTA should be
+   unmistakable without spending the accent on it. */
 .ph-btn[data-variant='primary'] {
-  background: var(--panel-hi);
-  color: var(--ink);
-  border-color: var(--line-hi);
+  background: var(--ink);
+  color: var(--ground);
+  font-weight: 600;
 }
 .ph-btn[data-variant='primary']:hover:not(:disabled) {
-  background: var(--panel-top);
+  background: #fff;
 }
 
 .ph-btn[data-variant='secondary'] {
   background: transparent;
   color: var(--ink);
-  border-color: var(--line-hi);
+  border-color: var(--edge);
 }
 .ph-btn[data-variant='secondary']:hover:not(:disabled) {
-  background: var(--panel);
+  background: var(--surface-2);
+  border-color: var(--ink-3);
 }
 
 .ph-btn[data-variant='ghost'] {
   background: transparent;
-  color: var(--ink-dim);
+  color: var(--ink-2);
 }
 .ph-btn[data-variant='ghost']:hover:not(:disabled) {
-  background: var(--panel);
+  background: var(--surface-2);
   color: var(--ink);
 }
 
@@ -114,10 +95,11 @@
 .ph-btn[data-variant='danger'] {
   background: transparent;
   color: var(--critical);
-  border-color: rgb(255 77 77 / 0.45);
+  border-color: rgb(255 107 107 / 0.45);
 }
 .ph-btn[data-variant='danger']:hover:not(:disabled) {
-  background: rgb(255 77 77 / 0.1);
+  background: rgb(255 107 107 / 0.1);
+  border-color: var(--critical);
 }
 
 .ph-btn[data-wide='true'] {
@@ -133,7 +115,10 @@
   inset: 0;
   display: grid;
   place-items: center;
-  color: var(--ink);
+  color: currentColor;
+}
+.ph-btn[data-variant='primary'] .ph-btn__spin {
+  color: var(--ground);
 }
 
 /* ---------------------------------------------------- icon button */
@@ -141,74 +126,80 @@
   display: grid;
   place-items: center;
   flex: none;
-  border: 0;
-  border-radius: 50%;
+  border: 1px solid transparent;
+  border-radius: var(--r);
   background: transparent;
-  color: var(--ink-dim);
+  color: var(--ink-2);
   cursor: pointer;
   transition:
     background var(--t-hover) var(--ease),
     color var(--t-hover) var(--ease),
+    border-color var(--t-hover) var(--ease),
     transform var(--t-press) var(--ease);
 }
 .ph-icb:hover:not(:disabled) {
-  background: var(--panel);
+  background: var(--surface-2);
   color: var(--ink);
 }
 .ph-icb:active:not(:disabled) {
-  transform: scale(0.92);
+  transform: translateY(1px);
 }
 .ph-icb:disabled {
-  opacity: 0.4;
+  opacity: 0.38;
   cursor: not-allowed;
 }
 .ph-icb[data-size='sm'] {
-  width: 28px;
-  height: 28px;
+  width: 1.867rem;
+  height: 1.867rem;
 }
 .ph-icb[data-size='md'] {
-  width: 32px;
-  height: 32px;
+  width: 2.267rem;
+  height: 2.267rem;
 }
 .ph-icb[data-size='lg'] {
-  width: 40px;
-  height: 40px;
+  width: 2.667rem;
+  height: 2.667rem;
 }
 .ph-icb[data-variant='filled'] {
-  background: var(--panel-top);
-  color: var(--ink);
+  background: var(--ink);
+  color: var(--ground);
 }
 .ph-icb[data-variant='filled']:hover:not(:disabled) {
-  background: var(--line-hi);
+  background: #fff;
 }
 
-/* ----------------------------------------------------------- chip */
+/* ----------------------------------------------------------- chip
+   The one place the pill survives: a chip is a status token, and
+   the shape is doing the telling. */
 .ph-chip {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
   font-family: var(--ui);
-  font-size: 0.72rem;
-  padding: 0.32rem 0.7rem;
+  font-size: 0.75rem;
+  padding: 0.34rem 0.72rem;
   border-radius: var(--r-pill);
-  border: 1px solid var(--line-hi);
-  background: var(--panel);
-  color: var(--ink-dim);
+  border: 1px solid var(--hairline);
+  background: var(--surface);
+  color: var(--ink-2);
   cursor: pointer;
   transition:
     background var(--t-hover) var(--ease),
+    border-color var(--t-hover) var(--ease),
     color var(--t-hover) var(--ease);
 }
 .ph-chip:hover:not(:disabled) {
-  background: var(--panel-hi);
+  background: var(--surface-2);
+  border-color: var(--edge);
   color: var(--ink);
 }
 .ph-chip[aria-pressed='true'] {
-  background: var(--panel-top);
-  color: var(--ink);
+  background: var(--accent-fill);
+  border-color: var(--accent-line);
+  color: var(--accent-hi);
 }
 .ph-chip:disabled {
-  opacity: 0.4;
+  opacity: 0.38;
   cursor: not-allowed;
 }
 
@@ -216,14 +207,15 @@
 .ph-sev {
   display: inline-flex;
   align-items: center;
-  gap: 0.32rem;
+  gap: 0.34rem;
   flex: none;
-  font-family: var(--mono);
-  font-size: 0.55rem;
-  letter-spacing: 0.1em;
+  font-family: var(--display);
+  font-size: var(--label-size);
+  font-weight: 600;
+  letter-spacing: var(--label-track);
   text-transform: uppercase;
-  padding: 0.22rem 0.48rem 0.22rem 0.38rem;
-  border-radius: 5px;
+  padding: 0.2rem 0.5rem 0.2rem 0.42rem;
+  border-radius: var(--r-sm);
   border: 1px solid currentColor;
 }
 .ph-sev__dot {
@@ -235,21 +227,21 @@
 }
 .ph-sev[data-level='critical'] {
   color: var(--critical);
-  background: rgb(255 77 77 / 0.09);
+  background: rgb(255 107 107 / 0.1);
 }
 .ph-sev[data-level='high'] {
   color: var(--high);
-  background: rgb(255 138 61 / 0.09);
+  background: rgb(255 144 82 / 0.09);
 }
 .ph-sev[data-level='warning'] {
   color: var(--warning);
-  background: rgb(245 165 36 / 0.09);
+  background: rgb(240 180 41 / 0.09);
 }
 /* "Nothing wrong" is the default state of the app. It gets no hue. */
 .ph-sev[data-level='clear'],
 .ph-sev[data-level='routine'] {
-  color: var(--muted);
-  background: rgb(255 255 255 / 0.035);
+  color: var(--ink-3);
+  background: rgb(255 255 255 / 0.03);
 }
 
 /* ----------------------------------------------------------- card */
@@ -257,15 +249,16 @@
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: var(--r-card);
-  padding: 0.7rem 0.8rem;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r);
+  padding: 0.75rem 0.85rem;
 }
 .ph-card[data-interactive='true'] {
   cursor: pointer;
   text-align: left;
   font-family: var(--ui);
+  font-size: 1rem;
   color: var(--ink);
   transition:
     background var(--t-hover) var(--ease),
@@ -273,51 +266,54 @@
     transform var(--t-press) var(--ease);
 }
 .ph-card[data-interactive='true']:hover {
-  background: var(--panel-hi);
-  border-color: var(--line-hi);
+  background: var(--surface-2);
+  border-color: var(--edge);
 }
 .ph-card[data-interactive='true']:active {
   transform: translateY(1px);
 }
+/* Selection is an accent edge, not an accent fill. */
 .ph-card[data-selected='true'] {
-  background: var(--panel-hi);
-  border-color: var(--line-hi);
+  background: var(--surface-2);
+  border-color: var(--accent-line);
+  box-shadow: inset 2px 0 0 var(--accent);
 }
 
 /* -------------------------------------------------------- surface */
 .ph-sheet {
-  background: var(--glass);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border: 1px solid var(--glass-line);
-  border-radius: var(--r-sheet) var(--r-sheet) 0 0;
-  padding: 0.5rem 0.9rem 0.7rem;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-bottom: 0;
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
+  padding: 0.55rem 0.95rem 0.75rem;
+  box-shadow: var(--lift-hi);
 }
 .ph-sheet__grip {
-  width: 30px;
-  height: 3.5px;
+  width: 2.25rem;
+  height: 3px;
   border-radius: 2px;
-  background: var(--line-hi);
-  margin: 0 auto 0.5rem;
+  background: var(--edge);
+  margin: 0 auto 0.55rem;
 }
 
 /* ------------------------------------------------------- divider */
 .ph-divider {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  color: var(--muted);
-  font-family: var(--mono);
-  font-size: 0.55rem;
-  letter-spacing: 0.16em;
+  gap: 0.65rem;
+  font-family: var(--display);
+  font-size: var(--label-size);
+  font-weight: 600;
+  letter-spacing: var(--label-track);
   text-transform: uppercase;
+  color: var(--ink-3);
 }
 .ph-divider::before,
 .ph-divider::after {
   content: '';
   flex: 1;
   height: 1px;
-  background: var(--line);
+  background: var(--hairline);
 }
 .ph-divider[data-label='false']::after {
   display: none;
@@ -327,71 +323,77 @@
 .ph-sechead {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0 0.1rem 0.25rem;
-  font-family: var(--mono);
-  font-size: 0.55rem;
-  letter-spacing: 0.15em;
+  gap: 0.6rem;
+  padding: 0 0.1rem 0.3rem;
+  font-family: var(--display);
+  font-size: var(--label-size);
+  font-weight: 600;
+  letter-spacing: var(--label-track);
   text-transform: uppercase;
-  color: var(--muted);
+  color: var(--ink-3);
 }
 .ph-sechead::after {
   content: '';
   flex: 1;
   height: 1px;
-  background: var(--line);
+  background: var(--hairline);
 }
 
 /* ---------------------------------------------------------- field */
 .ph-field {
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
+  gap: 0.34rem;
 }
 .ph-field__label {
-  font-size: 0.7rem;
-  color: var(--muted);
+  font-family: var(--display);
+  font-size: var(--label-size);
+  font-weight: 600;
+  letter-spacing: var(--label-track);
+  text-transform: uppercase;
+  color: var(--ink-3);
 }
 .ph-field__req {
-  color: var(--ember);
-  margin-left: 0.15rem;
+  color: var(--accent);
+  margin-left: 0.2rem;
 }
 .ph-field__hint {
-  font-size: 0.68rem;
-  color: var(--muted);
+  font-size: 0.72rem;
+  color: var(--ink-3);
   line-height: 1.45;
 }
 .ph-field__error {
-  font-size: 0.68rem;
+  font-size: 0.72rem;
   color: var(--critical);
   line-height: 1.45;
 }
 
 .ph-input {
   width: 100%;
-  height: 38px;
+  height: 2.533rem;
   padding: 0 0.75rem;
   font-family: var(--ui);
-  font-size: 0.82rem;
-  font-weight: 300;
+  font-size: 0.85rem;
   color: var(--ink);
-  background: var(--panel);
-  border: 1px solid var(--line-hi);
-  border-radius: var(--r-input);
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r);
   transition:
     border-color var(--t-hover) var(--ease),
-    background var(--t-hover) var(--ease);
+    background var(--t-hover) var(--ease),
+    box-shadow var(--t-hover) var(--ease);
 }
 .ph-input::placeholder {
-  color: var(--muted);
+  color: var(--ink-3);
 }
 .ph-input:hover:not(:disabled) {
-  border-color: var(--panel-top);
+  border-color: var(--edge);
 }
 .ph-input:focus {
   outline: none;
-  border-color: var(--ember);
-  box-shadow: 0 0 0 3px var(--ember-wash);
+  background: var(--surface-2);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
 }
 .ph-input:disabled {
   opacity: 0.45;
@@ -402,7 +404,7 @@
 }
 .ph-input[data-multiline='true'] {
   height: auto;
-  min-height: 84px;
+  min-height: 5.6rem;
   padding: 0.55rem 0.75rem;
   line-height: 1.5;
   resize: vertical;
@@ -424,7 +426,7 @@
   top: 50%;
   transform: translateY(-50%);
   pointer-events: none;
-  color: var(--ink-dim);
+  color: var(--ink-3);
   display: grid;
   place-items: center;
 }
@@ -440,26 +442,25 @@
   top: 50%;
   transform: translateY(-50%);
   pointer-events: none;
-  color: var(--muted);
+  color: var(--ink-3);
   display: grid;
   place-items: center;
 }
 .ph-search .ph-input {
-  height: 34px;
-  padding-left: 2rem;
-  border-radius: var(--r-pill);
-  font-size: 0.78rem;
+  height: 2.4rem;
+  padding-left: 2.1rem;
+  font-size: 0.82rem;
 }
 
 /* --------------------------------------------------------- switch */
 .ph-switch {
-  width: 36px;
-  height: 21px;
+  width: 2.4rem;
+  height: 1.4rem;
   flex: none;
   padding: 0;
   border-radius: var(--r-pill);
-  background: var(--panel-top);
-  border: 1px solid var(--line-hi);
+  background: var(--surface-3);
+  border: 1px solid var(--hairline);
   position: relative;
   cursor: pointer;
   transition:
@@ -471,24 +472,24 @@
   position: absolute;
   top: 1.5px;
   left: 1.5px;
-  width: 16px;
-  height: 16px;
+  width: 1.067rem;
+  height: 1.067rem;
   border-radius: 50%;
-  background: var(--ink-dim);
+  background: var(--ink-2);
   transition:
-    transform var(--t-move) var(--ease-spring),
+    transform var(--t-move) var(--ease-out),
     background var(--t-hover) var(--ease);
 }
 .ph-switch[aria-checked='true'] {
-  background: var(--ember);
-  border-color: var(--ember);
+  background: var(--accent);
+  border-color: var(--accent);
 }
 .ph-switch[aria-checked='true']::before {
   transform: translateX(15px);
-  background: #fff;
+  background: var(--ground);
 }
 .ph-switch:disabled {
-  opacity: 0.5;
+  opacity: 0.45;
   cursor: not-allowed;
 }
 
@@ -498,7 +499,7 @@
   align-items: flex-start;
   gap: 0.55rem;
   cursor: pointer;
-  font-size: 0.82rem;
+  font-size: 0.85rem;
   line-height: 1.4;
 }
 .ph-choice input {
@@ -508,12 +509,12 @@
   height: 0;
 }
 .ph-choice__box {
-  width: 17px;
-  height: 17px;
+  width: 1.133rem;
+  height: 1.133rem;
   flex: none;
-  margin-top: 0.1rem;
-  border: 1px solid var(--line-hi);
-  background: var(--panel);
+  margin-top: 0.12rem;
+  border: 1px solid var(--edge);
+  background: var(--surface);
   display: grid;
   place-items: center;
   transition:
@@ -521,19 +522,19 @@
     border-color var(--t-hover) var(--ease);
 }
 .ph-choice__box[data-shape='check'] {
-  border-radius: 5px;
+  border-radius: var(--r-sm);
 }
 .ph-choice__box[data-shape='radio'] {
   border-radius: 50%;
 }
 .ph-choice:hover .ph-choice__box {
-  border-color: var(--panel-top);
+  border-color: var(--ink-3);
 }
 .ph-choice input:checked + .ph-choice__box {
-  border-color: var(--ember);
+  border-color: var(--accent);
 }
 .ph-choice input:focus-visible + .ph-choice__box {
-  outline: 2px solid var(--ember);
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 .ph-choice input:disabled + .ph-choice__box {
@@ -542,7 +543,7 @@
 
 /* the tick draws itself */
 .ph-choice__tick {
-  stroke: var(--ember);
+  stroke: var(--accent);
   stroke-width: 2.4;
   fill: none;
   stroke-linecap: round;
@@ -555,14 +556,13 @@
   stroke-dashoffset: 0;
 }
 
-/* the dot springs in */
 .ph-choice__dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--ember);
+  background: var(--accent);
   transform: scale(0);
-  transition: transform var(--t-move) var(--ease-spring);
+  transition: transform var(--t-move) var(--ease-out);
 }
 .ph-choice input:checked + .ph-choice__box .ph-choice__dot {
   transform: scale(1);
@@ -573,9 +573,9 @@
   display: flex;
   padding: 3px;
   gap: 3px;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: var(--r-pill);
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r);
   position: relative;
 }
 .ph-seg__thumb {
@@ -583,8 +583,8 @@
   top: 3px;
   bottom: 3px;
   left: 0;
-  border-radius: var(--r-pill);
-  background: var(--panel-top);
+  border-radius: var(--r-sm);
+  background: var(--surface-3);
   transition:
     transform var(--t-move) var(--ease-out),
     width var(--t-move) var(--ease-out);
@@ -596,15 +596,18 @@
   background: transparent;
   cursor: pointer;
   font-family: var(--ui);
-  font-size: 0.78rem;
+  font-size: 0.8rem;
   font-weight: 500;
-  color: var(--ink-dim);
+  color: var(--ink-3);
   padding: 0.42rem 1rem;
-  border-radius: var(--r-pill);
+  border-radius: var(--r-sm);
   position: relative;
   z-index: 1;
-  min-height: 34px;
+  min-height: 2.267rem;
   transition: color var(--t-hover) var(--ease);
+}
+.ph-seg__opt:hover {
+  color: var(--ink-2);
 }
 .ph-seg__opt[aria-checked='true'] {
   color: var(--ink);
@@ -613,8 +616,8 @@
 /* ---------------------------------------------------------- tabs */
 .ph-tabs {
   display: flex;
-  gap: 1rem;
-  border-bottom: 1px solid var(--line);
+  gap: 1.2rem;
+  border-bottom: 1px solid var(--hairline);
   padding: 0 0.1rem;
   flex: none;
 }
@@ -623,11 +626,15 @@
   background: none;
   cursor: pointer;
   font-family: var(--ui);
-  font-size: 0.8rem;
-  color: var(--muted);
-  padding: 0.35rem 0 0.42rem;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--ink-3);
+  padding: 0.4rem 0 0.5rem;
   position: relative;
   transition: color var(--t-hover) var(--ease);
+}
+.ph-tab:hover {
+  color: var(--ink-2);
 }
 .ph-tab[aria-selected='true'] {
   color: var(--ink);
@@ -639,13 +646,11 @@
   right: 0;
   bottom: -1px;
   height: 2px;
-  border-radius: 2px;
   background: transparent;
   transition: background var(--t-hover) var(--ease);
 }
 .ph-tab[aria-selected='true']::after {
-  background: var(--ember);
-  box-shadow: 0 0 9px 0 var(--ember-wash);
+  background: var(--accent);
 }
 
 /* --------------------------------------------------------- slider */
@@ -653,7 +658,7 @@
   width: 100%;
   appearance: none;
   background: transparent;
-  height: 20px;
+  height: 1.333rem;
   cursor: pointer;
 }
 .ph-slider::-webkit-slider-runnable-track {
@@ -661,103 +666,132 @@
   border-radius: 2px;
   background: linear-gradient(
     to right,
-    var(--ember) 0 var(--fill, 50%),
-    var(--panel-top) var(--fill, 50%) 100%
+    var(--accent) 0 var(--fill, 50%),
+    var(--surface-3) var(--fill, 50%) 100%
   );
 }
 .ph-slider::-moz-range-track {
   height: 3px;
   border-radius: 2px;
-  background: var(--panel-top);
+  background: var(--surface-3);
 }
 .ph-slider::-moz-range-progress {
   height: 3px;
   border-radius: 2px;
-  background: var(--ember);
+  background: var(--accent);
 }
 .ph-slider::-webkit-slider-thumb {
   appearance: none;
-  width: 14px;
-  height: 14px;
+  width: 0.933rem;
+  height: 0.933rem;
   margin-top: -5.5px;
   border-radius: 50%;
   background: var(--ink);
   border: 2px solid var(--ground);
-  box-shadow: 0 1px 5px rgb(0 0 0 / 0.6);
+  box-shadow: var(--lift);
   transition: transform var(--t-press) var(--ease);
 }
 .ph-slider::-moz-range-thumb {
-  width: 14px;
-  height: 14px;
+  width: 0.933rem;
+  height: 0.933rem;
   border-radius: 50%;
   background: var(--ink);
   border: 2px solid var(--ground);
-  box-shadow: 0 1px 5px rgb(0 0 0 / 0.6);
+  box-shadow: var(--lift);
 }
 .ph-slider:active::-webkit-slider-thumb {
-  transform: scale(1.15);
+  transform: scale(1.12);
 }
 .ph-slider:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+}
+/* The slider's caption row — was an inline style object in the TSX. */
+.ph-slider__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.6rem;
+  font-family: var(--display);
+  font-size: var(--label-size);
+  font-weight: 600;
+  letter-spacing: var(--label-track);
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.ph-slider__value {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+  color: var(--ink-2);
 }
 
 /* ---------------------------------------------------- star rating */
 .ph-stars {
   display: inline-flex;
   align-items: center;
-  gap: 0.06em;
-  color: var(--ember);
-  font-size: 0.75rem;
+  gap: 0.1em;
+  color: var(--accent);
   line-height: 1;
+  min-height: 0;
 }
 .ph-stars__off {
-  color: var(--line-hi);
+  color: var(--surface-3);
 }
+/* Interactive stars need a real hit area. The glyph stays small; the
+   target does not (WCAG 2.5.8). */
 .ph-stars button {
   border: 0;
   background: none;
-  padding: 0 0.06em;
+  padding: 0;
+  min-width: 2.25rem;
+  min-height: 2.75rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
   color: inherit;
-  font-size: inherit;
-  line-height: 1;
   transition: transform var(--t-press) var(--ease);
 }
 .ph-stars button:hover {
-  transform: scale(1.18);
+  transform: scale(1.15);
 }
 
 /* ---------------------------------------------- meter / progress */
 .ph-meter {
   height: 3px;
   border-radius: 2px;
-  background: var(--panel-top);
+  background: var(--surface-3);
   overflow: hidden;
 }
 .ph-meter__fill {
   display: block;
   height: 100%;
-  background: var(--ink-dim);
+  background: var(--ink-3);
   border-radius: 2px;
   transition: width var(--t-move) var(--ease-out);
 }
-.ph-meter[data-tone='ember'] .ph-meter__fill {
-  background: var(--ember);
-  box-shadow: 0 0 10px var(--ember-wash);
+.ph-meter[data-tone='accent'] .ph-meter__fill {
+  background: var(--accent);
 }
 
 /* parts vs labour, or any two-part total */
 .ph-split {
   display: flex;
   height: 5px;
-  border-radius: 3px;
+  border-radius: 2px;
   overflow: hidden;
-  background: var(--panel-top);
+  background: var(--surface-3);
 }
 .ph-split__seg {
   display: block;
   height: 100%;
+}
+.ph-split__seg[data-tone='bright'] {
+  background: var(--ink-2);
+}
+.ph-split__seg[data-tone='dim'] {
+  background: var(--ink-3);
 }
 
 /* steps, as on onboarding */
@@ -768,24 +802,23 @@
 .ph-steps__seg {
   flex: 1;
   height: 2px;
-  border-radius: 2px;
-  background: var(--line-hi);
+  border-radius: 1px;
+  background: var(--surface-3);
   transition: background var(--t-move) var(--ease);
 }
 .ph-steps__seg[data-state='done'] {
-  background: var(--muted);
+  background: var(--ink-3);
 }
 .ph-steps__seg[data-state='current'] {
-  background: var(--ember);
-  box-shadow: 0 0 8px var(--ember-wash);
+  background: var(--accent);
 }
 
 /* --------------------------------------------------------- spinner */
 .ph-spinner {
   display: inline-block;
   border-radius: 50%;
-  border: 2px solid rgb(244 244 246 / 0.2);
-  border-top-color: var(--ink-dim);
+  border: 2px solid rgb(236 239 244 / 0.16);
+  border-top-color: currentColor;
   animation: ph-spin 0.7s linear infinite;
 }
 @keyframes ph-spin {
@@ -796,10 +829,15 @@
 
 /* -------------------------------------------------------- skeleton */
 .ph-skeleton {
-  background: linear-gradient(90deg, var(--panel) 25%, var(--panel-hi) 37%, var(--panel) 63%);
+  background: linear-gradient(
+    90deg,
+    var(--surface) 25%,
+    var(--surface-2) 37%,
+    var(--surface) 63%
+  );
   background-size: 400% 100%;
   animation: ph-shimmer 1.4s var(--ease) infinite;
-  border-radius: var(--r-tile);
+  border-radius: var(--r-sm);
 }
 @keyframes ph-shimmer {
   0% {
@@ -816,21 +854,26 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
+  gap: 0.55rem;
   text-align: center;
-  padding: 1.6rem 1.4rem;
-  color: var(--ink-dim);
+  padding: 1.8rem 1.4rem;
+  color: var(--ink-2);
+}
+.ph-empty__icon {
+  color: var(--ink-3);
+  margin-bottom: 0.1rem;
 }
 .ph-empty__title {
-  font-size: 0.9rem;
-  font-weight: 500;
+  font-family: var(--display);
+  font-size: 0.95rem;
+  font-weight: 600;
   color: var(--ink);
 }
 .ph-empty__body {
-  font-size: 0.78rem;
+  font-size: 0.8rem;
   line-height: 1.55;
-  max-width: 32ch;
-  color: var(--muted);
+  max-width: 34ch;
+  color: var(--ink-3);
 }
 
 /* ------------------------------------------------------------ row */
@@ -839,14 +882,14 @@
   align-items: center;
   gap: 0.6rem;
   width: 100%;
-  padding: 0.55rem 0.7rem;
+  padding: 0.6rem 0.75rem;
   text-align: left;
   background: transparent;
   border: 0;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--hairline);
   color: var(--ink);
   font-family: var(--ui);
-  font-size: 0.82rem;
+  font-size: 0.85rem;
   transition:
     background var(--t-hover) var(--ease),
     transform var(--t-press) var(--ease);
@@ -858,7 +901,7 @@
   cursor: pointer;
 }
 .ph-row[data-interactive='true']:hover {
-  background: var(--panel-hi);
+  background: var(--surface-2);
 }
 .ph-row[data-interactive='true']:active {
   transform: translateY(1px);
@@ -869,19 +912,21 @@
 }
 .ph-row__sub {
   display: block;
-  font-size: 0.7rem;
-  color: var(--muted);
+  font-size: 0.72rem;
+  color: var(--ink-3);
+  line-height: 1.45;
 }
 .ph-row__value {
   font-family: var(--mono);
-  font-size: 0.7rem;
-  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.74rem;
+  color: var(--ink-3);
 }
 
 .ph-group {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: var(--r-card);
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r);
   overflow: hidden;
 }
 
@@ -890,9 +935,9 @@
   display: flex;
   align-items: baseline;
   gap: 0.7rem;
-  padding: 0.34rem 0;
-  border-bottom: 1px solid var(--line);
-  font-size: 0.8rem;
+  padding: 0.38rem 0;
+  border-bottom: 1px solid var(--hairline);
+  font-size: 0.82rem;
 }
 .ph-spec:last-child {
   border-bottom: 0;
@@ -900,42 +945,54 @@
 .ph-spec__key {
   flex: 1;
   min-width: 0;
-  color: var(--muted);
-  font-weight: 300;
+  color: var(--ink-3);
 }
 .ph-spec__val {
   margin: 0;
   font-family: var(--mono);
-  font-size: 0.76rem;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.78rem;
   text-align: right;
 }
 
-/* --------------------------------------------------- message bubble */
+/* --------------------------------------------------- message bubble
+   Both sides are flat panels. The sender is told by alignment and by
+   one accent edge, not by two competing fills. */
 .ph-bubble {
   max-width: 86%;
-  padding: 0.55rem 0.8rem;
-  border-radius: 14px;
-  font-size: 0.82rem;
-  line-height: 1.5;
+  padding: 0.6rem 0.8rem;
+  border-radius: var(--r);
+  font-size: 0.85rem;
+  line-height: 1.55;
+  border: 1px solid var(--hairline);
 }
 .ph-bubble[data-from='user'] {
   margin-left: auto;
-  background: var(--panel-top);
-  border-bottom-right-radius: 4px;
+  background: var(--surface-2);
+  color: var(--ink);
 }
 .ph-bubble[data-from='assistant'] {
   margin-right: auto;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-bottom-left-radius: 4px;
+  background: var(--surface);
+  box-shadow: inset 2px 0 0 var(--accent);
+}
+/* A bubble whose text is still being spoken or heard. `SpokenText` renders a
+   paragraph, which must not bring its own margin into the bubble. */
+.ph-bubble .spoken {
+  margin: 0;
+}
+/* Their words, mid-utterance: present, but not yet a sent message. */
+.ph-bubble--forming {
+  opacity: 0.72;
+  border-style: dashed;
 }
 .ph-bubble__caret {
   display: inline-block;
   width: 2px;
   height: 0.95em;
-  margin-left: 1px;
+  margin-left: 2px;
   vertical-align: text-bottom;
-  background: var(--ember);
+  background: var(--accent);
   animation: ph-blink 1s steps(2, start) infinite;
 }
 @keyframes ph-blink {
@@ -944,26 +1001,70 @@
   }
 }
 
+/* -------------------------------------------------- spoken transcript
+   Words arrive as she says them. Transparent, not absent — the block
+   holds its full height from the first frame so nothing below it
+   jumps around while the line fills in. */
+.spoken__w {
+  display: inline-block;
+  opacity: 0;
+  transform: translateY(0.16em);
+  transition:
+    opacity 260ms var(--ease-out),
+    transform 260ms var(--ease-out);
+}
+.spoken__w[data-lit='true'] {
+  opacity: 1;
+  transform: none;
+}
+
+/* Live dictation: the string itself grows, so there is nothing to reveal —
+   each word animates as it mounts instead. A transition cannot do this
+   (they do not run on first paint), so this is an animation. */
+.spoken--live .spoken__w {
+  opacity: 1;
+  transform: none;
+  animation: spoken-in 240ms var(--ease-out) both;
+}
+@keyframes spoken-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.16em);
+  }
+}
+
 /* --------------------------------------------------------- toast */
 .ph-toast {
   display: flex;
   align-items: flex-start;
-  gap: 0.6rem;
-  padding: 0.6rem 0.75rem;
-  border-radius: var(--r-card);
-  background: var(--glass);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border: 1px solid var(--glass-line);
-  font-size: 0.8rem;
-  box-shadow: 0 12px 30px -14px #000;
+  gap: 0.65rem;
+  padding: 0.65rem 0.8rem;
+  background: var(--surface-2);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r);
+  font-size: 0.82rem;
+  box-shadow: var(--lift-hi);
 }
 .ph-toast__stripe {
   width: 2px;
   align-self: stretch;
-  border-radius: 2px;
-  background: var(--muted);
+  border-radius: 1px;
+  background: var(--ink-3);
   flex: none;
+}
+.ph-toast__text {
+  flex: 1;
+  min-width: 0;
+}
+.ph-toast__title {
+  display: block;
+  font-weight: 500;
+}
+.ph-toast__body {
+  display: block;
+  font-size: 0.76rem;
+  color: var(--ink-3);
+  line-height: 1.5;
 }
 .ph-toast[data-level='critical'] .ph-toast__stripe {
   background: var(--critical);
@@ -971,114 +1072,8 @@
 .ph-toast[data-level='warning'] .ph-toast__stripe {
   background: var(--warning);
 }
-.ph-toast[data-level='ember'] .ph-toast__stripe {
-  background: var(--ember);
-  box-shadow: 0 0 8px var(--ember-wash);
-}
-
-/* --------------------------------------------------------- tab bar / rail
-   One nav, two presentations. Both read their items from the same array;
-   only the shape differs. */
-.ph-tabbar {
-  display: flex;
-  flex: none;
-  border-top: 1px solid var(--line);
-  background: rgb(32 32 35 / 0.75);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-}
-.ph-tabbar__item {
-  flex: 1;
-  border: 0;
-  background: none;
-  cursor: pointer;
-  padding: 0.42rem 0.1rem 0.48rem;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.18rem;
-  color: var(--muted);
-  font-family: var(--ui);
-  font-size: 0.55rem;
-  transition: color var(--t-hover) var(--ease);
-}
-.ph-tabbar__item[aria-current='page'] {
-  color: var(--ink);
-}
-.ph-tabbar__item::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 18px;
-  height: 2px;
-  border-radius: 0 0 2px 2px;
-  background: transparent;
-  transition: background var(--t-hover) var(--ease);
-}
-.ph-tabbar__item[aria-current='page']::before {
-  background: var(--ember);
-  box-shadow: 0 0 9px 0 var(--ember-wash);
-}
-
-.ph-rail {
-  width: 64px;
-  flex: none;
-  border-right: 1px solid var(--line);
-  background: var(--ground-lift);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.35rem;
-  padding: 0.8rem 0.5rem;
-}
-.ph-rail__mark {
-  font-family: var(--display);
-  font-size: 0.62rem;
-  font-weight: 600;
-  letter-spacing: 0.06em;
-  color: var(--ember);
-  margin-bottom: 0.5rem;
-}
-.ph-rail__item {
-  width: 44px;
-  height: 42px;
-  border: 0;
-  border-radius: 11px;
-  background: transparent;
-  color: var(--muted);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 2px;
-  cursor: pointer;
-  font-family: var(--ui);
-  font-size: 0.5rem;
-  transition:
-    background var(--t-hover) var(--ease),
-    color var(--t-hover) var(--ease);
-}
-.ph-rail__item:hover {
-  background: var(--panel);
-  color: var(--ink-dim);
-}
-.ph-rail__item[aria-current='page'] {
-  background: var(--panel-hi);
-  color: var(--ink);
-}
-.ph-rail__item[aria-current='page']::before {
-  content: '';
-  position: absolute;
-  left: -0.5rem;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 2px;
-  height: 18px;
-  border-radius: 2px;
-  background: var(--ember);
-  box-shadow: 0 0 9px 0 var(--ember-wash);
+.ph-toast[data-level='accent'] .ph-toast__stripe {
+  background: var(--accent);
 }
 
 /* --------------------------------------------------------------- app bar */
@@ -1091,23 +1086,16 @@
 }
 .ph-appbar__title {
   flex: 1;
-  text-align: center;
   font-family: var(--display);
   font-weight: 600;
-  font-size: 0.6rem;
-  letter-spacing: 0.22em;
+  font-size: var(--label-size);
+  letter-spacing: var(--label-track);
+  text-transform: uppercase;
+  color: var(--ink-3);
 }
 .ph-appbar__spacer {
-  width: 32px;
+  width: 2.267rem;
   flex: none;
-}
-
-/* The rail's active marker sits on the rail edge, outside the button box.
-   `.ph-pressable` clips by default; the bloom does not actually need that
-   clip (a background is already bounded by the border-box), so the rail can
-   safely opt out and let the marker show. */
-.ph-rail__item {
-  overflow: visible;
 }
 
 /* ------------------------------------------------------------- static tag
@@ -1117,12 +1105,172 @@
   display: inline-flex;
   align-items: center;
   font-family: var(--ui);
-  font-size: 0.64rem;
+  font-size: 0.7rem;
   padding: 0.2rem 0.5rem;
-  border-radius: var(--r-pill);
-  border: 1px solid var(--line-hi);
-  background: var(--panel-hi);
-  color: var(--ink-dim);
+  border-radius: var(--r-sm);
+  border: 1px solid var(--hairline);
+  background: var(--surface-2);
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+
+/* ============================================================ navigation
+   A rail at 900px and up, a tab bar below it. The same items either
+   way, in the same order, so the two never disagree about where you
+   are. Nothing floats over the content: the shell is a sibling of
+   the page, so no page has to reserve space for it. */
+
+.ph-rail {
+  flex: none;
+  width: var(--rail-w);
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 1.1rem 0.7rem 0.9rem;
+  background: var(--ground);
+  border-right: 1px solid var(--hairline);
+  overflow-y: auto;
+}
+.ph-rail__brand {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0 0.45rem;
+  margin-bottom: 1.1rem;
+}
+.ph-rail__mark {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 0.82rem;
+  letter-spacing: 0.16em;
+  color: var(--ink);
+}
+.ph-rail__orb {
+  width: 1.5rem;
+  height: 1.5rem;
+  flex: none;
+}
+.ph-rail__spacer {
+  flex: 1;
+  min-height: 0.6rem;
+}
+
+.ph-navitem {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  padding: 0.6rem 0.65rem;
+  border: 0;
+  border-radius: var(--r);
+  background: transparent;
+  color: var(--ink-3);
+  font-family: var(--ui);
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background var(--t-hover) var(--ease),
+    color var(--t-hover) var(--ease);
+}
+.ph-navitem svg {
+  flex: none;
+}
+.ph-navitem:hover {
+  background: var(--surface);
+  color: var(--ink-2);
+}
+.ph-navitem[aria-current='page'] {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+/* The active marker: a short accent edge, not a filled pill. */
+.ph-navitem[aria-current='page']::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 2px;
+  height: 1.15rem;
+  border-radius: 1px;
+  background: var(--accent);
+}
+
+/* ---- the rail's footer readout ---- */
+.ph-rail__car {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.6rem 0.65rem;
+  border: 1px solid var(--hairline);
+  border-radius: var(--r);
+  background: var(--surface);
+}
+.ph-rail__carLabel {
+  font-family: var(--display);
+  font-size: var(--label-size);
+  font-weight: 600;
+  letter-spacing: var(--label-track);
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+.ph-rail__carName {
+  font-size: 0.8rem;
+  color: var(--ink);
+}
+.ph-rail__carPlate {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--ink-3);
+}
+
+/* ---- phone: the tab bar ---- */
+.ph-tabbar {
+  flex: none;
+  display: flex;
+  align-items: stretch;
+  height: var(--tabbar-h);
+  padding-bottom: env(safe-area-inset-bottom);
+  background: var(--ground);
+  border-top: 1px solid var(--hairline);
+}
+.ph-tabbar__item {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.2rem;
+  border: 0;
+  background: transparent;
+  color: var(--ink-3);
+  font-family: var(--ui);
+  font-size: 0.625rem;
+  font-weight: 500;
+  cursor: pointer;
+  position: relative;
+  transition: color var(--t-hover) var(--ease);
+}
+.ph-tabbar__item[aria-current='page'] {
+  color: var(--ink);
+}
+.ph-tabbar__item[aria-current='page']::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 1.6rem;
+  height: 2px;
+  background: var(--accent);
+}
+.ph-tabbar__label {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
@@ -1138,31 +1286,31 @@
   width: 100%;
 }
 .ph-dialog::backdrop {
-  background: rgb(10 10 12 / 0.65);
-  backdrop-filter: blur(3px);
+  background: rgb(5 6 8 / 0.72);
 }
 .ph-dialog__panel {
-  background: var(--ground-lift);
-  border: 1px solid var(--line-hi);
-  border-radius: var(--r-sheet);
-  padding: 1.1rem 1.2rem 1rem;
+  background: var(--surface-2);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-lg);
+  padding: 1.15rem 1.25rem 1.05rem;
   display: flex;
   flex-direction: column;
   gap: 0.6rem;
-  box-shadow: 0 30px 60px -25px #000;
+  box-shadow: var(--lift-hi);
 }
 .ph-dialog__title {
   margin: 0;
-  font-size: 1rem;
-  font-weight: 500;
+  font-family: var(--display);
+  font-size: 1.02rem;
+  font-weight: 600;
 }
 .ph-dialog__body {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  font-size: 0.84rem;
+  font-size: 0.85rem;
   line-height: 1.55;
-  color: var(--ink-dim);
+  color: var(--ink-2);
 }
 .ph-dialog__body p {
   margin: 0;
@@ -1171,6 +1319,34 @@
   display: flex;
   justify-content: flex-end;
   gap: 0.4rem;
-  margin-top: 0.3rem;
+  margin-top: 0.35rem;
   flex-wrap: wrap;
+}
+
+/* ------------------------------------------------------------- skip link
+   Visually hidden until focused, then a real, visible target. */
+.ph-skip {
+  position: fixed;
+  top: 0.5rem;
+  left: 0.5rem;
+  z-index: 200;
+  padding: 0.6rem 0.9rem;
+  border-radius: var(--r);
+  background: var(--surface-3);
+  color: var(--ink);
+  border: 1px solid var(--edge);
+  font-size: 0.85rem;
+  text-decoration: none;
+  transform: translateY(-200%);
+  transition: transform var(--t-hover) var(--ease-out);
+}
+/* :focus, not :focus-visible — a skip link is only ever reached by
+   keyboard, and :focus-visible does not match programmatic focus. */
+.ph-skip:focus {
+  transform: translateY(0);
+}
+
+/* main is focused on route change; it must never show a ring for that. */
+main:focus {
+  outline: none;
 }

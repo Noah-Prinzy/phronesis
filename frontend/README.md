@@ -4,9 +4,11 @@ A rebuild of the Phronesis frontend, from the bottom up. It replaced the
 original `frontend/` wholesale in one migration; the previous version is in
 git history at `d3421f8` and earlier.
 
-Nothing here is wired to a backend yet — no `fetch`, no auth, no Firebase. The
-serverless functions in `api/` are carried over intact from the previous
-frontend and are **not yet called by anything**; connecting them is step 4.
+Step 4 is under way. **Auth and chat are wired to the Express server in
+`backend/`**; Diagnosis, Solutions, Maps and the vehicle record still run on
+mocks. The Vercel functions in `api/` are carried over from the previous
+frontend and are *not* used — `backend/` is the chosen server, and the two
+overlap on every endpoint.
 
 ## The order of work
 
@@ -152,8 +154,10 @@ it *is* the components.
 - [x] **1. Design the atoms** — `design/`
 - [x] **2. Build the atoms** — `src/ui/`, 24 components
 - [x] **3. Compose the pages** — every screen in the flow is built
-- [ ] **4. Wire the backend**
-- [ ] **4. Wire the backend**
+- [ ] **4. Wire the backend** — auth and chat done; diagnosis, history,
+      solutions, maps and the vehicle record remain
+- [ ] **4. Wire the backend** — auth and chat done; diagnosis, history,
+      solutions, maps and the vehicle record remain
 
 `tsc -b && vite build` and `oxlint` are clean at every commit.
 
@@ -386,3 +390,92 @@ would be worse or broken without them:
 
 `.gitignore` is the old frontend's rather than this one's, because it ignores
 `.env` and `.env.*` and the replacement did not.
+
+## Talking to the backend
+
+`backend/` runs on `:3001`; the frontend reads `VITE_API_BASE_URL` from `.env`.
+Both must be running:
+
+```bash
+npm --prefix backend run dev     # :3001
+npm --prefix frontend run dev    # :5173
+```
+
+`src/lib/api.ts` is the only module that knows the base URL, the auth header
+and the wire format.
+
+### Chat
+
+`POST /api/chat` answers with **Server-Sent Events over a POST**, so
+`EventSource` is out — it only does GET. The client reads the body stream and
+parses frames itself, which means handling the thing hand-rolled SSE readers
+get wrong: a chunk boundary can land anywhere, including mid-frame and
+mid-UTF-8-character. Hence the buffer and `decode(..., { stream: true })`.
+
+The endpoint is stateless, so the whole thread is sent every turn. Two
+consequences the UI has to respect:
+
+- The history built for the request comes from what is on screen **plus** the
+  new turn — not from reading state back after `setMsgs`, which is one render
+  behind and would silently drop the newest message.
+- **A failed send rolls the whole turn back** and returns the text to the
+  composer. Leaving an unanswered user message in the thread looks kinder, but
+  it puts two consecutive `user` roles into every later request — a malformed
+  conversation that some providers reject outright.
+
+### Auth
+
+Firebase on the client, `Authorization: Bearer <idToken>` to the server. The
+chat endpoint uses `optionalAuth`: it answers signed-out users and only saves
+history when a token is present.
+
+`src/lib/firebase.ts` tolerates missing configuration on purpose — a build with
+no Firebase keys still runs, and Onboarding says sign-in is unavailable rather
+than the whole app failing at module load.
+
+Firebase error codes are mapped to human sentences in `app/auth.tsx`. The
+sign-in failure stays deliberately vague about *which* of the email or password
+was wrong; that vagueness is a security property, not an oversight.
+
+## Scale
+
+The interface is sized in `rem`, and the root is fluid:
+
+```css
+html { font-size: clamp(15px, 13.4px + 0.35vw, 19px) }
+```
+
+15px on a phone, 19px on a large monitor. Everything follows because
+everything is relative to it — type, control heights, content column widths,
+and the avatar canvas (which is drawn in JavaScript and so reads the root size
+through `useRootFontSize`).
+
+It was pinned to 15px before, and the app read as a postage stamp on a 27"
+screen. Fixed sizes are the bug; a fixed *ratio* is the design.
+
+Breakpoints stay in px, because those are questions about the device rather
+than about the type.
+
+## Principles, measured
+
+`/styleguide` opens with a **Principles** section that measures the live page
+and reports pass/fail. It is not documentation of intent — it reads the real
+computed styles of the real components, so lowering a contrast ratio or
+shrinking a control turns it red on its own.
+
+It has already earned its keep. The audit that produced it found:
+
+| Found | Was | Now |
+| --- | --- | --- |
+| `--muted` text contrast | 2.07–3.44:1 — failed AA on **every** surface | 5.5:1 on panel |
+| `--critical` as text | 4.37:1 on panel | 5.15:1 |
+| `--line-hi` control borders | 1.6:1, under the 3:1 non-text floor | raised |
+| Smallest text | 8px | 11px floor, enforced |
+| Interactive star rating | **14×14px** targets | 36×44px |
+| Route changes | silent — no title, no focus move, nothing announced | title, focus, polite announcement |
+| Skip link | none | first tab stop on every page |
+
+Two contrast "failures" are left standing deliberately: the unfilled stars in a
+read-only rating. They are `aria-hidden`, the rating is also given as text
+beside them, and they are decorative by WCAG's definition. Lifting them until
+they pass would stop them reading as empty.

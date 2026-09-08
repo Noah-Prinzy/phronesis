@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useId, useRef } from 'react'
 import type { ReactNode } from 'react'
 import { cx } from './cx'
 
@@ -23,6 +23,9 @@ export interface DialogProps {
  */
 export function Dialog({ open, onClose, title, children, actions, className }: DialogProps) {
   const ref = useRef<HTMLDialogElement>(null)
+  // Generated, not literal: two mounted dialogs sharing one id would leave
+  // aria-labelledby pointing at whichever happened to render first.
+  const titleId = useId()
 
   useEffect(() => {
     const el = ref.current
@@ -47,14 +50,14 @@ export function Dialog({ open, onClose, title, children, actions, className }: D
     <dialog
       ref={ref}
       className={cx('ph-dialog', className)}
-      aria-labelledby="ph-dialog-title"
+      aria-labelledby={titleId}
       onClick={(e) => {
         // The backdrop is the dialog element itself; the panel is a child.
         if (e.target === ref.current) onClose()
       }}
     >
       <div className="ph-dialog__panel">
-        <h2 className="ph-dialog__title" id="ph-dialog-title">
+        <h2 className="ph-dialog__title" id={titleId}>
           {title}
         </h2>
         {children && <div className="ph-dialog__body">{children}</div>}

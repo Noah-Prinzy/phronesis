@@ -10,7 +10,6 @@
  */
 
 export { cx } from './cx'
-export { usePressLight } from './usePressLight'
 
 export { Button, IconButton } from './Button'
 export { Dialog } from './Dialog'
@@ -67,8 +66,11 @@ export type {
   TextInputProps,
 } from './Form'
 
+export { SpokenText } from './SpokenText'
+export type { SpokenTextProps } from './SpokenText'
+
 export { AppBar, Rail, TabBar, Tabs } from './Nav'
-export type { AppBarProps, NavItem, NavProps, TabsProps } from './Nav'
+export type { AppBarProps, NavItem, NavProps, RailProps, TabsProps } from './Nav'
 
 export { EmptyState, Meter, Skeleton, Spinner, SplitBar, Steps, Toast } from './Status'
 export type { EmptyStateProps, MeterProps, SplitBarProps, ToastLevel, ToastProps } from './Status'

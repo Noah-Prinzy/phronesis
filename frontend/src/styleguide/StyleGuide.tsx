@@ -39,6 +39,7 @@ import {
 } from '../ui'
 import type { NavItem, Severity } from '../ui'
 import { IconAccount, IconCompare, IconDiagnose, IconFix, IconHome, IconMap, IconSearch } from '../icons'
+import { Principles } from './Principles'
 import '../styles/gallery.css'
 
 /* The two journeys differ by exactly two nav slots. Defining both here keeps
@@ -111,13 +112,14 @@ export function StyleGuide() {
   const items = journey === 'post' ? POST_CAR : PRE_CAR
 
   return (
-    <div className="page">
+    <div className="guide">
       <header className="topbar">
         <div className="topbar__in">
           <span className="wordmark">
             PHR<span>O</span>NESIS
           </span>
           <nav className="jump">
+            <a href="#principles">Principles</a>
             <a href="#buttons">Buttons</a>
             <a href="#inputs">Inputs</a>
             <a href="#choice">Choice</a>
@@ -128,18 +130,21 @@ export function StyleGuide() {
         </div>
       </header>
 
-      <main className="wrap">
+      <main id="main" className="wrap">
         <div className="hero">
           <h1>The atoms.</h1>
           <p>
             Every control in Phronesis, in every state it can reach, as running code rather than a
-            picture of code. Press anything — the bloom follows the pointer, because press is light.
+            picture of code. Press anything — it steps one surface brighter and sinks a pixel,
+            which is the whole of the feedback language.
           </p>
           <p className="hero__meta">
             Tokens come from <code>design/02-tokens.md</code> and exist once, in{' '}
             <code>src/styles/tokens.css</code>. No component below hard-codes a colour.
           </p>
         </div>
+
+        <Principles />
 
         {/* ------------------------------------------------------- buttons */}
         <Bench
@@ -328,7 +333,7 @@ export function StyleGuide() {
           <Case label="rows">
             <Group style={{ width: 300 }}>
               <Row label="Name" value="Noah" onClick={() => {}} />
-              <Row label="OBD reader" sub="ELM327 v1.5 · paired" trailing={<span className="dot-ember" />} />
+              <Row label="OBD reader" sub="ELM327 v1.5 · paired" trailing={<span className="dot-accent" />} />
               <Row label="Maintenance due" trailing={<Switch checked={alerts} onChange={setAlerts} label="Maintenance due" />} />
             </Group>
           </Case>
@@ -377,16 +382,16 @@ export function StyleGuide() {
           id="nav"
           n="05"
           title="Navigation"
-          note="One definition, two presentations. The tab bar and the rail read the same array, so they can never disagree about what the app contains. Flip the Journey control above to swap slots 2 and 3."
+          note="A rail at 900px and up, a tab bar below it — the same items, in the same order, so the two can never disagree about where you are. Flip the Journey control above to swap slots 2 and 3."
         >
-          <Case label="tab bar · phone">
-            <div className="navdemo navdemo--phone">
-              <TabBar items={items} value={nav} onChange={setNav} />
-            </div>
-          </Case>
-          <Case label="rail · 768px and up">
+          <Case label="rail — 900px and up">
             <div className="navdemo navdemo--rail">
               <Rail items={items} value={nav} onChange={setNav} />
+            </div>
+          </Case>
+          <Case label="tab bar — below 900px">
+            <div className="navdemo navdemo--tabbar">
+              <TabBar items={items} value={nav} onChange={setNav} />
             </div>
           </Case>
           <Case label="app bar">
@@ -423,7 +428,7 @@ export function StyleGuide() {
           <Case label="meter">
             <div style={{ width: 200, display: 'grid', gap: '0.5rem' }}>
               <Meter value={0.92} label="Confidence" />
-              <Meter value={0.62} tone="ember" label="Loading" />
+              <Meter value={0.62} tone="accent" label="Loading" />
             </div>
           </Case>
           <Case label="split">
@@ -458,7 +463,7 @@ export function StyleGuide() {
           <Case label="toast">
             <div style={{ display: 'grid', gap: '0.5rem', width: 300 }}>
               <Toast level="critical" title="Coolant temperature critical" body="Pull over when it is safe to do so." />
-              <Toast level="ember" title="Premio dropped to 16.8M" body="Below your 17M alert." />
+              <Toast level="accent" title="Premio dropped to 16.8M" body="Below your 17M alert." />
               <Toast title="Scan complete" body="Two findings." />
             </div>
           </Case>

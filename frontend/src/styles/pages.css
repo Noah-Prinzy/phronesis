@@ -1,368 +1,13 @@
 /* ============================================================
-   PHRONESIS · page layout
-   Screens only. Every control on them comes from src/ui — nothing
-   here restyles an atom, it only decides where the atoms sit.
+   PHRONESIS · pages
+   Layout only. Anything that looks like a component belongs in
+   atoms.css; this file places things and nothing else.
    ============================================================ */
 
-.screen {
-  min-height: 100dvh;
-  display: flex;
-  flex-direction: column;
-  /* One column, centred, capped. Wider screens do not mean wider forms. */
-  width: min(420px, 100%);
-  margin-inline: auto;
-  padding: max(0.9rem, env(safe-area-inset-top)) 1.2rem
-    max(1.1rem, env(safe-area-inset-bottom));
-}
-.screen--center {
-  align-items: center;
-  justify-content: center;
-}
-
-/* ---------------------------------------------------------------- avatar */
-.ph-halo {
-  display: inline-grid;
-  place-items: center;
-  flex: none;
-  line-height: 0;
-}
-.ph-halo__canvas {
-  display: block;
-}
-.ph-halo--button {
-  border: 0;
-  padding: 0;
-  background: none;
-  cursor: pointer;
-  border-radius: 50%;
-  transition: transform var(--t-press) var(--ease);
-}
-.ph-halo--button:active {
-  transform: scale(0.96);
-}
-
-/* ============================================================ intro / loading */
-
-.intro {
-  gap: 0;
-}
-.intro__stack {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.9rem;
-}
-
-/* The wordmark, with the avatar as the letter O. `align-items: center` on a
-   flex row keeps the ring on the cap-height axis at any size. */
-.lockup {
-  margin: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: var(--display);
-  font-weight: 600;
-  font-size: 1.2rem;
-  letter-spacing: 0.16em;
-  line-height: 1;
-  color: var(--ink);
-  white-space: nowrap;
-}
-.lockup__part {
-  display: block;
-}
-.lockup__o {
-  /* The ring occupies 0.66 of its canvas, leaving ~17% dead space each side.
-     Close that back up and leave 2px, so the letters sit beside the ring
-     instead of overlapping it. --o-size is set by the page. */
-  margin-inline: calc(var(--o-size, 34px) * -0.17 + 2px);
-}
-
-.intro__tag {
-  margin: 0;
-  font-size: 0.8rem;
-  color: var(--muted);
-  letter-spacing: 0.02em;
-}
-
-.intro__bar {
-  width: 180px;
-  height: 2px;
-  margin: 0 auto 2rem;
-  border-radius: 2px;
-  background: var(--panel-top);
-  overflow: hidden;
-}
-.intro__bar > span {
-  display: block;
-  width: 38%;
-  height: 100%;
-  border-radius: 2px;
-  background: var(--ember);
-  box-shadow: 0 0 10px var(--ember-wash);
-  animation: intro-sweep 1.6s var(--ease) infinite;
-}
-@keyframes intro-sweep {
-  from {
-    transform: translateX(-110%);
-  }
-  to {
-    transform: translateX(320%);
-  }
-}
-
-/* The reveal is a class JS *removes*. Default is visible, so a failure
-   upstream leaves a readable screen rather than a black one. */
-.intro__stack,
-.intro__tag {
-  transition:
-    opacity var(--t-dock) var(--ease-out),
-    transform var(--t-dock) var(--ease-out);
-}
-.intro[data-lit='false'] .intro__tag {
-  opacity: 0;
-  transform: translateY(6px);
-}
-
-/* ==================================================================== welcome */
-
-.welcome__mark {
-  margin: 0;
-  text-align: center;
-  font-family: var(--display);
-  font-size: 0.56rem;
-  letter-spacing: 0.38em;
-  color: var(--muted);
-  padding-top: 0.4rem;
-}
-.welcome__body {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 1.4rem;
-  text-align: center;
-  min-height: 0;
-}
-.welcome__line {
-  margin: 0;
-  font-size: 0.95rem;
-  line-height: 1.65;
-  max-width: 30ch;
-}
-.welcome__actions {
-  display: flex;
-  flex-direction: column;
-  gap: 0.45rem;
-  padding-top: 1.2rem;
-}
-
-/* Staged reveal, again by removing a class. `--i` is the stagger index. */
-.reveal {
-  transition:
-    opacity 520ms var(--ease-out),
-    transform 520ms var(--ease-out);
-  transition-delay: calc(var(--i, 0) * 160ms + 220ms);
-}
-.welcome[data-shown='false'] .reveal {
-  opacity: 0;
-  transform: translateY(5px);
-  /* No delay on the way out, so a re-mount does not stall. */
-  transition-delay: 0ms;
-}
-.welcome[data-shown='false'] .welcome__actions {
-  opacity: 0;
-}
-.welcome__actions {
-  transition: opacity 520ms var(--ease-out) 900ms;
-}
-
-/* ================================================================= onboarding */
-
-.onboarding {
-  gap: 0.9rem;
-}
-.onboarding__steps {
-  flex: none;
-  padding-top: 0.2rem;
-}
-.onboarding__body {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.9rem;
-  overflow-y: auto;
-  /* Stacking makes content taller than the viewport; clipped content is
-     unreachable content. Same rule as the tablet breakpoint. */
-  scrollbar-width: thin;
-}
-.onboarding__actions {
-  flex: none;
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-  padding-top: 0.6rem;
-}
-
-.onboarding__intro {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.7rem;
-  text-align: center;
-  padding: 1.2rem 0 0.4rem;
-}
-.onboarding__title {
-  margin: 0;
-  font-family: var(--display);
-  font-weight: 500;
-  font-size: 0.95rem;
-  letter-spacing: 0.08em;
-}
-.onboarding__sub {
-  margin: 0;
-  font-size: 0.8rem;
-  color: var(--muted);
-  max-width: 30ch;
-  line-height: 1.5;
-}
-
-.onboarding__choices {
-  display: flex;
-  flex-direction: column;
-  gap: 0.55rem;
-}
-.choice__name {
-  font-size: 0.95rem;
-  font-weight: 500;
-}
-.choice__note {
-  font-size: 0.76rem;
-  color: var(--muted);
-  line-height: 1.5;
-}
-
-.onboarding__greet {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding-top: 0.4rem;
-}
-.greet__line {
-  margin: 0;
-  font-size: 0.95rem;
-  font-weight: 500;
-}
-.greet__note {
-  margin: 0;
-  font-size: 0.76rem;
-  color: var(--muted);
-  line-height: 1.45;
-}
-
-.onboarding__form {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-.onboarding__submit {
-  margin-top: 0.2rem;
-}
-
-.onboarding__prose {
-  margin: 0;
-  font-size: 0.82rem;
-  color: var(--ink-dim);
-  line-height: 1.55;
-}
-.onboarding__fine {
-  margin: 0;
-  font-size: 0.74rem;
-  color: var(--muted);
-  line-height: 1.5;
-}
-
-.scan {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-.scan__status {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.76rem;
-  color: var(--muted);
-  min-height: 1.2rem;
-}
-
-.reader {
-  flex-direction: row !important;
-  align-items: center;
-  gap: 0.7rem;
-}
-.reader__icon {
-  width: 32px;
-  height: 32px;
-  flex: none;
-  border-radius: 9px;
-  background: var(--panel-hi);
-  display: grid;
-  place-items: center;
-  color: var(--ink-dim);
-}
-.reader__text {
-  flex: 1;
-  min-width: 0;
-  text-align: left;
-}
-.reader__name {
-  display: block;
-  font-size: 0.86rem;
-  font-weight: 500;
-}
-.reader__mac {
-  display: block;
-  font-family: var(--mono);
-  font-size: 0.66rem;
-  color: var(--muted);
-}
-.reader__dot {
-  width: 6px;
-  height: 6px;
-  flex: none;
-  border-radius: 50%;
-  background: var(--ember);
-  box-shadow: 0 0 8px var(--ember-wash);
-}
-
-/* ===================================================== 768px and up · the rail
-   Every screen above is a centred column, so the only thing that changes on a
-   wide viewport is that it gets more air around it — not more width. */
-@media (min-width: 768px) {
-  .screen {
-    width: min(460px, 100%);
-    padding-block: 2rem;
-  }
-  .welcome__line {
-    font-size: 1.05rem;
-    max-width: 34ch;
-  }
-  .lockup {
-    font-size: 1.9rem;
-  }
-  .intro__bar {
-    width: 220px;
-  }
-}
-
-/* ======================================================================= hub
-   The shell every page below the entry flow sits inside. Tab bar under 768px,
-   rail at or above it — the same items either way. */
+/* ================================================================== shell
+   Rail beside the content at 900px and up, tab bar under it below.
+   Both are siblings of the page rather than overlays, so no page
+   ever has to reserve space for the navigation. */
 
 .hub {
   display: flex;
@@ -375,89 +20,467 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
-}
-.hub[data-wide='true'] {
-  flex-direction: row;
-}
-.hub[data-wide='true'] .hub__main {
-  min-width: 0;
+  overflow: hidden;
 }
 
-.soon {
+@media (min-width: 900px) {
+  .hub {
+    flex-direction: row;
+  }
+}
+
+/* ================================================================== orb
+   Phronesis' presence. Two renderers draw it — a pre-rendered video loop
+   and a generative Three.js shell — and both are driven by the one state
+   table in avatar/orbSpec.ts.
+
+   Nothing about a state is described here any more. The renderer writes
+   --orb-bright / --orb-scale / --orb-glow every frame and this file just
+   spends them, so there is exactly one place to tune how `thinking` looks.
+
+   Deliberately NOT `isolation: isolate`, and no negative z-index below.
+   Either one would give the video an isolated backdrop, and `screen`
+   against an empty backdrop is a no-op — the asset's black would stop
+   dropping out and the orb would render as a black disc. The glow is
+   painted first and the renderer sits above it, which needs no stacking
+   context at all. */
+
+.orb {
+  position: relative;
+  display: block;
+  flex: none;
+  border: 0;
+  padding: 0;
+  background: none;
+  line-height: 0;
+  border-radius: 50%;
+  /* The size is an inline style in px, so transitioning the box is what lets
+     the orb shrink into the header on Home without remounting anything. */
+  transition:
+    width var(--t-dock) var(--ease-out),
+    height var(--t-dock) var(--ease-out);
+}
+.orb[data-interactive='true'] {
+  cursor: pointer;
+}
+
+.orb__video,
+.orb__canvas {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  display: block;
+  border-radius: 50%;
+  transform: scale(var(--orb-scale, 1));
+}
+
+.orb__video {
+  object-fit: cover;
+  /* Additive: the black background drops out and the dark plates survive,
+     which keying would have eaten. See design/avatar-v2/README.md. */
+  mix-blend-mode: screen;
+  filter: brightness(var(--orb-bright, 1));
+}
+
+/* The generative orb draws onto a transparent canvas, so there is no black
+   to drop out and no blend mode to apply. */
+.orb__canvas {
+  background: none;
+}
+
+/* A faint ground-glow so the orb sits in the page rather than on it.
+   Painted before the renderer, so it needs no z-index of its own. */
+.orb::before {
+  content: '';
+  position: absolute;
+  inset: -18%;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--accent-glow), transparent 68%);
+  opacity: var(--orb-glow, 0.4);
+  pointer-events: none;
+}
+
+/* ======================================================== entry screens
+   Welcome and onboarding: one centred column, more air on a wide
+   viewport rather than more width. */
+
+.screen {
   flex: 1;
+  min-height: 0;
+  width: 100%;
+  max-width: 27rem;
+  margin-inline: auto;
+  padding: 1.2rem 1.15rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+@media (min-width: 768px) {
+  .screen {
+    max-width: 30rem;
+    padding-block: 2.2rem;
+  }
+}
+
+/* ==================================================== page stub (phase 0)
+   Every page starts here and grows its own section as it is built. */
+
+.page {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  padding: 1.1rem 1.15rem 1.4rem;
+  overflow-y: auto;
+}
+.page__head {
+  flex: none;
+  display: flex;
+  align-items: baseline;
+  gap: 0.7rem;
+  padding-bottom: 0.7rem;
+  border-bottom: 1px solid var(--hairline);
+}
+.page__title {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.page__body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+@media (min-width: 900px) {
+  .page {
+    padding: 1.5rem 1.8rem 1.8rem;
+  }
+}
+
+/* =================================================================== splash */
+
+.splash {
+  flex: 1;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.4rem;
+}
+.splash__mark {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 0.78rem;
+  letter-spacing: 0.34em;
+  text-indent: 0.34em;
+  color: var(--ink-3);
+}
+
+/* ================================================================== welcome */
+
+.welcome {
+  justify-content: center;
+  gap: 1.6rem;
+  text-align: center;
+}
+.welcome__stage {
+  display: flex;
+  justify-content: center;
+}
+.welcome__text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+.welcome__title {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 1.85rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+.welcome__line {
+  margin: 0;
+  max-width: 32ch;
+  font-size: 0.92rem;
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+.welcome__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+@media (min-width: 768px) {
+  .welcome__title {
+    font-size: 2.25rem;
+  }
+  .welcome__line {
+    font-size: 1rem;
+    max-width: 36ch;
+  }
+}
+
+/* =============================================================== onboarding */
+
+.onboarding {
+  gap: 1.15rem;
+}
+.onboarding__steps {
+  flex: none;
+}
+.onboarding__body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.05rem;
+}
+.onboarding__intro {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.55rem;
+  text-align: center;
+  padding: 0.6rem 0 0.2rem;
+}
+.onboarding__title {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+.onboarding__sub {
+  margin: 0;
+  max-width: 34ch;
+  font-size: 0.82rem;
+  line-height: 1.6;
+  color: var(--ink-3);
+}
+
+/* Her question, written as she asks it. Carries the weight a page title
+   would, because on this screen it *is* the title. */
+.onboarding__ask {
+  margin: 0;
+  max-width: 24ch;
+  font-family: var(--display);
+  font-size: 1.4rem;
+  font-weight: 600;
+  line-height: 1.28;
+  letter-spacing: -0.015em;
+}
+
+/* the small avatar + her line, used above a form */
+.onboarding__greet {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+.greet__line {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: var(--ink-2);
+}
+
+.onboarding__choices {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+.choice {
+  gap: 0.25rem;
+  padding: 0.9rem 1rem;
+}
+.choice__name {
+  font-family: var(--display);
+  font-size: 0.98rem;
+  font-weight: 600;
+}
+.choice__note {
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--ink-3);
+}
+
+.onboarding__form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+.onboarding__submit {
+  margin-top: 0.15rem;
+}
+.onboarding__actions {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding-top: 0.9rem;
+}
+.onboarding__fine {
+  margin: 0;
+  font-size: 0.76rem;
+  line-height: 1.55;
+  color: var(--ink-3);
+}
+
+.linklike {
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+/* ---- pairing ---- */
+.scan {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.scan__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.8rem;
+  color: var(--ink-3);
+}
+.reader {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.7rem;
+}
+.reader__icon {
+  width: 2rem;
+  height: 2rem;
+  flex: none;
   display: grid;
   place-items: center;
-  padding: 2rem 1.2rem;
+  border-radius: var(--r-sm);
+  background: var(--surface-3);
+  color: var(--accent);
+}
+.reader__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.reader__name {
+  font-size: 0.88rem;
+  font-weight: 500;
+}
+.reader__mac {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--ink-3);
 }
 
-/* ====================================================================== home */
+/* ===================================================================== home */
 
 .home {
-  position: relative; /* the avatar layer is measured against this box */
   flex: 1;
   min-height: 0;
   display: flex;
   flex-direction: column;
   width: 100%;
-  max-width: 760px;
+  max-width: 50rem;
   margin-inline: auto;
-  padding-inline: 0.9rem;
+  padding-inline: 1.15rem;
 }
 
-.home__bar {
+/* One slot, two shapes. Fresh: a centred column that owns the screen.
+   In conversation: a compact header row. */
+.home__stage {
   flex: none;
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  padding: 0.7rem 0 0.5rem;
+  gap: 0.65rem;
+  padding: 0.8rem 0 0.7rem;
+  border-bottom: 1px solid var(--hairline);
 }
+/* Both pre-conversation states own the screen. The difference is what sits
+   under the orb: openers when nothing has been said, their own words once
+   they start talking. */
+.home[data-mode='fresh'] .home__stage,
+.home[data-mode='speaking'] .home__stage {
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+  gap: 0.75rem;
+  padding: 1rem 0;
+  border-bottom: 0;
+}
+
+/* Their voice, on the screen, as they say it. Larger and quieter than
+   anything else here — at this moment it is the only thing that matters. */
+.home__heard {
+  margin: 0;
+  max-width: 24ch;
+  font-family: var(--display);
+  font-size: 1.35rem;
+  font-weight: 500;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  min-height: 2.7em;
+}
+
 .home__mark {
   font-family: var(--display);
-  font-weight: 600;
-  font-size: 0.62rem;
-  letter-spacing: 0.22em;
+  font-weight: 700;
+  font-size: 0.72rem;
+  letter-spacing: 0.2em;
+  color: var(--ink-2);
 }
 .home__car {
   margin-left: auto;
   font-family: var(--mono);
-  font-size: 0.58rem;
-  color: var(--muted);
-  border: 1px solid var(--line);
-  background: var(--panel);
-  border-radius: var(--r-pill);
-  padding: 0.15rem 0.55rem;
+  font-size: 0.7rem;
+  color: var(--ink-3);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-sm);
+  padding: 0.18rem 0.5rem;
   white-space: nowrap;
 }
-
-/* ---- fresh: the avatar is the screen ---- */
-.home__hero {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 1rem;
-  text-align: center;
-  padding-bottom: 0.5rem;
-}
-.home__heroSlot {
-  flex: none;
-}
-.home__prompt {
+/* Her opening line, written as she says it. Replaces the old static
+   greeting-plus-prompt pair: one thing she says, not two things printed. */
+.home__opener {
   margin: 0;
-  font-size: 0.92rem;
-  line-height: 1.55;
-  max-width: 30ch;
+  max-width: 26ch;
+  font-family: var(--display);
+  font-size: 1.35rem;
+  font-weight: 600;
+  line-height: 1.32;
+  letter-spacing: -0.015em;
+  color: var(--ink);
 }
 .home__chips {
   display: flex;
   flex-wrap: wrap;
   gap: 0.35rem;
   justify-content: center;
+  padding-top: 0.2rem;
 }
 
-/* ---- in conversation ---- */
 .home__thread {
   flex: 1;
   min-height: 0;
@@ -465,84 +488,125 @@
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  padding: 0.2rem 0 0.6rem;
+  padding: 0.8rem 0;
   scrollbar-width: thin;
 }
+
 .home__thinking {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
   margin: 0;
-  font-size: 0.76rem;
-  color: var(--muted);
-  padding-left: 0.2rem;
+  padding-left: 0.15rem;
+  font-size: 0.78rem;
+  color: var(--ink-3);
+}
+.home__dots {
+  display: inline-flex;
+  gap: 3px;
+}
+.home__dots i {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: ph-dot 1.1s var(--ease) infinite;
+}
+.home__dots i:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.home__dots i:nth-child(3) {
+  animation-delay: 0.3s;
+}
+@keyframes ph-dot {
+  0%,
+  60%,
+  100% {
+    opacity: 0.25;
+  }
+  30% {
+    opacity: 1;
+  }
 }
 
+/* ---- the routing offer ---- */
 .offer {
   margin-right: auto;
-  max-width: 90%;
-  background: var(--panel);
-  border: 1px solid var(--line-hi);
-  border-radius: var(--r-card);
-  padding: 0.65rem 0.75rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.55rem;
-}
-.offer__head {
-  display: flex;
-  gap: 0.55rem;
-  align-items: flex-start;
+  max-width: 92%;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.4rem 0.65rem;
+  padding: 0.75rem 0.85rem;
+  background: var(--surface);
+  border: 1px solid var(--accent-line);
+  border-radius: var(--r);
 }
 .offer__icon {
-  width: 26px;
-  height: 26px;
+  width: 1.75rem;
+  height: 1.75rem;
   flex: none;
-  border-radius: 8px;
-  background: var(--panel-hi);
   display: grid;
   place-items: center;
-  /* Ember as light on an icon, never as a fill behind a label. */
-  color: var(--ember);
+  border-radius: var(--r-sm);
+  background: var(--accent-fill);
+  color: var(--accent);
+}
+.offer__text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
 }
 .offer__title {
-  display: block;
-  font-size: 0.85rem;
+  font-size: 0.86rem;
   font-weight: 500;
 }
 .offer__note {
-  display: block;
-  font-size: 0.74rem;
-  color: var(--muted);
-  line-height: 1.45;
+  font-size: 0.76rem;
+  line-height: 1.5;
+  color: var(--ink-3);
 }
 .offer__actions {
+  grid-column: 2;
   display: flex;
   gap: 0.35rem;
 }
 
-/* ---- composer ---- */
-.composer {
+/* ---- the composer, and what sits above it ---- */
+.home__foot {
   flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding-bottom: 0.9rem;
+}
+.home__error {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--critical);
+}
+.home__note {
+  margin: 0;
+  font-size: 0.76rem;
+  color: var(--ink-3);
+}
+
+.composer {
   display: flex;
   align-items: center;
   gap: 0.3rem;
-  background: var(--panel);
-  border: 1px solid var(--line-hi);
-  border-radius: 20px;
-  padding: 0.25rem 0.25rem 0.25rem 0.5rem;
-  margin-bottom: 0.6rem;
-  transition: border-color var(--t-hover) var(--ease);
+  padding: 0.28rem;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r);
+  transition:
+    border-color var(--t-hover) var(--ease),
+    box-shadow var(--t-hover) var(--ease);
 }
 .composer:focus-within {
-  border-color: var(--panel-top);
-}
-/* Reserves the docked avatar's footprint. Zero-width until it docks, so the
-   fresh composer is not carrying an empty hole.
-
-   Deliberately NOT transitioned. The avatar's dock target is measured from
-   this box, and a width that animates from zero means the first measurement
-   reads zero — which parks the avatar at its old position instead. The slot
-   snaps to its final size and the avatar flies to it. */
-.composer__mic {
-  flex: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
 }
 .composer__input {
   flex: 1;
@@ -551,1025 +615,28 @@
   background: none;
   color: var(--ink);
   font-family: var(--ui);
-  font-size: 0.85rem;
-  font-weight: 300;
-  padding: 0.45rem 0.2rem;
+  font-size: 0.88rem;
+  padding: 0.45rem 0.3rem;
 }
 .composer__input::placeholder {
-  color: var(--muted);
+  color: var(--ink-3);
 }
 .composer__input:focus {
   outline: none;
 }
-
-.home__micnote {
-  flex: none;
-  margin: 0 0 0.6rem;
-  font-size: 0.74rem;
-  color: var(--muted);
-  text-align: center;
+/* Listening is the one state the composer carries colour for. */
+.composer__mic--on {
+  background: var(--accent-fill);
+  color: var(--accent);
+  border-color: var(--accent-line);
 }
 
-/* ---- the avatar layer ----
-   One mount, moved between measured slots by transform alone. Transform and
-   opacity are the only two things a browser animates without touching layout,
-   which is why docking is smooth on a cheap phone. */
-.home__layer {
-  position: absolute;
-  top: 0;
-  left: 0;
-  /* grid, not block: an inline-level child leaves descender space in the line
-     box, so the layer would be a few px taller than the canvas and
-     translate(-50%) would centre on the wrong height. */
-  display: grid;
-  line-height: 0;
-  transform-origin: 50% 50%;
-  transition: transform var(--t-dock) var(--ease-out);
-  will-change: transform;
-  z-index: 4;
-}
-
-@media (min-width: 768px) {
+@media (min-width: 900px) {
   .home {
-    padding-inline: 1.4rem;
+    padding-inline: 1.8rem;
   }
-  .home__thread,
-  .composer {
-    width: 100%;
-    max-width: 680px;
-    margin-inline: auto;
+  .home__opener {
+    font-size: 1.7rem;
+    max-width: 28ch;
   }
-  .home__prompt {
-    font-size: 1.02rem;
-    max-width: 34ch;
-  }
-}
-
-/* ================================================================= diagnosis */
-
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-  border: 0;
-}
-
-.diag {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  max-width: 760px;
-  margin-inline: auto;
-  padding-inline: 0.9rem;
-}
-
-.diag__bar {
-  flex: none;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 0 0.4rem;
-}
-.diag__title {
-  flex: 1;
-  text-align: center;
-  font-family: var(--display);
-  font-weight: 600;
-  font-size: 0.6rem;
-  letter-spacing: 0.22em;
-}
-
-/* ---- the hologram ---- */
-.diag__stage {
-  flex: none;
-}
-.diag__stage--phone {
-  height: 160px;
-}
-
-.holo {
-  position: relative;
-  height: 100%;
-  min-height: 140px;
-  background: #0e0e10;
-  border: 1px solid var(--line);
-  border-radius: var(--r-card);
-  overflow: hidden;
-}
-.holo__canvas {
-  display: block;
-  width: 100%;
-  height: 100%;
-  cursor: grab;
-  touch-action: none; /* the drag is ours; do not let the page pan under it */
-}
-.holo__canvas:active {
-  cursor: grabbing;
-}
-.holo__vehicle,
-.holo__hint {
-  position: absolute;
-  left: 0.7rem;
-  font-family: var(--mono);
-  font-size: 0.58rem;
-  letter-spacing: 0.06em;
-  color: var(--muted);
-  pointer-events: none;
-}
-.holo__vehicle {
-  top: 0.6rem;
-}
-.holo__hint {
-  bottom: 0.6rem;
-}
-.holo[data-nogl='true'] .holo__canvas {
-  display: none;
-}
-.holo[data-nogl='true']::after {
-  content: 'This device cannot draw the 3D view. The findings below are unaffected.';
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  padding: 1.2rem;
-  text-align: center;
-  font-size: 0.76rem;
-  color: var(--muted);
-}
-
-/* ---- the findings list ---- */
-.diag__list {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 0.45rem;
-  padding: 0.6rem 0;
-  scrollbar-width: thin;
-}
-.diag__actions {
-  flex: none;
-  padding-bottom: 0.7rem;
-}
-
-.diag__status {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin: 0;
-  font-size: 0.78rem;
-  color: var(--muted);
-}
-
-.diag__clear {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  text-align: center;
-  padding: 1.4rem;
-}
-.diag__clearBody {
-  margin: 0;
-  font-size: 0.8rem;
-  line-height: 1.55;
-  color: var(--muted);
-  max-width: 32ch;
-}
-.diag__stamp {
-  margin: 0;
-  font-family: var(--mono);
-  font-size: 0.66rem;
-  color: var(--muted);
-}
-
-/* ---- finding card ---- */
-.finding__top {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  width: 100%;
-}
-.finding__title {
-  flex: 1;
-  min-width: 0;
-  font-size: 0.85rem;
-  font-weight: 500;
-}
-.finding__code {
-  font-family: var(--mono);
-  font-size: 0.66rem;
-  color: var(--muted);
-}
-.finding__explain {
-  font-size: 0.76rem;
-  line-height: 1.5;
-  color: var(--muted);
-  text-align: left;
-}
-.finding__foot {
-  display: flex;
-  justify-content: space-between;
-  width: 100%;
-  font-family: var(--mono);
-  font-size: 0.64rem;
-  color: var(--muted);
-}
-
-/* ============================================ desktop: the car earns its space
-   Above 900px the car and the findings sit side by side. Below it they stack —
-   the same rule the mockups use, and the reason the car gets a fixed height
-   there rather than competing for width. */
-.diag--wide {
-  max-width: none;
-  padding: 0.9rem;
-  container-type: inline-size;
-}
-/* The flex row lives inside the container. An @container rule only matches
-   descendants, so flipping direction has to happen on this, not on .diag--wide. */
-.diag__cols {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: row;
-}
-.diag--wide .diag__stage {
-  flex: 1.25;
-  min-width: 0;
-  display: flex;
-}
-/* Fill the stage. Without this the hologram shrink-to-fits as a flex item and
-   sits in a fraction of the space it was given. */
-.diag__stage > .holo {
-  flex: 1;
-  min-width: 0;
-}
-.diag--wide .diag__panel {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.55rem;
-  padding-left: 1rem;
-  margin-left: 1rem;
-  border-left: 1px solid var(--line);
-  overflow: hidden;
-}
-.diag__panelHead {
-  flex: none;
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-}
-.diag__panelHead .ph-tabs {
-  flex: 1;
-}
-
-@container (max-width: 900px) {
-  .diag__cols {
-    flex-direction: column;
-  }
-  .diag--wide .diag__stage {
-    flex: 0 0 260px;
-    min-height: 260px;
-  }
-  .diag--wide .diag__panel {
-    flex: 1 1 auto;
-    padding-left: 0;
-    margin-left: 0;
-    border-left: 0;
-    border-top: 1px solid var(--line);
-    padding-top: 0.7rem;
-    margin-top: 0.7rem;
-    overflow-y: auto;
-  }
-}
-
-.holo--loading {
-  display: grid;
-  place-items: center;
-}
-
-/* ================================================================= solutions */
-
-.sol {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  max-width: 760px;
-  margin-inline: auto;
-  padding-inline: 0.9rem;
-}
-
-.sol__bar {
-  flex: none;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 0 0.4rem;
-}
-.sol__title {
-  flex: 1;
-  text-align: center;
-  font-family: var(--display);
-  font-weight: 600;
-  font-size: 0.6rem;
-  letter-spacing: 0.22em;
-}
-.sol__barSpacer {
-  width: 32px;
-  flex: none;
-}
-
-.sol__faultRow,
-.sol__head {
-  flex: none;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.35rem 0.75rem 0.45rem;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: var(--r-card);
-  margin-bottom: 0.5rem;
-}
-.sol__fault {
-  flex: 1;
-  min-width: 0;
-  font-size: 0.85rem;
-  font-weight: 500;
-}
-
-.sol__scroll {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 0.45rem;
-  padding-bottom: 0.6rem;
-  scrollbar-width: thin;
-}
-.sol__cta {
-  flex: none;
-  padding-bottom: 0.7rem;
-}
-.sol__fine {
-  margin: 0.2rem 0 0;
-  font-size: 0.72rem;
-  line-height: 1.5;
-  color: var(--muted);
-}
-
-/* ---- sort ---- */
-.sol__sort {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-.sol__sortLabel {
-  font-family: var(--mono);
-  font-size: 0.6rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-.sol__sortSelect {
-  flex: 1;
-}
-.sol__sortSelect .ph-input {
-  height: 32px;
-  font-size: 0.78rem;
-  border-radius: var(--r-tile);
-}
-
-/* ---- repair option ---- */
-.opt__top {
-  display: flex;
-  align-items: baseline;
-  gap: 0.5rem;
-  width: 100%;
-}
-.opt__title {
-  flex: 1;
-  min-width: 0;
-  font-size: 0.86rem;
-  font-weight: 500;
-}
-.opt__flag {
-  font-family: var(--mono);
-  font-size: 0.55rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--ember);
-  border: 1px solid var(--ember);
-  border-radius: 4px;
-  padding: 0.1rem 0.3rem;
-  flex: none;
-}
-.opt__total {
-  font-family: var(--mono);
-  font-size: 0.82rem;
-  flex: none;
-}
-.opt__blurb {
-  font-size: 0.75rem;
-  line-height: 1.5;
-  color: var(--muted);
-  text-align: left;
-}
-
-/* ---- cost breakdown ---- */
-.cost {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-.cost__row {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 0.7rem;
-  padding: 0.3rem 0;
-  border-bottom: 1px solid var(--line);
-  font-size: 0.8rem;
-}
-.cost__key {
-  color: var(--muted);
-}
-.cost__val {
-  font-family: var(--mono);
-  font-size: 0.78rem;
-  white-space: nowrap;
-}
-.cost__row--total {
-  border-bottom: 0;
-}
-.cost__row--total .cost__key {
-  color: var(--ink);
-}
-.cost__val--total {
-  font-size: 0.92rem;
-}
-.cost__foot {
-  display: flex;
-  justify-content: space-between;
-  font-family: var(--mono);
-  font-size: 0.64rem;
-  color: var(--muted);
-}
-
-/* ---- mechanic card ---- */
-.mech__top {
-  display: flex;
-  align-items: baseline;
-  gap: 0.5rem;
-  width: 100%;
-}
-.mech__name {
-  flex: 1;
-  min-width: 0;
-  font-size: 0.86rem;
-  font-weight: 500;
-}
-.mech__dist {
-  font-family: var(--mono);
-  font-size: 0.68rem;
-  color: var(--muted);
-  flex: none;
-}
-.mech__rating {
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-}
-.mech__reviews {
-  font-family: var(--mono);
-  font-size: 0.66rem;
-  color: var(--muted);
-}
-.mech__chips {
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
-  flex-wrap: wrap;
-}
-.mech__open,
-.mech__closed {
-  font-family: var(--mono);
-  font-size: 0.62rem;
-  color: var(--muted);
-}
-.mech__closed {
-  opacity: 0.7;
-}
-.mech__estimate {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  width: 100%;
-  border-top: 1px solid var(--line);
-  padding-top: 0.4rem;
-}
-.mech__total {
-  font-family: var(--mono);
-  font-size: 0.85rem;
-}
-.mech__caption {
-  font-family: var(--mono);
-  font-size: 0.64rem;
-  color: var(--muted);
-}
-.mech__detail {
-  width: 100%;
-  border-top: 1px solid var(--line);
-  padding-top: 0.4rem;
-}
-
-/* ---- jump to another finding ---- */
-.sol__jump {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  width: 100%;
-  padding: 0.6rem 0.75rem;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: var(--r-card);
-  color: var(--ink);
-  font-family: var(--ui);
-  font-size: 0.82rem;
-  cursor: pointer;
-  transition:
-    background var(--t-hover) var(--ease),
-    border-color var(--t-hover) var(--ease);
-}
-.sol__jump:hover {
-  background: var(--panel-hi);
-  border-color: var(--line-hi);
-}
-.sol__jump svg {
-  color: var(--muted);
-  flex: none;
-}
-
-/* ---- desktop: choose the repair on the left, see the breakdown on the right */
-.sol--wide {
-  max-width: none;
-  padding: 0.9rem;
-  container-type: inline-size;
-}
-.sol__cols {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: row;
-  gap: 1rem;
-}
-.sol__left,
-.sol__right {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  overflow: hidden;
-}
-.sol__right {
-  flex: 1.05;
-  padding-left: 1rem;
-  border-left: 1px solid var(--line);
-  overflow-y: auto;
-}
-.sol__mechName {
-  margin: 0;
-  font-size: 1.05rem;
-  font-weight: 500;
-}
-.sol__mechMeta {
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-  margin-top: 0.2rem;
-  font-family: var(--mono);
-  font-size: 0.68rem;
-  color: var(--muted);
-}
-.sol__contact {
-  display: flex;
-  gap: 0.4rem;
-}
-.sol__contact .ph-btn {
-  flex: 1;
-}
-.sol__right .sol__cta {
-  margin-top: auto;
-  padding-bottom: 0;
-}
-
-@container (max-width: 900px) {
-  .sol__cols {
-    flex-direction: column;
-  }
-  .sol__right {
-    flex: 0 0 auto;
-    padding-left: 0;
-    border-left: 0;
-    border-top: 1px solid var(--line);
-    padding-top: 0.7rem;
-  }
-}
-
-/* =================================================================== account */
-
-.acct {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  max-width: 760px;
-  margin-inline: auto;
-  padding-inline: 0.9rem;
-}
-
-.acct__bar {
-  flex: none;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 0 0.4rem;
-}
-.acct__title {
-  flex: 1;
-  text-align: center;
-  font-family: var(--display);
-  font-weight: 600;
-  font-size: 0.6rem;
-  letter-spacing: 0.22em;
-}
-.acct__barSpacer {
-  width: 32px;
-  flex: none;
-}
-
-.acct__scroll {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 0.9rem;
-  padding-bottom: 1rem;
-  scrollbar-width: thin;
-}
-
-.acct__profile {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  padding-top: 0.3rem;
-}
-.acct__avatar {
-  width: 48px;
-  height: 48px;
-  flex: none;
-  border-radius: 50%;
-  background: var(--panel-hi);
-  border: 1px solid var(--line-hi);
-  display: grid;
-  place-items: center;
-  font-family: var(--display);
-  font-size: 1rem;
-  color: var(--muted);
-}
-.acct__name {
-  font-size: 0.95rem;
-  font-weight: 500;
-}
-.acct__email {
-  font-family: var(--mono);
-  font-size: 0.7rem;
-  color: var(--muted);
-}
-
-.acct__note {
-  margin: 0.4rem 0 0;
-  font-size: 0.72rem;
-  line-height: 1.5;
-  color: var(--muted);
-}
-.acct__dot {
-  width: 6px;
-  height: 6px;
-  flex: none;
-  border-radius: 50%;
-  background: var(--ember);
-  box-shadow: 0 0 8px var(--ember-wash);
-}
-.acct__danger {
-  color: var(--critical);
-}
-.acct__dialogFine {
-  font-size: 0.76rem;
-  color: var(--muted);
-}
-.acct__signout {
-  padding-top: 0.2rem;
-}
-
-/* ---- desktop: two columns, so nothing important sits below the fold ---- */
-.acct--wide {
-  max-width: none;
-  padding: 1.1rem 1.4rem;
-  container-type: inline-size;
-  overflow-y: auto;
-}
-.acct--wide .acct__profile {
-  padding-bottom: 1rem;
-}
-.acct__grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1.1rem 1.4rem;
-  align-items: start;
-}
-.acct__col {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  min-width: 0;
-}
-.acct--wide .acct__signout {
-  max-width: 220px;
-}
-
-@container (max-width: 900px) {
-  .acct__grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* ====================================================================== maps
-   The map is the page. Every piece of chrome is glass laid over it — and all
-   of it lives in the layout flow. Floating the search row, the filters, the
-   ETA and the sheet independently is what made them collide in the mockup,
-   twice, at different heights. Flow order decides who sits where. */
-
-.map {
-  position: relative;
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  background: #101012;
-}
-
-.map__canvas {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-.map__canvas--behind {
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-}
-
-.map__chrome {
-  position: relative;
-  z-index: 3;
-  flex: none;
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-  padding: 0.6rem 0.6rem 0;
-}
-
-.map__searchRow {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-}
-.map__glassBtn {
-  width: 34px;
-  height: 34px;
-  background: var(--glass);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border: 1px solid var(--glass-line);
-}
-.map__search {
-  flex: 1;
-  min-width: 0;
-}
-.map__search .ph-input {
-  background: var(--glass);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border-color: var(--glass-line);
-}
-
-.map__filters {
-  display: flex;
-  gap: 0.28rem;
-  flex-wrap: wrap;
-}
-.map .map__filters .ph-chip {
-  background: var(--glass);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border-color: var(--glass-line);
-}
-.map .map__filters .ph-chip[aria-pressed='true'] {
-  background: var(--panel-top);
-  color: var(--ink);
-}
-
-.map__eta {
-  align-self: center;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.3rem 0.65rem;
-  border-radius: var(--r-pill);
-  background: var(--glass);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border: 1px solid var(--glass-line);
-  font-family: var(--mono);
-  font-size: 0.66rem;
-  color: var(--ember);
-  white-space: nowrap;
-}
-.map__eta .dimmed {
-  color: var(--muted);
-}
-.map__eta svg {
-  color: var(--ember);
-}
-
-/* The flexible gap. This is what lets the map show through, and it is why
-   nothing needs to float. */
-.map__spacer {
-  flex: 1;
-  min-height: 0;
-}
-
-.map__sheet {
-  position: relative;
-  z-index: 3;
-  flex: none;
-  margin: 0 0.45rem;
-  border-radius: var(--r-sheet) var(--r-sheet) 0 0;
-  background: var(--glass);
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
-  border: 1px solid var(--glass-line);
-  border-bottom: 0;
-  padding: 0.45rem 0.8rem 0.6rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-}
-.map__grip {
-  width: 30px;
-  height: 3.5px;
-  border-radius: 2px;
-  background: var(--line-hi);
-  margin: 0 auto 0.1rem;
-}
-.map__sheetTop {
-  display: flex;
-  align-items: baseline;
-  gap: 0.4rem;
-}
-.map__sheetName {
-  flex: 1;
-  min-width: 0;
-  font-size: 0.9rem;
-  font-weight: 500;
-}
-.map__itemDist {
-  font-family: var(--mono);
-  font-size: 0.68rem;
-  color: var(--muted);
-  flex: none;
-}
-.map__itemMeta {
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-  flex-wrap: wrap;
-}
-.map__meta {
-  font-family: var(--mono);
-  font-size: 0.66rem;
-  color: var(--muted);
-}
-.map__actions {
-  display: flex;
-  gap: 0.35rem;
-}
-.map__primary {
-  flex: 1.4;
-}
-.map__actions .ph-btn:not(.map__primary) {
-  flex: 1;
-}
-.map__empty {
-  margin: 0;
-  padding: 0.6rem 0.2rem;
-  font-size: 0.78rem;
-  color: var(--muted);
-  text-align: center;
-}
-
-/* ---- desktop: the sheet becomes a panel and the map keeps the rest ---- */
-.map--wide {
-  flex-direction: row;
-}
-.map__panel {
-  width: 300px;
-  flex: none;
-  border-right: 1px solid var(--line);
-  background: var(--ground);
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  padding: 0.9rem;
-  overflow: hidden;
-}
-.map__list {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-  scrollbar-width: thin;
-}
-.map__item {
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-  width: 100%;
-  text-align: left;
-  padding: 0.6rem 0.7rem;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: var(--r-card);
-  color: var(--ink);
-  font-family: var(--ui);
-  cursor: pointer;
-  transition:
-    background var(--t-hover) var(--ease),
-    border-color var(--t-hover) var(--ease);
-}
-.map__item:hover {
-  background: var(--panel-hi);
-  border-color: var(--line-hi);
-}
-.map__item[aria-pressed='true'] {
-  background: var(--panel-hi);
-  border-color: var(--line-hi);
-}
-.map__itemTop {
-  display: flex;
-  align-items: baseline;
-  gap: 0.4rem;
-}
-.map__itemName {
-  flex: 1;
-  min-width: 0;
-  font-size: 0.84rem;
-  font-weight: 500;
-}
-.map__eta--inline {
-  align-self: flex-start;
-  padding: 0;
-  background: none;
-  backdrop-filter: none;
-  border: 0;
-  font-size: 0.64rem;
-}
-.map__stage {
-  flex: 1;
-  min-width: 0;
-  position: relative;
 }

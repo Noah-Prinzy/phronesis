@@ -3,23 +3,46 @@ import type { ReactNode } from 'react'
 
 export type Journey = 'owner' | 'buyer'
 
+const KEY = 'phronesis:journey'
+
 interface JourneyValue {
   journey: Journey | null
   setJourney: (j: Journey) => void
-  /**
-   * Onboarding is three steps for an owner and **two** for a buyer — the OBD
-   * step exists only for people who have a car to plug it into. The progress
-   * bar reads from here so it can never claim a step the flow will not show.
-   */
-  steps: number
 }
 
 const Ctx = createContext<JourneyValue | null>(null)
 
+/**
+ * Persisted, because it is not a preference — it decides which two of the
+ * five navigation slots exist and which half of the product the user sees.
+ * Held in memory alone, any reload during onboarding silently turned a buyer
+ * into an owner, since every consumer reads `journey !== 'buyer'`.
+ */
+function read(): Journey | null {
+  try {
+    const v = localStorage.getItem(KEY)
+    return v === 'owner' || v === 'buyer' ? v : null
+  } catch {
+    // Private mode, or storage disabled. Not knowing is survivable.
+    return null
+  }
+}
+
 export function JourneyProvider({ children }: { children: ReactNode }) {
-  const [journey, setJourney] = useState<Journey | null>(null)
+  const [journey, setJourneyState] = useState<Journey | null>(read)
+
   const value = useMemo<JourneyValue>(
-    () => ({ journey, setJourney, steps: journey === 'buyer' ? 2 : 3 }),
+    () => ({
+      journey,
+      setJourney: (j: Journey) => {
+        setJourneyState(j)
+        try {
+          localStorage.setItem(KEY, j)
+        } catch {
+          /* the session still works, it just will not outlive a reload */
+        }
+      },
+    }),
     [journey],
   )
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>

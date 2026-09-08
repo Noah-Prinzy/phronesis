@@ -77,7 +77,7 @@ export function MapCanvas({ places, selectedId, onSelect, className }: MapCanvas
       const { places: ps, selectedId: sel } = live.current
       const scale = Math.min(w, h) / 600
 
-      ctx.fillStyle = '#101012'
+      ctx.fillStyle = '#0b0d10'
       ctx.fillRect(0, 0, w, h)
 
       // City blocks, barely there — they give the streets something to be
@@ -114,8 +114,8 @@ export function MapCanvas({ places, selectedId, onSelect, className }: MapCanvas
       const route = sel ? ROUTE_TO[sel] : undefined
       if (route) {
         const pts = route.map(([x, y]) => [x * w, y * h] as [number, number])
-        road(pts, 20 * scale, 'rgba(255,122,47,0.22)')
-        road(pts, 7 * scale, 'rgba(255,122,47,0.95)')
+        road(pts, 20 * scale, 'rgba(112,170,226,0.22)')
+        road(pts, 7 * scale, 'rgba(112,170,226,0.95)')
       }
 
       // Pins.
@@ -129,7 +129,7 @@ export function MapCanvas({ places, selectedId, onSelect, className }: MapCanvas
           const pulse = 0.5 + Math.sin(now * 0.0022) * 0.5
           ctx.beginPath()
           ctx.arc(px, py, (24 + pulse * 9) * scale, 0, Math.PI * 2)
-          ctx.fillStyle = `rgba(255,122,47,${(0.14 * (1 - pulse * 0.55)).toFixed(3)})`
+          ctx.fillStyle = `rgba(112,170,226,${(0.14 * (1 - pulse * 0.55)).toFixed(3)})`
           ctx.fill()
 
           ctx.save()
@@ -138,20 +138,20 @@ export function MapCanvas({ places, selectedId, onSelect, className }: MapCanvas
           ctx.bezierCurveTo(px - 15 * scale, py - 8 * scale, px - 12 * scale, py - 25 * scale, px, py - 25 * scale)
           ctx.bezierCurveTo(px + 12 * scale, py - 25 * scale, px + 15 * scale, py - 8 * scale, px, py + 9 * scale)
           ctx.closePath()
-          ctx.shadowColor = '#ff7a2f'
+          ctx.shadowColor = '#70aae2'
           ctx.shadowBlur = 16 * scale
-          ctx.fillStyle = '#ff7a2f'
+          ctx.fillStyle = '#70aae2'
           ctx.fill()
           ctx.shadowBlur = 0
           ctx.beginPath()
           ctx.arc(px, py - 13 * scale, 5 * scale, 0, Math.PI * 2)
-          ctx.fillStyle = '#141416'
+          ctx.fillStyle = '#111419'
           ctx.fill()
           ctx.restore()
         } else {
           ctx.beginPath()
           ctx.arc(px, py, 8 * scale, 0, Math.PI * 2)
-          ctx.fillStyle = 'rgba(20,20,22,0.9)'
+          ctx.fillStyle = 'rgba(17,20,25,0.9)'
           ctx.fill()
           ctx.lineWidth = 2.4 * scale
           ctx.strokeStyle = p.openNow ? 'rgba(190,196,208,0.55)' : 'rgba(120,124,134,0.4)'
@@ -172,7 +172,7 @@ export function MapCanvas({ places, selectedId, onSelect, className }: MapCanvas
       ctx.fillStyle = '#e2e6f0'
       ctx.fill()
       ctx.lineWidth = 3 * scale
-      ctx.strokeStyle = '#101012'
+      ctx.strokeStyle = '#0b0d10'
       ctx.stroke()
     }
 

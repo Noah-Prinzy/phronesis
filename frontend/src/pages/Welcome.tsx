@@ -1,54 +1,43 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Button } from '../ui'
+import { Button, SpokenText } from '../ui'
 import { Halo } from '../avatar/Halo'
+import { useRem } from '../app/useRootFontSize'
+import { useMediaQuery } from '../app/useMediaQuery'
+import { useSpeak } from '../app/useSpeak'
 
 /**
- * Welcome. One action, and the avatar introduces itself.
+ * What she says — and, a word at a time, what appears.
  *
- * The avatar sits in `responding` while the introduction is revealing, then
- * settles to `idle` — so the first thing a user sees the ring do is the thing
- * it does when it speaks.
+ * The paragraph is not printed and then narrated. It arrives as she speaks
+ * it, which is the difference between someone talking to you and someone
+ * reading you a page that was already there.
  */
+const SPOKEN =
+  "Hi — I'm Phronesis. Think of me as the friend who actually knows cars, the one you'd call before you call a mechanic. Shall we get you set up?"
+
 export function Welcome() {
   const navigate = useNavigate()
-  const [shown, setShown] = useState(false)
-  const [speaking, setSpeaking] = useState(true)
+  const wide = useMediaQuery('(min-width: 768px)')
+  const size = useRem(wide ? 9.6 : 7.6)
+  const { talking, speak, progress } = useSpeak()
 
   useEffect(() => {
-    const on = window.setTimeout(() => setShown(true), 40)
-    const quiet = window.setTimeout(() => setSpeaking(false), 3400)
-    return () => {
-      window.clearTimeout(on)
-      window.clearTimeout(quiet)
-    }
+    speak(SPOKEN)
+    // Runs once, on mount — the line plays exactly once per visit.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   return (
-    <main className="screen welcome" data-shown={shown}>
-      <p className="welcome__mark">PHRONESIS</p>
+    <main id="main" className="screen welcome">
+      <div className="welcome__stage">
+        <Halo size={size} state={talking ? 'responding' : 'idle'} />
+      </div>
 
-      <div className="welcome__body">
-        <Halo size={150} state={speaking ? 'responding' : 'idle'} />
-        {/*
-          Real text nodes between the spans, not `inline-block` siblings.
-          An inline-block swallows its trailing space, and the sentence renders
-          as "Ihelpyouunderstandyourcar".
-        */}
-        <p className="welcome__line">
-          <span className="reveal" style={{ ['--i' as string]: 0 }}>
-            Hey — I&rsquo;m Phronesis.
-          </span>{' '}
-          <span className="reveal" style={{ ['--i' as string]: 1 }}>
-            I help you understand your car:
-          </span>{' '}
-          <span className="reveal" style={{ ['--i' as string]: 2 }}>
-            what&rsquo;s wrong, what it should cost,
-          </span>{' '}
-          <span className="reveal" style={{ ['--i' as string]: 3 }}>
-            and which mechanic to trust.
-          </span>
-        </p>
+      <div className="welcome__text">
+        <span className="label">Phronesis</span>
+        <h1 className="welcome__title">Your car, explained.</h1>
+        <SpokenText text={SPOKEN} progress={progress} className="welcome__line" />
       </div>
 
       <div className="welcome__actions">

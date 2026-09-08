@@ -15,7 +15,7 @@ export function Chip({ pressed, icon, className, children, ...rest }: ChipProps)
       {...rest}
       type="button"
       aria-pressed={pressed}
-      className={cx('ph-chip', 'ph-pressable', className)}
+      className={cx('ph-chip', className)}
     >
       {icon}
       {children}
@@ -84,7 +84,7 @@ export function StarRating({
       <span className={cx('ph-stars', className)} aria-label={`${label}: ${value} of ${count}`}>
         {Array.from({ length: count }, (_, i) => (
           <span key={i} className={i < filled ? undefined : 'ph-stars__off'} aria-hidden="true">
-            ★
+            <Star />
           </span>
         ))}
       </span>
@@ -103,10 +103,20 @@ export function StarRating({
           className={i < filled ? undefined : 'ph-stars__off'}
           onClick={() => onChange(i + 1)}
         >
-          ★
+          <Star />
         </button>
       ))}
     </span>
+  )
+}
+
+/** Drawn rather than typed: the ★ glyph's weight is the font's decision, and
+    it never matched the rest of the icon set. */
+function Star() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M12 3.4 14.9 9.3l6.5.95-4.7 4.58 1.11 6.47L12 18.24l-5.81 3.06 1.11-6.47-4.7-4.58 6.5-.95z" />
+    </svg>
   )
 }
 
@@ -137,7 +147,7 @@ export function CardButton({ selected, className, children, ...rest }: CardButto
       data-interactive="true"
       data-selected={selected || undefined}
       aria-pressed={selected}
-      className={cx('ph-card', 'ph-pressable', className)}
+      className={cx('ph-card', className)}
     >
       {children}
     </button>
@@ -206,7 +216,7 @@ export function Row({ label, sub, value, trailing, onClick, className }: RowProp
       type="button"
       onClick={onClick}
       data-interactive="true"
-      className={cx('ph-row', 'ph-pressable', className)}
+      className={cx('ph-row', className)}
     >
       {content}
     </button>

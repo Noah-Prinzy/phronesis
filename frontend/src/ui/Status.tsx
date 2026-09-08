@@ -19,7 +19,7 @@ export function Spinner({ size = 14, className }: { size?: number; className?: s
 export interface MeterProps {
   /** 0–1. Clamped, because a confidence of 1.4 is a bug worth not rendering. */
   value: number
-  tone?: 'neutral' | 'ember'
+  tone?: 'neutral' | 'accent'
   label?: string
   className?: string
 }
@@ -57,10 +57,8 @@ export function SplitBar({ segments, className }: SplitBarProps) {
         <span
           key={i}
           className="ph-split__seg"
-          style={{
-            width: `${(s.value / total) * 100}%`,
-            background: s.tone === 'dim' ? 'var(--muted)' : 'var(--ink-dim)',
-          }}
+          data-tone={s.tone ?? 'bright'}
+          style={{ width: `${(s.value / total) * 100}%` }}
         />
       ))}
     </div>
@@ -134,7 +132,7 @@ export interface EmptyStateProps {
 export function EmptyState({ title, body, action, icon, className }: EmptyStateProps) {
   return (
     <div className={cx('ph-empty', className)}>
-      {icon}
+      {icon && <span className="ph-empty__icon">{icon}</span>}
       <p className="ph-empty__title">{title}</p>
       {body && <p className="ph-empty__body">{body}</p>}
       {action}
@@ -144,7 +142,7 @@ export function EmptyState({ title, body, action, icon, className }: EmptyStateP
 
 /* -------------------------------------------------------------------- toast */
 
-export type ToastLevel = 'neutral' | 'ember' | 'warning' | 'critical'
+export type ToastLevel = 'neutral' | 'accent' | 'warning' | 'critical'
 
 export interface ToastProps extends HTMLAttributes<HTMLDivElement> {
   level?: ToastLevel
@@ -162,13 +160,9 @@ export function Toast({ level = 'neutral', title, body, action, className, ...re
       className={cx('ph-toast', className)}
     >
       <span className="ph-toast__stripe" />
-      <span style={{ flex: 1, minWidth: 0 }}>
-        <span style={{ display: 'block', fontWeight: 500 }}>{title}</span>
-        {body && (
-          <span style={{ display: 'block', fontSize: '0.74rem', color: 'var(--muted)' }}>
-            {body}
-          </span>
-        )}
+      <span className="ph-toast__text">
+        <span className="ph-toast__title">{title}</span>
+        {body && <span className="ph-toast__body">{body}</span>}
       </span>
       {action}
     </div>

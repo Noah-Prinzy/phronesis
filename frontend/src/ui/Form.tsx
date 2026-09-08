@@ -399,19 +399,9 @@ export function Slider({
   return (
     <div className={className}>
       {(label || valueLabel) && (
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            fontFamily: 'var(--mono)',
-            fontSize: '0.62rem',
-            letterSpacing: '0.12em',
-            textTransform: 'uppercase',
-            color: 'var(--muted)',
-          }}
-        >
+        <div className="ph-slider__head">
           <span>{label}</span>
-          {valueLabel && <span>{valueLabel}</span>}
+          {valueLabel && <span className="ph-slider__value">{valueLabel}</span>}
         </div>
       )}
       <input

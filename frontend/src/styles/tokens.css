@@ -1,63 +1,103 @@
 @import 'tailwindcss';
 
 /* ============================================================
-   PHRONESIS · design tokens
-   The canonical values live in design/02-tokens.md. This file is
-   the only place they exist in code. Nothing below :root should
-   ever hard-code a colour, radius, duration or font.
+   PHRONESIS · INSTRUMENT
+   The design system, v3.
+
+   The reference is a premium car's instrument cluster, not a
+   sci-fi HUD: graphite and machined greys, one precise accent,
+   hairline rules, and type that gets out of the way. Restraint
+   is the premium signal here — nothing glows for decoration.
+
+   Nothing outside this file may hard-code a colour, radius,
+   duration or font.
    ============================================================ */
 
 :root {
-  /* --- ground: hierarchy is brightness, never hue --- */
-  --ground: #1a1a1c;
-  --ground-lift: #202023;
-  --panel: #2a2a2e;
-  --panel-hi: #34343a;
-  --panel-top: #3f3f46;
-  --line: #34343a;
-  --line-hi: #4a4a52;
+  /* --- ground: depth is brightness, never hue ---
+     A cool blue-grey cast rather than neutral black. Reads as
+     machined metal under low light instead of an OLED void. */
+  --ground: #0b0d10; /* the page itself */
+  --surface: #111419; /* cards, panels, the default raised plane */
+  --surface-2: #171b22; /* raised above a panel — hover, selected */
+  --surface-3: #1f242d; /* highest: pressed, active fills */
 
-  /* --- ink --- */
-  --ink: #f4f4f6;
-  --ink-dim: #a8a8ae;
-  --muted: #6e6e76;
+  /* Two rules, two jobs. A hairline separates; an edge bounds a
+     control and therefore owes 3:1 (WCAG 1.4.11). */
+  --hairline: #222831;
+  --edge: #6d7684;
 
-  /* --- ember: this system's light. Never a fill, never a label. --- */
-  --ember: #ff7a2f;
-  --ember-wash: rgb(255 122 47 / 0.3);
+  /* --- ink ---
+     Three steps, each measured against --surface, the darkest
+     plane text is ever set on. */
+  --ink: #eceff4; /* 15.4:1 */
+  --ink-2: #b4bcc8; /* 9.6:1 */
+  --ink-3: #868f9d; /* 5.7:1 — the floor, still clears AA */
 
-  /* --- severity: the ONLY hue in the product, and only where
-         safety is at stake. There is no green: "nothing wrong" is
-         the default state and reads as --muted. --- */
-  --critical: #ff4d4d;
-  --high: #ff8a3d;
-  --warning: #f5a524;
+  /* --- accent: the orb's own light ---
+     Sampled straight from the avatar render (design/avatar-v2 —
+     "band hot" and "band peak"). The focus ring, the active nav
+     item, a live readout and Phronesis' presence are therefore
+     literally the same light, which is the whole brand in one
+     decision.
 
-  /* --- radii --- */
+     Steel blue rather than amber for a second, harder reason: the
+     severity ramp below already owns amber and orange, and an
+     accent that competes with a warning colour is a safety
+     problem, not a taste problem. */
+  --accent: #70aae2; /* 7.5:1 on --surface, 7.9:1 on --ground */
+  --accent-hi: #8ad7fb;
+  --accent-fill: rgb(112 170 226 / 0.14);
+  --accent-line: rgb(112 170 226 / 0.42);
+  --accent-glow: rgb(112 170 226 / 0.28);
+
+  /* --- severity: the only other hue, and only where safety is
+         at stake. There is no "green/all clear": nothing wrong is
+         the default state of the app and reads as --ink-3. --- */
+  --critical: #ff6b6b;
+  --high: #ff9052;
+  --warning: #f0b429;
+
+  /* --- radii: sharp, not soft ---
+     Machined corners. The pill survives in exactly one place —
+     status chips — where the shape carries meaning. */
+  --r-lg: 8px; /* sheets, dialogs */
+  --r: 5px; /* cards, inputs, buttons */
+  --r-sm: 3px; /* tiles, badges, bars */
   --r-pill: 999px;
-  --r-sheet: 20px;
-  --r-card: 14px;
-  --r-input: 10px;
-  --r-tile: 8px;
 
-  /* --- type --- */
-  --display: 'Orbitron', 'Eurostile', ui-sans-serif, sans-serif;
-  --ui: 'IBM Plex Sans', 'Segoe UI', system-ui, sans-serif;
-  --mono: 'IBM Plex Mono', ui-monospace, Consolas, monospace;
+  /* --- type ---
+     A neutral grotesk family throughout. The brand character comes
+     from spacing, hierarchy and the wide-tracked caps labels below
+     — not from a novelty display face, which is what makes an
+     interface look cheap rather than engineered. */
+  --display: 'Inter Tight', 'Inter', system-ui, sans-serif;
+  --ui: 'Inter', system-ui, 'Segoe UI', sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, Consolas, monospace;
 
-  /* --- motion --- */
-  --t-press: 120ms;
-  --t-hover: 220ms;
-  --t-move: 420ms;
-  --t-dock: 620ms;
+  /* The one label treatment, used for every section head, nav
+     label, spec key and readout caption in the app. */
+  --label-size: 0.6875rem;
+  --label-track: 0.14em;
+
+  /* --- motion ---
+     Short and mechanical. Nothing bounces; this is an instrument. */
+  --t-press: 110ms;
+  --t-hover: 180ms;
+  --t-move: 320ms;
+  --t-dock: 560ms;
   --ease: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
-  --ease-spring: cubic-bezier(0.34, 1.45, 0.64, 1);
 
-  /* --- glass: transient surfaces only (sheets, popovers, map chrome) --- */
-  --glass: linear-gradient(180deg, rgb(255 255 255 / 0.07), rgb(255 255 255 / 0.025));
-  --glass-line: rgb(255 255 255 / 0.1);
-  --glass-blur: blur(20px) saturate(1.3);
+  /* --- elevation ---
+     Shadow is depth, never decoration. Two steps only. */
+  --lift: 0 1px 2px rgb(0 0 0 / 0.4);
+  --lift-hi: 0 18px 40px -20px rgb(0 0 0 / 0.8);
+
+  /* --- shell ---
+     The nav's footprint, in one place so no page has to guess it. */
+  --rail-w: 14.5rem;
+  --tabbar-h: 3.75rem;
 }
 
 /* Expose the same tokens to Tailwind so page-level layout can use
@@ -65,25 +105,23 @@
    utility reference our variable rather than copying its value. */
 @theme inline {
   --color-ground: var(--ground);
-  --color-ground-lift: var(--ground-lift);
-  --color-panel: var(--panel);
-  --color-panel-hi: var(--panel-hi);
-  --color-panel-top: var(--panel-top);
-  --color-line: var(--line);
-  --color-line-hi: var(--line-hi);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-hairline: var(--hairline);
+  --color-edge: var(--edge);
   --color-ink: var(--ink);
-  --color-ink-dim: var(--ink-dim);
-  --color-muted: var(--muted);
-  --color-ember: var(--ember);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-accent: var(--accent);
   --color-critical: var(--critical);
   --color-high: var(--high);
   --color-warning: var(--warning);
 
+  --radius-lg: var(--r-lg);
+  --radius-DEFAULT: var(--r);
+  --radius-sm: var(--r-sm);
   --radius-pill: var(--r-pill);
-  --radius-sheet: var(--r-sheet);
-  --radius-card: var(--r-card);
-  --radius-input: var(--r-input);
-  --radius-tile: var(--r-tile);
 
   --font-display: var(--display);
   --font-ui: var(--ui);
@@ -98,8 +136,11 @@
   box-sizing: border-box;
 }
 
+/* The whole interface is sized in rem, so the root IS the scale:
+   15px on a phone, growing to 19px on a large monitor. */
 html {
   color-scheme: dark;
+  font-size: clamp(15px, 13.4px + 0.35vw, 19px);
 }
 
 body {
@@ -107,17 +148,47 @@ body {
   background: var(--ground);
   color: var(--ink);
   font-family: var(--ui);
-  font-size: 15px;
-  font-weight: 300;
-  line-height: 1.6;
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.55;
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
-/* The one global focus treatment. Ember as light, never as fill. */
+/* The one global focus treatment. */
 :focus-visible {
-  outline: 2px solid var(--ember);
-  outline-offset: 3px;
-  border-radius: 3px;
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Tabular figures everywhere a number is compared to another number:
+   prices, distances, confidences. Ragged digits read as sloppy. */
+.num {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The label treatment, as a class so it is never re-typed. */
+.label {
+  font-family: var(--display);
+  font-size: var(--label-size);
+  font-weight: 600;
+  letter-spacing: var(--label-track);
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 /* Motion is decoration here — every state change still happens without it. */

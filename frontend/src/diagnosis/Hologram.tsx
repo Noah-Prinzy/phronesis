@@ -1,8 +1,12 @@
 import { useEffect, useLayoutEffect, useRef } from 'react'
 import * as THREE from 'three'
 import { PART_ANCHOR, buildCar, tokenColor } from './carModel'
-import type { Finding } from '../data/findings'
+import type { CarPart, Finding } from '../data/findings'
 import { cx } from '../ui/cx'
+
+/** The id a synthetic "Phronesis is pointing here" marker is tagged with —
+    never a real finding id, so it can never collide with one. */
+const FOCUS_MARKER_ID = '__focus__'
 
 export interface HologramProps {
   findings: Finding[]
@@ -13,6 +17,11 @@ export interface HologramProps {
   scanning?: boolean
   vehicle?: string
   className?: string
+  /** The part Phronesis last talked about in chat — a neutral "look here"
+      ping, distinct from a diagnosed fault's severity colour. Skipped
+      entirely when a real finding already covers the same part; that
+      finding's own marker already does the pointing. */
+  focusPart?: CarPart | null
 }
 
 interface Marker {
@@ -28,8 +37,8 @@ const SEVERITY_TOKEN: Record<string, [string, number]> = {
   critical: ['--critical', 0xff4d4d],
   high: ['--high', 0xff8a3d],
   warning: ['--warning', 0xf5a524],
-  routine: ['--muted', 0x6e6e76],
-  clear: ['--muted', 0x6e6e76],
+  routine: ['--ink-3', 0x868f9d],
+  clear: ['--ink-3', 0x868f9d],
 }
 
 export function Hologram({
@@ -39,6 +48,7 @@ export function Hologram({
   scanning = false,
   vehicle,
   className,
+  focusPart,
 }: HologramProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const hostRef = useRef<HTMLDivElement>(null)
@@ -92,7 +102,7 @@ export function Hologram({
     const sweep = new THREE.Mesh(
       new THREE.PlaneGeometry(3.2, 0.5),
       new THREE.MeshBasicMaterial({
-        color: tokenColor('--ember', 0xff7a2f),
+        color: tokenColor('--accent', 0x70aae2),
         transparent: true,
         opacity: 0.26,
         side: THREE.DoubleSide,
@@ -154,9 +164,13 @@ export function Hologram({
       mat.opacity = state.scanning ? 0.3 : 0
 
       for (const m of state.markers) {
-        const pulse = 0.5 + Math.sin(t * 0.0028) * 0.5
+        // The focus ping pulses faster and wider — it reads as "look, right
+        // now", not as an ambient fault indicator.
+        const isFocus = m.id === FOCUS_MARKER_ID
+        const speed = isFocus ? 0.0062 : 0.0028
+        const pulse = 0.5 + Math.sin(t * speed) * 0.5
         const dim = state.selected && state.selected !== m.id ? 0.25 : 1
-        const s = 1 + pulse * 0.22
+        const s = 1 + pulse * (isFocus ? 0.4 : 0.22)
         m.halo.scale.setScalar(s)
         ;(m.halo.material as THREE.MeshBasicMaterial).opacity = (0.1 + 0.1 * pulse) * dim
         ;(m.core.material as THREE.MeshBasicMaterial).opacity = dim
@@ -227,10 +241,8 @@ export function Hologram({
     }
     s.markers = []
 
-    for (const f of findings) {
-      const [token, fallback] = SEVERITY_TOKEN[f.severity] ?? ['--muted', 0x6e6e76]
-      const colour = tokenColor(token, fallback)
-      const at = PART_ANCHOR[f.part]
+    const addMarker = (id: string, part: CarPart, colour: THREE.Color) => {
+      const at = PART_ANCHOR[part]
 
       const core = new THREE.Mesh(
         new THREE.SphereGeometry(0.16, 14, 14),
@@ -246,11 +258,22 @@ export function Hologram({
 
       s.car.add(core)
       s.car.add(halo)
-      s.markers.push({ id: f.id, core, halo })
+      s.markers.push({ id, core, halo })
+    }
+
+    for (const f of findings) {
+      const [token, fallback] = SEVERITY_TOKEN[f.severity] ?? ['--ink-3', 0x868f9d]
+      addMarker(f.id, f.part, tokenColor(token, fallback))
+    }
+
+    // A real diagnosed fault already points at itself — the focus ping only
+    // adds anything when nothing else is marking that part.
+    if (focusPart && !findings.some((f) => f.part === focusPart)) {
+      addMarker(FOCUS_MARKER_ID, focusPart, tokenColor('--accent', 0x70aae2))
     }
 
     s.paint(performance.now())
-  }, [findings])
+  }, [findings, focusPart])
 
   /* ------------------------------------------------- state passed to the loop */
   useEffect(() => {

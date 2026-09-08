@@ -1,22 +1,41 @@
-import { useEffect, useLayoutEffect, useMemo, useRef } from 'react'
+import { lazy, Suspense, useRef } from 'react'
 import type { CSSProperties } from 'react'
-import { HALO, blendSpec, drawHalo, makeMotes } from './renderer'
-import type { HaloState } from './renderer'
 import { cx } from '../ui/cx'
+import { OrbVideo } from './OrbVideo'
+import { orbMode } from './orbMode'
+import type { OrbState } from './orbSpec'
+
+/**
+ * Phronesis' presence.
+ *
+ * A sphere skinned in floating hexagonal plates with a band of light sweeping
+ * a tilted axis. Two renderers draw it, chosen at load by `orbMode()`:
+ *
+ *   video  — the pre-rendered loop from design/avatar-v2. What ships.
+ *   three  — generative, so a state can reshape the orb rather than just
+ *            replay it faster. Behind a flag until it earns the default.
+ *
+ * Both read the same state table in orbSpec.ts, so they cannot disagree about
+ * what `thinking` means. This component owns only the wrapper: the size, the
+ * hit target, and the element the renderers write their `--orb-*` properties
+ * onto.
+ */
+
+/** Kept as the public name — every call site already speaks in these terms. */
+export type HaloState = OrbState
 
 export interface HaloProps {
   state?: HaloState
-  /** Rendered size in CSS pixels. The canvas backing store is this × DPR. */
+  /** Rendered size in CSS pixels. */
   size?: number
-  /** Live audio level, 0–1. Only moves the ring in listening/responding. */
+  /** Live audio level, 0–1. */
   level?: number
   /**
-   * A ref carrying the live level instead of a prop. The render loop reads it
-   * directly, so a microphone can drive the ring at 60fps without re-rendering
-   * anything above it.
+   * A ref carrying the live level instead of a prop, so a microphone can drive
+   * the orb at 60fps without re-rendering anything above it.
    */
   levelRef?: React.RefObject<number>
-  /** Tap target — on Home this toggles the microphone. */
+  /** Tap target. Omit it and the orb is decorative and aria-hidden. */
   onActivate?: () => void
   label?: string
   className?: string
@@ -24,7 +43,10 @@ export interface HaloProps {
   style?: CSSProperties
 }
 
-const STATE_BLEND_MS = 620 // --t-dock: the same duration the avatar docks in
+// Three is already in the bundle for the diagnosis hologram, but that route
+// lazy-loads it. Importing it here eagerly would put it in the entry chunk for
+// everyone, including the majority who never leave the video renderer.
+const OrbThree = lazy(() => import('./OrbThree').then((m) => ({ default: m.OrbThree })))
 
 export function Halo({
   state = 'idle',
@@ -36,132 +58,47 @@ export function Halo({
   className,
   style,
 }: HaloProps) {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const motes = useMemo(() => makeMotes(size > 160 ? 46 : size > 90 ? 30 : 12), [size])
+  const hostRef = useRef<HTMLElement | null>(null)
+  const mode = orbMode()
 
-  // Everything the loop reads lives in a ref, so changing state or level never
-  // tears down and restarts the animation.
-  const live = useRef({ state, level, from: state, since: 0 })
-  live.current.level = level
-  const levelSource = useRef(levelRef)
-  levelSource.current = levelRef
+  const orb =
+    mode === 'three' ? (
+      <Suspense fallback={null}>
+        <OrbThree state={state} size={size} level={level} levelRef={levelRef} hostRef={hostRef} />
+      </Suspense>
+    ) : (
+      <OrbVideo state={state} size={size} level={level} levelRef={levelRef} hostRef={hostRef} />
+    )
 
-  useEffect(() => {
-    if (live.current.state === state) return
-    live.current.from = live.current.state
-    live.current.state = state
-    live.current.since = performance.now()
-  }, [state])
-
-  useLayoutEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas) return
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
-
-    const dpr = Math.min(window.devicePixelRatio || 1, 2)
-    let w = 0
-    let h = 0
-
-    /**
-     * Hand the canvas a concrete pixel size. Left to work it out for itself a
-     * renderer can sit with a live context, correct layout, and a parked loop,
-     * painting nothing — silently. That was the V1 avatar bug, and it cost a
-     * day; see ../../README.md.
-     */
-    const resize = (): boolean => {
-      const cssW = canvas.getBoundingClientRect().width || size
-      const cssH = canvas.getBoundingClientRect().height || size
-      const nw = Math.max(1, Math.round(cssW * dpr))
-      const nh = Math.max(1, Math.round(cssH * dpr))
-      const changed = nw !== canvas.width || nh !== canvas.height
-      if (changed) {
-        canvas.width = nw
-        canvas.height = nh
-      }
-      // Assign the locals ALWAYS, not only when the canvas changed size.
-      // Returning early left them at 0 whenever the effect re-ran against a
-      // canvas that was already the right size — which StrictMode does on
-      // every mount — and the loop then painted into a 0x0 box forever.
-      w = nw
-      h = nh
-      return changed
-    }
-
-    const t0 = performance.now()
-
-    const paint = (now: number): void => {
-      const l = live.current
-      const target = HALO[l.state]
-      const elapsed = l.since ? now - l.since : STATE_BLEND_MS
-      const k = Math.min(1, elapsed / STATE_BLEND_MS)
-      // ease-out, so a state change arrives quickly and settles slowly
-      const eased = 1 - Math.pow(1 - k, 3)
-      const spec = k >= 1 ? target : blendSpec(HALO[l.from], target, eased)
-      drawHalo(ctx, w, h, {
-        time: (now - t0) / 1000,
-        spec,
-        motes,
-        level: levelSource.current?.current ?? l.level,
-        segments: Math.min(300, Math.max(90, Math.round(w / 1.6))),
-      })
-    }
-
-    resize()
-    // Paint once, synchronously, before any frame is requested. A hidden or
-    // backgrounded tab may never deliver one, and a blank avatar looks
-    // identical to a broken app.
-    paint(performance.now())
-
-    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    let raf = 0
-    if (!reduced) {
-      const tick = (now: number) => {
-        paint(now)
-        raf = requestAnimationFrame(tick)
-      }
-      raf = requestAnimationFrame(tick)
-    }
-
-    // Repaint on resize immediately rather than waiting for the loop — same
-    // reason as the synchronous first paint.
-    const ro = new ResizeObserver(() => {
-      if (resize()) paint(performance.now())
-    })
-    ro.observe(canvas)
-
-    return () => {
-      if (raf) cancelAnimationFrame(raf)
-      ro.disconnect()
-    }
-  }, [motes, size])
-
-  const canvas = (
-    <canvas
-      ref={canvasRef}
-      className="ph-halo__canvas"
-      style={{ width: size, height: size }}
-      aria-hidden={onActivate ? undefined : true}
-    />
-  )
+  const shared = {
+    className: cx('orb', className),
+    style: { width: size, height: size, ...style },
+    'data-state': state,
+    'data-mode': mode,
+  }
 
   if (!onActivate) {
     return (
-      <div className={cx('ph-halo', className)} style={style}>
-        {canvas}
+      <div
+        {...shared}
+        ref={hostRef as React.RefObject<HTMLDivElement>}
+        aria-hidden="true"
+      >
+        {orb}
       </div>
     )
   }
 
   return (
     <button
+      {...shared}
+      ref={hostRef as React.RefObject<HTMLButtonElement>}
       type="button"
+      data-interactive="true"
       onClick={onActivate}
       aria-label={label ?? 'Talk to Phronesis'}
-      style={style}
-      className={cx('ph-halo', 'ph-halo--button', className)}
     >
-      {canvas}
+      {orb}
     </button>
   )
 }
