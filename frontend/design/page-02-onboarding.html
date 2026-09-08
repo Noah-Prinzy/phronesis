@@ -1,0 +1,654 @@
+<title>Phronesis Onboarding</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600&family=IBM+Plex+Sans:wght@300;400;500&family=IBM+Plex+Mono:wght@400&display=swap">
+
+<style>
+/* ============================================================
+   PHRONESIS · frontend_V2 · page 02 — Onboarding
+   Journey → personalised auth → optional OBD pairing.
+   Tokens lifted verbatim from the element sheet.
+   ============================================================ */
+:root{
+  --ground:#1a1a1c;--ground-lift:#202023;--panel:#2a2a2e;
+  --panel-hi:#34343a;--panel-top:#3f3f46;--line:#34343a;--line-hi:#4a4a52;
+  --ink:#f4f4f6;--ink-dim:#a8a8ae;--muted:#6e6e76;
+  --ember:#ff7a2f;--ember-wash:rgba(255,122,47,0.30);
+  --critical:#ff4d4d;
+  --r-pill:999px;--r-card:14px;--r-input:10px;
+  --ease:cubic-bezier(0.4,0,0.2,1);--ease-out:cubic-bezier(0.16,1,0.3,1);
+  --display:'Orbitron','Eurostile',sans-serif;
+  --ui:'IBM Plex Sans','Segoe UI',system-ui,sans-serif;
+  --mono:'IBM Plex Mono',ui-monospace,Consolas,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--ui);
+  font-size:15px;font-weight:300;line-height:1.6;-webkit-font-smoothing:antialiased}
+h1,h2,h3{margin:0;text-wrap:balance}p{margin:0}
+
+.wrap{width:min(1180px,100% - 2.5rem);margin-inline:auto;padding-block:clamp(2.5rem,6vw,4rem) 5rem}
+.masthead{margin-bottom:2.5rem}
+.eyebrow{font-family:var(--mono);font-size:0.65rem;letter-spacing:0.22em;text-transform:uppercase;
+  color:var(--muted);display:flex;align-items:center;gap:0.9rem;margin-bottom:1rem}
+.eyebrow::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,var(--line-hi),transparent)}
+.masthead h1{font-family:var(--display);font-weight:600;font-size:clamp(1.9rem,4.6vw,2.9rem);
+  letter-spacing:0.03em;line-height:1.06;margin-bottom:0.9rem}
+.masthead p{color:var(--ink-dim);max-width:64ch;font-size:1.0625rem}
+
+.layout{display:grid;grid-template-columns:minmax(0,340px) minmax(0,1fr);gap:clamp(2rem,4vw,3.5rem);align-items:start}
+@media (max-width:860px){.layout{grid-template-columns:minmax(0,1fr)}}
+
+/* ---------- device ---------- */
+.device{width:340px;justify-self:center;border:1px solid var(--line-hi);border-radius:30px;
+  background:#000;padding:8px;box-shadow:0 40px 80px -40px #000;position:sticky;top:2rem}
+.screen{position:relative;width:100%;height:684px;border-radius:23px;overflow:hidden;
+  background:var(--ground);display:flex;flex-direction:column}
+.screen::before{content:"";position:absolute;inset:auto 0 -12% 0;height:42%;
+  background:radial-gradient(60% 100% at 50% 100%,rgba(255,122,47,0.06),transparent 70%);pointer-events:none}
+
+.statusbar{display:flex;justify-content:space-between;align-items:center;padding:0.7rem 1.15rem 0.35rem;
+  font-family:var(--mono);font-size:0.62rem;color:var(--muted);letter-spacing:0.04em;flex:none;position:relative;z-index:2}
+.statusbar .sig{display:flex;gap:3px;align-items:flex-end}
+.statusbar .sig i{width:2.5px;background:var(--muted);border-radius:1px}
+
+/* step rail */
+.steps{display:flex;gap:5px;padding:0.2rem 1.15rem 0.9rem;flex:none;position:relative;z-index:2}
+.steps i{flex:1;height:2px;border-radius:2px;background:var(--line-hi);transition:background 320ms var(--ease-out)}
+.steps i.done{background:var(--muted)}
+.steps i.now{background:var(--ember);box-shadow:0 0 8px 0 var(--ember-wash)}
+
+.topnav{display:flex;align-items:center;gap:0.6rem;padding:0 1rem 0.4rem;flex:none;position:relative;z-index:2;min-height:34px}
+
+.body{flex:1;overflow-y:auto;padding:0 1.35rem;position:relative;z-index:2;min-height:0}
+.panel{display:flex;flex-direction:column;gap:1.1rem;padding-bottom:1.2rem}
+.panel[hidden]{display:none}
+
+.hero{display:flex;flex-direction:column;align-items:center;gap:1rem;padding-top:0.5rem;text-align:center}
+canvas.orb{display:block}
+.hero h2{font-family:var(--display);font-weight:500;font-size:1.05rem;letter-spacing:0.05em}
+.hero p{font-size:0.9375rem;color:var(--ink-dim);max-width:26ch}
+
+.greet{display:flex;align-items:center;gap:0.75rem;padding-top:0.3rem}
+.greet .txt{min-width:0}
+.greet h2{font-size:1.0625rem;font-weight:500;letter-spacing:0.01em}
+.greet p{font-size:0.8125rem;color:var(--muted)}
+
+/* choice cards */
+.choice{width:100%;text-align:left;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-card);padding:0.95rem 1rem;display:flex;gap:0.85rem;align-items:flex-start;
+  cursor:pointer;color:var(--ink);font-family:var(--ui);position:relative;isolation:isolate;overflow:hidden;
+  -webkit-tap-highlight-color:transparent;
+  transition-property:background,border-color,transform;transition-duration:220ms,220ms,150ms;
+  transition-timing-function:var(--ease-out)}
+.choice::after{content:"";position:absolute;inset:0;z-index:-1;border-radius:inherit;
+  background:radial-gradient(circle at var(--px,50%) var(--py,50%),rgba(255,122,47,0.30),rgba(255,122,47,0) 65%);
+  opacity:0;transition:opacity 300ms var(--ease-out);pointer-events:none}
+.choice.is-touch::after{opacity:1;transition-duration:90ms}
+.choice:hover{background:var(--panel-hi)}
+.choice:active{transform:translateY(1px) scale(0.99)}
+.choice:focus-visible{outline:2px solid var(--ember);outline-offset:3px}
+.choice .t{font-size:0.9375rem;font-weight:500;display:block;margin-bottom:0.2rem}
+.choice .d{font-size:0.8125rem;color:var(--ink-dim);line-height:1.5;display:block}
+.choice .chev{margin-left:auto;color:var(--muted);flex:none;align-self:center}
+
+/* fields */
+.field{display:flex;flex-direction:column;gap:0.4rem}
+.field label{font-size:0.8125rem;color:var(--ink-dim)}
+.input{font-family:var(--ui);font-size:0.9375rem;font-weight:300;color:var(--ink);
+  background:var(--panel);border:1px solid var(--line-hi);border-radius:var(--r-input);
+  padding:0 0.95rem;height:46px;width:100%;
+  transition:border-color 220ms,background 220ms,box-shadow 220ms}
+.input::placeholder{color:var(--muted)}
+.input:hover{background:var(--panel-hi)}
+.input:focus{outline:none;border-color:var(--ember);box-shadow:0 0 0 3px var(--ember-wash);background:var(--panel-hi)}
+.hint{font-size:0.75rem;color:var(--muted)}
+
+/* segmented */
+.seg{display:flex;padding:3px;gap:3px;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--r-pill);position:relative}
+.seg__thumb{position:absolute;top:3px;bottom:3px;left:0;border-radius:var(--r-pill);
+  background:var(--panel-top);transition:transform 320ms var(--ease-out),width 320ms var(--ease-out);z-index:0}
+.seg button{flex:1;border:0;background:transparent;cursor:pointer;font-family:var(--ui);
+  font-size:0.8125rem;font-weight:500;color:var(--ink-dim);padding:0.5rem 0.9rem;
+  border-radius:var(--r-pill);min-height:36px;position:relative;z-index:1;transition:color 220ms}
+.seg button[aria-pressed="true"]{color:var(--ink)}
+.seg button:focus-visible{outline:2px solid var(--ember);outline-offset:2px}
+
+/* divider */
+.divider{display:flex;align-items:center;gap:0.8rem}
+.divider span{flex:1;height:1px;background:var(--line)}
+.divider b{font-family:var(--mono);font-size:0.6rem;letter-spacing:0.18em;color:var(--muted);font-weight:400}
+
+/* device list for OBD */
+.dev{display:flex;align-items:center;gap:0.8rem;padding:0.8rem 0.9rem;background:var(--panel);
+  border:1px solid var(--line);border-radius:var(--r-card);cursor:pointer;width:100%;text-align:left;
+  color:var(--ink);font-family:var(--ui);position:relative;isolation:isolate;overflow:hidden;
+  transition:background 220ms,transform 150ms}
+.dev:hover{background:var(--panel-hi)}
+.dev:active{transform:translateY(1px) scale(0.99)}
+.dev:focus-visible{outline:2px solid var(--ember);outline-offset:3px}
+.dev .ico{width:34px;height:34px;border-radius:9px;background:var(--panel-hi);display:grid;place-items:center;color:var(--ink-dim);flex:none}
+.dev .n{font-size:0.9rem;font-weight:500;display:block}
+.dev .m{font-family:var(--mono);font-size:0.7rem;color:var(--muted)}
+.dev .rssi{margin-left:auto;display:flex;gap:2px;align-items:flex-end;flex:none}
+.dev .rssi i{width:3px;border-radius:1px;background:var(--muted)}
+
+.scanrow{display:flex;align-items:center;gap:0.6rem;color:var(--muted);font-size:0.8125rem}
+.spinner{width:14px;height:14px;border-radius:50%;border:2px solid rgba(244,244,246,0.2);
+  border-top-color:var(--ink-dim);animation:spin 0.7s linear infinite;flex:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+.foot{padding:0 1.35rem 1.5rem;display:flex;flex-direction:column;gap:0.5rem;flex:none;position:relative;z-index:2}
+.homebar{width:110px;height:4px;border-radius:2px;background:var(--line-hi);margin:0 auto 0.55rem;flex:none;opacity:0.7}
+
+/* buttons */
+.btn{font-family:var(--ui);font-weight:500;font-size:0.9375rem;line-height:1;border:1px solid transparent;
+  border-radius:var(--r-pill);padding:0 1.3rem;height:48px;display:inline-flex;align-items:center;
+  justify-content:center;gap:0.55rem;cursor:pointer;white-space:nowrap;width:100%;
+  position:relative;isolation:isolate;overflow:hidden;-webkit-tap-highlight-color:transparent;
+  transition-property:background,border-color,color,transform;transition-duration:220ms,220ms,220ms,150ms;
+  transition-timing-function:var(--ease-out)}
+.btn::after{content:"";position:absolute;inset:0;z-index:-1;border-radius:inherit;
+  background:radial-gradient(circle at var(--px,50%) var(--py,50%),rgba(255,122,47,0.30),rgba(255,122,47,0) 65%);
+  opacity:0;transition:opacity 300ms var(--ease-out);pointer-events:none}
+.btn.is-touch::after{opacity:1;transition-duration:90ms}
+.btn:active{transform:translateY(1px) scale(0.985)}
+.btn:focus-visible{outline:2px solid var(--ember);outline-offset:3px}
+.btn--primary{background:var(--panel-hi);color:var(--ink);border-color:var(--line-hi)}
+.btn--primary:hover{background:var(--panel-top)}
+.btn--secondary{background:transparent;color:var(--ink);border-color:var(--line-hi)}
+.btn--secondary:hover{background:var(--panel)}
+.btn--ghost{background:transparent;color:var(--ink-dim)}
+.btn--ghost:hover{background:var(--panel);color:var(--ink)}
+.iconbtn{width:36px;height:36px;border-radius:50%;border:0;background:transparent;color:var(--ink-dim);
+  display:grid;place-items:center;cursor:pointer;flex:none;transition:background 220ms,color 220ms}
+.iconbtn:hover{background:var(--panel);color:var(--ink)}
+.iconbtn:focus-visible{outline:2px solid var(--ember);outline-offset:2px}
+
+/* ---------- notes ---------- */
+.notes{display:flex;flex-direction:column;gap:1px;background:var(--line);border:1px solid var(--line);
+  border-radius:var(--r-card);overflow:hidden}
+.note{background:var(--ground-lift);padding:1.15rem 1.3rem 1.3rem}
+.note h3{font-family:var(--mono);font-size:0.65rem;letter-spacing:0.14em;text-transform:uppercase;
+  color:var(--muted);margin-bottom:0.6rem}
+.note p{font-size:0.9rem;color:var(--ink-dim);line-height:1.6}
+.note p+p{margin-top:0.6rem}
+.note b{color:var(--ink);font-weight:500}
+.note code{font-family:var(--mono);font-size:0.8em;background:var(--panel);padding:0.1em 0.38em;border-radius:4px}
+.flag{display:inline-block;font-family:var(--mono);font-size:0.6rem;letter-spacing:0.12em;
+  text-transform:uppercase;color:var(--ember);border:1px solid var(--ember);
+  padding:0.16rem 0.42rem;border-radius:4px;margin-bottom:0.6rem}
+
+.controls{display:flex;gap:0.4rem;flex-wrap:wrap;margin-top:1.1rem;justify-content:center}
+.ctl{font-family:var(--mono);font-size:0.62rem;letter-spacing:0.1em;text-transform:uppercase;
+  border:1px solid var(--line-hi);background:transparent;color:var(--muted);padding:0.5rem 0.7rem;
+  border-radius:6px;cursor:pointer;transition:color 200ms,background 200ms}
+.ctl:hover{color:var(--ink);background:var(--panel)}
+.ctl[aria-pressed="true"]{color:var(--ink);background:var(--panel-hi);border-color:var(--line-hi)}
+
+footer{margin-top:3.5rem;padding-top:1.4rem;border-top:1px solid var(--line);
+  font-family:var(--mono);font-size:0.65rem;color:var(--muted);
+  display:flex;justify-content:space-between;flex-wrap:wrap;gap:0.5rem 2rem}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:0.001ms !important;transition-duration:0.001ms !important}
+}
+</style>
+
+<div class="wrap">
+  <header class="masthead">
+    <p class="eyebrow">frontend_V2 · page 02</p>
+    <h1>Onboarding</h1>
+    <p>
+      One question, then an account, then — for car owners only — the OBD
+      reader. Click through it: the journey you pick changes what comes after.
+    </p>
+  </header>
+
+  <div class="layout">
+    <div>
+      <div class="device">
+        <div class="screen">
+          <div class="statusbar">
+            <span>9:41</span>
+            <span style="display:flex;gap:0.5rem;align-items:center">
+              <span class="sig"><i style="height:4px"></i><i style="height:6px"></i><i style="height:8px"></i><i style="height:10px"></i></span>
+              <span>84%</span>
+            </span>
+          </div>
+
+          <div class="steps" id="steps"></div>
+
+          <div class="topnav">
+            <button class="iconbtn" id="back" aria-label="Back" hidden type="button">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 18l-6-6 6-6"/></svg>
+            </button>
+          </div>
+
+          <div class="body">
+
+            <!-- ===== STEP 1 · JOURNEY ===== -->
+            <section class="panel" id="p1">
+              <div class="hero">
+                <canvas class="orb" id="orbBig" width="280" height="280" style="width:140px;height:140px"></canvas>
+                <h2>ONE QUESTION</h2>
+                <p>It decides what I show you first. You can change it later, or use both.</p>
+              </div>
+
+              <button class="choice" data-journey="post" type="button">
+                <span>
+                  <span class="t">I own a car</span>
+                  <span class="d">Diagnose faults, watch its health, and find mechanics worth trusting.</span>
+                </span>
+                <svg class="chev" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 18l6-6-6-6"/></svg>
+              </button>
+
+              <button class="choice" data-journey="pre" type="button">
+                <span>
+                  <span class="t">Not yet</span>
+                  <span class="d">Compare models, check what they really sell for, and find honest sellers.</span>
+                </span>
+                <svg class="chev" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 18l6-6-6-6"/></svg>
+              </button>
+            </section>
+
+            <!-- ===== STEP 2 · AUTH ===== -->
+            <section class="panel" id="p2" hidden>
+              <div class="greet">
+                <canvas class="orb" id="orbSm" width="104" height="104" style="width:52px;height:52px"></canvas>
+                <div class="txt">
+                  <h2 id="greetTitle">Welcome, future car owner.</h2>
+                  <p id="greetSub">Make an account and I'll remember everything.</p>
+                </div>
+              </div>
+
+              <div class="seg" id="authSeg">
+                <span class="seg__thumb"></span>
+                <button type="button" aria-pressed="true" data-mode="up">Create account</button>
+                <button type="button" aria-pressed="false" data-mode="in">Sign in</button>
+              </div>
+
+              <div class="field">
+                <label for="em">Email</label>
+                <input class="input" id="em" type="email" placeholder="you@example.com" autocomplete="email">
+              </div>
+
+              <div class="field">
+                <label for="pw">Password</label>
+                <input class="input" id="pw" type="password" placeholder="At least 8 characters" autocomplete="new-password">
+                <span class="hint" id="pwHint">Eight characters or more. Nothing else required.</span>
+              </div>
+
+              <div class="divider"><span></span><b>OR</b><span></span></div>
+
+              <button class="btn btn--secondary" type="button">
+                <svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true">
+                  <path fill="#4285F4" d="M23.52 12.27c0-.85-.08-1.67-.22-2.45H12v4.64h6.47a5.54 5.54 0 0 1-2.4 3.63v3.02h3.88c2.27-2.09 3.57-5.17 3.57-8.84Z"/>
+                  <path fill="#34A853" d="M12 24c3.24 0 5.96-1.07 7.95-2.9l-3.88-3.02c-1.08.72-2.45 1.15-4.07 1.15-3.13 0-5.78-2.11-6.73-4.96H1.25v3.11A11.99 11.99 0 0 0 12 24Z"/>
+                  <path fill="#FBBC05" d="M5.27 14.27a7.2 7.2 0 0 1 0-4.54V6.62H1.25a12 12 0 0 0 0 10.76l4.02-3.11Z"/>
+                  <path fill="#EA4335" d="M12 4.75c1.76 0 3.34.6 4.58 1.79l3.44-3.44C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.69 1.25 6.62l4.02 3.11C6.22 6.87 8.87 4.75 12 4.75Z"/>
+                </svg>
+                Continue with Google
+              </button>
+            </section>
+
+            <!-- ===== STEP 3 · OBD ===== -->
+            <section class="panel" id="p3" hidden>
+              <div class="greet">
+                <canvas class="orb" id="orbSm2" width="104" height="104" style="width:52px;height:52px"></canvas>
+                <div class="txt">
+                  <h2>One last thing.</h2>
+                  <p>Optional, and skippable.</p>
+                </div>
+              </div>
+
+              <p style="font-size:0.9375rem;color:var(--ink-dim);line-height:1.6">
+                An OBD reader plugs in under your dash and lets me see the engine
+                directly — fault codes, temperatures, live readings.
+              </p>
+
+              <div class="scanrow"><span class="spinner"></span> Looking for readers nearby…</div>
+
+              <button class="dev" type="button">
+                <span class="ico"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3v18M12 8l5-3M12 16l5 3M12 8L7 5M12 16l-5 3"/></svg></span>
+                <span><span class="n">ELM327 v1.5</span><span class="m">00:1D:A5:68:98:8B</span></span>
+                <span class="rssi"><i style="height:5px"></i><i style="height:8px"></i><i style="height:11px"></i></span>
+              </button>
+
+              <button class="dev" type="button">
+                <span class="ico"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3v18M12 8l5-3M12 16l5 3M12 8L7 5M12 16l-5 3"/></svg></span>
+                <span><span class="n">OBDII_A1</span><span class="m">2C:AB:33:0F:71:D4</span></span>
+                <span class="rssi"><i style="height:5px"></i><i style="height:8px"></i><i style="height:4px;opacity:.35"></i></span>
+              </button>
+
+              <p class="hint" style="line-height:1.55">
+                Phronesis works without one — you'd describe the symptoms and I'd
+                work from that instead. Slightly less certain, still useful.
+              </p>
+            </section>
+          </div>
+
+          <div class="foot" id="foot">
+            <button class="btn btn--primary" id="cta" type="button">Continue</button>
+            <button class="btn btn--ghost" id="skip" hidden type="button">Skip — I'll do this later</button>
+          </div>
+          <div class="homebar"></div>
+        </div>
+      </div>
+
+      <div class="controls">
+        <button class="ctl" data-go="1" type="button">1 · Journey</button>
+        <button class="ctl" data-go="2" type="button">2 · Account</button>
+        <button class="ctl" data-go="3" type="button">3 · OBD</button>
+        <button class="ctl" id="restart" type="button">Restart</button>
+      </div>
+    </div>
+
+    <!-- ============ NOTES ============ -->
+    <div class="notes">
+      <div class="note">
+        <span class="flag">changed from V1</span>
+        <h3>The question comes first</h3>
+        <p>
+          V1 asked you to sign in, <em>then</em> asked whether you own a car.
+          Your plan (§3.1) has it the other way round and marks the question
+          <b>"No Login Required"</b> — so that is what this does.
+        </p>
+        <p>
+          It is the better order for a reason worth keeping: the cheapest
+          possible question comes before the commitment, and the account screen
+          then arrives already personalised. Pick a different journey on step 1
+          and watch step 2's greeting change.
+        </p>
+      </div>
+
+      <div class="note">
+        <h3>The choice explains itself</h3>
+        <p>
+          V1 offered two buttons marked <b>YES</b> and <b>NO</b>. Neither told
+          you what the answer would change, and this answer sets the entire
+          shape of the app.
+        </p>
+        <p>
+          Each option now names what you get. The reassurance underneath —
+          you can change it later, or use both — is there because §3.2 says
+          that is true, and someone hesitating deserves to know it.
+        </p>
+      </div>
+
+      <div class="note">
+        <h3>OBD is step three, and only sometimes</h3>
+        <p>
+          §8.1 puts pairing in onboarding and marks it optional. It only appears
+          for car owners — showing it to someone who hasn't bought a car yet
+          would be nonsense — so this flow is <b>three steps or two</b>, and the
+          rail at the top adapts.
+        </p>
+        <p>
+          The line about working without one is from §8.3, and it is deliberate:
+          people skip things they think will break the app. Telling them what
+          actually happens makes skipping an informed choice.
+        </p>
+      </div>
+
+      <div class="note">
+        <h3>Password copy</h3>
+        <p>
+          The hint reads <b>"Eight characters or more. Nothing else required."</b>
+          Composition rules — a symbol, a capital, a digit — measurably push
+          people toward weaker, more predictable passwords, and length is what
+          actually matters.
+        </p>
+        <p>
+          Errors on this screen should name the fix, never the failure:
+          <code>Use at least 8 characters — add four more.</code>
+        </p>
+      </div>
+
+      <div class="note">
+        <span class="flag">exception</span>
+        <h3>The Google logo is in colour</h3>
+        <p>
+          It is the only full-colour thing in the entire app, and it has to be:
+          Google's brand terms require the mark in its own colours on a neutral
+          button. Recolouring it to monochrome is not permitted.
+        </p>
+        <p>
+          Worth knowing so nobody later "fixes" it for consistency.
+        </p>
+      </div>
+
+      <div class="note">
+        <h3>Open</h3>
+        <p>
+          <b>No guest route.</b> The plan ends onboarding at a completed
+          account. If you want people trying the assistant before signing up,
+          that decision belongs here, and it is cheap now.
+        </p>
+        <p>
+          <b>Bluetooth permission.</b> §8.2 defers to OS timing; on Android the
+          request lands on this step, so it needs its own denied state.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <span>Phronesis · frontend_V2 · Onboarding</span>
+    <span>Three steps for owners, two for buyers</span>
+  </footer>
+</div>
+
+<script>
+(function(){
+  'use strict';
+
+  var journey = null;           // 'post' | 'pre'
+  var step = 1;
+
+  var panels = { 1: document.getElementById('p1'), 2: document.getElementById('p2'), 3: document.getElementById('p3') };
+  var stepsEl = document.getElementById('steps');
+  var back = document.getElementById('back');
+  var cta = document.getElementById('cta');
+  var skip = document.getElementById('skip');
+  var foot = document.getElementById('foot');
+
+  // Two is the floor everyone walks; the third appears only once you say you
+  // own a car. A rail that grows is honest — one that starts at three and
+  // shrinks has told you something untrue.
+  function totalSteps(){ return journey === 'post' ? 3 : 2; }
+
+  function renderSteps(){
+    var n = totalSteps();
+    stepsEl.innerHTML = '';
+    for (var i = 1; i <= n; i++){
+      var bar = document.createElement('i');
+      if (i < step) bar.className = 'done';
+      else if (i === step) bar.className = 'now';
+      stepsEl.appendChild(bar);
+    }
+  }
+
+  var GREETING = {
+    pre:  { t: 'Welcome, future car owner.', s: "Make an account and I'll remember what you're looking for." },
+    post: { t: "I'm your car's co-pilot now.", s: "Make an account and I'll remember your car and its history." }
+  };
+
+  function show(n){
+    step = n;
+    for (var k in panels) panels[k].hidden = (String(n) !== k);
+    back.hidden = (n === 1);
+
+    if (n === 2 && journey){
+      document.getElementById('greetTitle').textContent = GREETING[journey].t;
+      document.getElementById('greetSub').textContent = GREETING[journey].s;
+    }
+
+    // the footer changes job per step
+    if (n === 1){
+      foot.hidden = true;
+    } else if (n === 2){
+      foot.hidden = false;
+      cta.textContent = document.querySelector('#authSeg button[aria-pressed="true"]').dataset.mode === 'up'
+        ? 'Create account' : 'Sign in';
+      skip.hidden = true;
+    } else {
+      foot.hidden = false;
+      cta.textContent = 'Pair reader';
+      skip.hidden = false;
+    }
+
+    renderSteps();
+    document.querySelectorAll('.ctl[data-go]').forEach(function(b){
+      b.setAttribute('aria-pressed', String(+b.dataset.go === n));
+    });
+    document.querySelector('.body').scrollTop = 0;
+  }
+
+  document.querySelectorAll('[data-journey]').forEach(function(b){
+    b.addEventListener('click', function(){ journey = b.dataset.journey; show(2); });
+  });
+
+  back.addEventListener('click', function(){ show(Math.max(1, step - 1)); });
+
+  cta.addEventListener('click', function(){
+    if (step === 2) show(journey === 'post' ? 3 : 2);
+  });
+
+  document.querySelectorAll('.ctl[data-go]').forEach(function(b){
+    b.addEventListener('click', function(){
+      var n = +b.dataset.go;
+      if (n > 1 && !journey) journey = 'post';       // so the demo can jump
+      show(n);
+    });
+  });
+  document.getElementById('restart').addEventListener('click', function(){
+    journey = null; show(1);
+  });
+
+  /* segmented control */
+  (function(){
+    var seg = document.getElementById('authSeg');
+    var thumb = seg.querySelector('.seg__thumb');
+    function place(animate){
+      var on = seg.querySelector('button[aria-pressed="true"]');
+      if (!on) return;
+      if (!animate) thumb.style.transition = 'none';
+      thumb.style.width = on.offsetWidth + 'px';
+      thumb.style.transform = 'translateX(' + (on.offsetLeft - 3) + 'px)';
+      if (!animate){ void thumb.offsetWidth; thumb.style.transition = ''; }
+    }
+    seg.addEventListener('click', function(e){
+      var b = e.target.closest('button'); if (!b) return;
+      seg.querySelectorAll('button').forEach(function(o){ o.setAttribute('aria-pressed', String(o === b)); });
+      place(true);
+      var isUp = b.dataset.mode === 'up';
+      cta.textContent = isUp ? 'Create account' : 'Sign in';
+      document.getElementById('pwHint').hidden = !isUp;
+      document.getElementById('pw').setAttribute('autocomplete', isUp ? 'new-password' : 'current-password');
+      document.getElementById('pw').placeholder = isUp ? 'At least 8 characters' : 'Your password';
+    });
+    place(false);
+    window.addEventListener('resize', function(){ place(false); });
+  })();
+
+  /* press is light */
+  document.addEventListener('pointerdown', function(e){
+    var el = e.target.closest('.btn,.choice,.dev,.iconbtn,.seg button');
+    if (!el) return;
+    var r = el.getBoundingClientRect();
+    el.style.setProperty('--px', (((e.clientX - r.left)/r.width)*100).toFixed(1) + '%');
+    el.style.setProperty('--py', (((e.clientY - r.top)/r.height)*100).toFixed(1) + '%');
+    el.classList.add('is-touch');
+  }, true);
+  ['pointerup','pointercancel','pointerleave'].forEach(function(ev){
+    document.addEventListener(ev, function(){
+      document.querySelectorAll('.is-touch').forEach(function(el){ el.classList.remove('is-touch'); });
+    }, true);
+  });
+
+  /* ---------- Halo ---------- */
+  var HALO = { idle:{travel:0.30,tighten:1.00,bright:0.80,breath:0.020,inner:0.45},
+               responding:{travel:0.30,tighten:1.02,bright:1.20,breath:0.022,inner:0.60} };
+  var SEG = 260;
+
+  function lumAt(a,t,sp){
+    var v = Math.sin(a - t*sp)*0.5 + Math.sin(a*2 + t*sp*0.61 + 1.9)*0.32 + Math.sin(a*3 - t*sp*0.37 + 4.1)*0.18;
+    return Math.pow((v+1)/2, 1.7);
+  }
+
+  var orbs = [];
+  ['orbBig','orbSm','orbSm2'].forEach(function(id, i){
+    var el = document.getElementById(id); if (!el) return;
+    var motes = [];
+    for (var m = 0; m < (i === 0 ? 50 : 16); m++) motes.push({lon:Math.random()*6.2832,rad:Math.random(),seed:Math.random()});
+    orbs.push({ el: el, ctx: el.getContext('2d'), motes: motes, state: i === 0 ? 'responding' : 'idle' });
+  });
+
+  function drawOrb(o, t){
+    var h = HALO[o.state];
+    var c = o.ctx, W = o.el.width, H = o.el.height, cx = W/2, cy = H/2;
+    var unit = Math.min(W,H)/440;
+    c.clearRect(0,0,W,H);
+    var level = o.state === 'responding' ? 0.10 + Math.abs(Math.sin(t*1.1))*0.10 : 0;
+    var R = Math.min(W,H)*0.33*h.tighten*(1 + Math.sin(t*0.7)*h.breath + level*0.10);
+    var glow = h.bright*(1 + level*0.8);
+    var tilt = 0.34 + Math.sin(t*0.23)*0.16;
+    var lean = Math.sin(t*0.17)*0.22;
+
+    var g = c.createRadialGradient(cx,cy,R*0.25,cx,cy,R*1.75);
+    g.addColorStop(0,'rgba(255,122,47,'+(0.17*glow).toFixed(3)+')');
+    g.addColorStop(0.5,'rgba(255,122,47,'+(0.06*glow).toFixed(3)+')');
+    g.addColorStop(1,'rgba(255,122,47,0)');
+    c.fillStyle = g; c.beginPath(); c.arc(cx,cy,R*1.75,0,6.2832); c.fill();
+
+    var coreR = R*(0.16 + Math.sin(t*0.9+1.2)*0.025 + level*0.07);
+    var g2 = c.createRadialGradient(cx,cy,0,cx,cy,coreR*3.2);
+    g2.addColorStop(0,'rgba(255,250,244,'+(0.5*glow).toFixed(3)+')');
+    g2.addColorStop(0.3,'rgba(255,214,170,'+(0.13*glow).toFixed(3)+')');
+    g2.addColorStop(1,'rgba(255,160,90,0)');
+    c.fillStyle = g2; c.beginPath(); c.arc(cx,cy,coreR*3.2,0,6.2832); c.fill();
+
+    for (var ring = 0; ring < 2; ring++){
+      var rr = ring === 0 ? R : R*0.66;
+      var dir = ring === 0 ? 1 : -0.7;
+      var amp = ring === 0 ? 1 : h.inner*0.6;
+      var segs = ring === 0 ? SEG : Math.round(SEG*0.55);
+      for (var i = 0; i < segs; i++){
+        var a = (i/segs)*6.2832;
+        var lum = lumAt(a,t,h.travel*dir)*amp*glow;
+        var jit = 1 + Math.sin(a*9 + t*0.9)*0.010 + Math.sin(a*17 - t*1.3)*0.006;
+        var ex = Math.cos(a)*rr*jit, ey = Math.sin(a)*rr*jit*tilt;
+        var sx = cx + ex*Math.cos(lean) - ey*Math.sin(lean);
+        var sy = cy + ex*Math.sin(lean) + ey*Math.cos(lean);
+        var depth = (Math.sin(a)+1)/2;
+        var al = (0.05 + lum*0.85)*(0.45 + depth*0.55);
+        if (al <= 0.015) continue; if (al > 1) al = 1;
+        var size = unit*(0.5 + lum*2.3)*(0.6 + depth*0.4);
+        var col = lum > 0.72 ? '255,247,236' : (lum > 0.4 ? '226,230,240' : '138,144,158');
+        c.fillStyle = 'rgba('+col+','+al.toFixed(3)+')';
+        c.beginPath(); c.arc(sx,sy,size,0,6.2832); c.fill();
+      }
+    }
+
+    for (var k = 0; k < o.motes.length; k++){
+      var mo = o.motes[k];
+      var ma = (mo.lon + t*0.12) % 6.2832;
+      var mr = R*(1.02 + mo.rad*0.22)*(1 + Math.sin(t*0.5 + mo.seed*6.283)*0.05);
+      var mex = Math.cos(ma)*mr, mey = Math.sin(ma)*mr*tilt;
+      c.fillStyle = 'rgba(240,238,236,'+(0.06 + lumAt(ma,t,h.travel)*0.30).toFixed(3)+')';
+      c.beginPath();
+      c.arc(cx + mex*Math.cos(lean) - mey*Math.sin(lean), cy + mex*Math.sin(lean) + mey*Math.cos(lean),
+            unit*(0.4 + mo.seed*0.7), 0, 6.2832);
+      c.fill();
+    }
+  }
+
+  var t0 = performance.now();
+  function paint(t){ for (var i = 0; i < orbs.length; i++) drawOrb(orbs[i], t); }
+  paint(0);
+  (function loop(now){ paint((now - t0)/1000); requestAnimationFrame(loop); })(t0);
+
+  show(1);
+})();
+</script>

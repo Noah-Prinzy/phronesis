@@ -1,0 +1,642 @@
+/* ============================================================
+   PHRONESIS · pages
+   Layout only. Anything that looks like a component belongs in
+   atoms.css; this file places things and nothing else.
+   ============================================================ */
+
+/* ================================================================== shell
+   Rail beside the content at 900px and up, tab bar under it below.
+   Both are siblings of the page rather than overlays, so no page
+   ever has to reserve space for the navigation. */
+
+.hub {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;
+  overflow: hidden;
+}
+.hub__main {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+@media (min-width: 900px) {
+  .hub {
+    flex-direction: row;
+  }
+}
+
+/* ================================================================== orb
+   Phronesis' presence. Two renderers draw it — a pre-rendered video loop
+   and a generative Three.js shell — and both are driven by the one state
+   table in avatar/orbSpec.ts.
+
+   Nothing about a state is described here any more. The renderer writes
+   --orb-bright / --orb-scale / --orb-glow every frame and this file just
+   spends them, so there is exactly one place to tune how `thinking` looks.
+
+   Deliberately NOT `isolation: isolate`, and no negative z-index below.
+   Either one would give the video an isolated backdrop, and `screen`
+   against an empty backdrop is a no-op — the asset's black would stop
+   dropping out and the orb would render as a black disc. The glow is
+   painted first and the renderer sits above it, which needs no stacking
+   context at all. */
+
+.orb {
+  position: relative;
+  display: block;
+  flex: none;
+  border: 0;
+  padding: 0;
+  background: none;
+  line-height: 0;
+  border-radius: 50%;
+  /* The size is an inline style in px, so transitioning the box is what lets
+     the orb shrink into the header on Home without remounting anything. */
+  transition:
+    width var(--t-dock) var(--ease-out),
+    height var(--t-dock) var(--ease-out);
+}
+.orb[data-interactive='true'] {
+  cursor: pointer;
+}
+
+.orb__video,
+.orb__canvas {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  display: block;
+  border-radius: 50%;
+  transform: scale(var(--orb-scale, 1));
+}
+
+.orb__video {
+  object-fit: cover;
+  /* Additive: the black background drops out and the dark plates survive,
+     which keying would have eaten. See design/avatar-v2/README.md. */
+  mix-blend-mode: screen;
+  filter: brightness(var(--orb-bright, 1));
+}
+
+/* The generative orb draws onto a transparent canvas, so there is no black
+   to drop out and no blend mode to apply. */
+.orb__canvas {
+  background: none;
+}
+
+/* A faint ground-glow so the orb sits in the page rather than on it.
+   Painted before the renderer, so it needs no z-index of its own. */
+.orb::before {
+  content: '';
+  position: absolute;
+  inset: -18%;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--accent-glow), transparent 68%);
+  opacity: var(--orb-glow, 0.4);
+  pointer-events: none;
+}
+
+/* ======================================================== entry screens
+   Welcome and onboarding: one centred column, more air on a wide
+   viewport rather than more width. */
+
+.screen {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  max-width: 27rem;
+  margin-inline: auto;
+  padding: 1.2rem 1.15rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+
+@media (min-width: 768px) {
+  .screen {
+    max-width: 30rem;
+    padding-block: 2.2rem;
+  }
+}
+
+/* ==================================================== page stub (phase 0)
+   Every page starts here and grows its own section as it is built. */
+
+.page {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  padding: 1.1rem 1.15rem 1.4rem;
+  overflow-y: auto;
+}
+.page__head {
+  flex: none;
+  display: flex;
+  align-items: baseline;
+  gap: 0.7rem;
+  padding-bottom: 0.7rem;
+  border-bottom: 1px solid var(--hairline);
+}
+.page__title {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.page__body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+@media (min-width: 900px) {
+  .page {
+    padding: 1.5rem 1.8rem 1.8rem;
+  }
+}
+
+/* =================================================================== splash */
+
+.splash {
+  flex: 1;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.4rem;
+}
+.splash__mark {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 0.78rem;
+  letter-spacing: 0.34em;
+  text-indent: 0.34em;
+  color: var(--ink-3);
+}
+
+/* ================================================================== welcome */
+
+.welcome {
+  justify-content: center;
+  gap: 1.6rem;
+  text-align: center;
+}
+.welcome__stage {
+  display: flex;
+  justify-content: center;
+}
+.welcome__text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+.welcome__title {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 1.85rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+.welcome__line {
+  margin: 0;
+  max-width: 32ch;
+  font-size: 0.92rem;
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+.welcome__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+@media (min-width: 768px) {
+  .welcome__title {
+    font-size: 2.25rem;
+  }
+  .welcome__line {
+    font-size: 1rem;
+    max-width: 36ch;
+  }
+}
+
+/* =============================================================== onboarding */
+
+.onboarding {
+  gap: 1.15rem;
+}
+.onboarding__steps {
+  flex: none;
+}
+.onboarding__body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1.05rem;
+}
+.onboarding__intro {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.55rem;
+  text-align: center;
+  padding: 0.6rem 0 0.2rem;
+}
+.onboarding__title {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+.onboarding__sub {
+  margin: 0;
+  max-width: 34ch;
+  font-size: 0.82rem;
+  line-height: 1.6;
+  color: var(--ink-3);
+}
+
+/* Her question, written as she asks it. Carries the weight a page title
+   would, because on this screen it *is* the title. */
+.onboarding__ask {
+  margin: 0;
+  max-width: 24ch;
+  font-family: var(--display);
+  font-size: 1.4rem;
+  font-weight: 600;
+  line-height: 1.28;
+  letter-spacing: -0.015em;
+}
+
+/* the small avatar + her line, used above a form */
+.onboarding__greet {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+.greet__line {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: var(--ink-2);
+}
+
+.onboarding__choices {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+.choice {
+  gap: 0.25rem;
+  padding: 0.9rem 1rem;
+}
+.choice__name {
+  font-family: var(--display);
+  font-size: 0.98rem;
+  font-weight: 600;
+}
+.choice__note {
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--ink-3);
+}
+
+.onboarding__form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+.onboarding__submit {
+  margin-top: 0.15rem;
+}
+.onboarding__actions {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding-top: 0.9rem;
+}
+.onboarding__fine {
+  margin: 0;
+  font-size: 0.76rem;
+  line-height: 1.55;
+  color: var(--ink-3);
+}
+
+.linklike {
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+/* ---- pairing ---- */
+.scan {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.scan__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.8rem;
+  color: var(--ink-3);
+}
+.reader {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.7rem;
+}
+.reader__icon {
+  width: 2rem;
+  height: 2rem;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: var(--r-sm);
+  background: var(--surface-3);
+  color: var(--accent);
+}
+.reader__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.reader__name {
+  font-size: 0.88rem;
+  font-weight: 500;
+}
+.reader__mac {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--ink-3);
+}
+
+/* ===================================================================== home */
+
+.home {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 50rem;
+  margin-inline: auto;
+  padding-inline: 1.15rem;
+}
+
+/* One slot, two shapes. Fresh: a centred column that owns the screen.
+   In conversation: a compact header row. */
+.home__stage {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.8rem 0 0.7rem;
+  border-bottom: 1px solid var(--hairline);
+}
+/* Both pre-conversation states own the screen. The difference is what sits
+   under the orb: openers when nothing has been said, their own words once
+   they start talking. */
+.home[data-mode='fresh'] .home__stage,
+.home[data-mode='speaking'] .home__stage {
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+  gap: 0.75rem;
+  padding: 1rem 0;
+  border-bottom: 0;
+}
+
+/* Their voice, on the screen, as they say it. Larger and quieter than
+   anything else here — at this moment it is the only thing that matters. */
+.home__heard {
+  margin: 0;
+  max-width: 24ch;
+  font-family: var(--display);
+  font-size: 1.35rem;
+  font-weight: 500;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  min-height: 2.7em;
+}
+
+.home__mark {
+  font-family: var(--display);
+  font-weight: 700;
+  font-size: 0.72rem;
+  letter-spacing: 0.2em;
+  color: var(--ink-2);
+}
+.home__car {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--ink-3);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r-sm);
+  padding: 0.18rem 0.5rem;
+  white-space: nowrap;
+}
+/* Her opening line, written as she says it. Replaces the old static
+   greeting-plus-prompt pair: one thing she says, not two things printed. */
+.home__opener {
+  margin: 0;
+  max-width: 26ch;
+  font-family: var(--display);
+  font-size: 1.35rem;
+  font-weight: 600;
+  line-height: 1.32;
+  letter-spacing: -0.015em;
+  color: var(--ink);
+}
+.home__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  justify-content: center;
+  padding-top: 0.2rem;
+}
+
+.home__thread {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.8rem 0;
+  scrollbar-width: thin;
+}
+
+.home__thinking {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  margin: 0;
+  padding-left: 0.15rem;
+  font-size: 0.78rem;
+  color: var(--ink-3);
+}
+.home__dots {
+  display: inline-flex;
+  gap: 3px;
+}
+.home__dots i {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: ph-dot 1.1s var(--ease) infinite;
+}
+.home__dots i:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.home__dots i:nth-child(3) {
+  animation-delay: 0.3s;
+}
+@keyframes ph-dot {
+  0%,
+  60%,
+  100% {
+    opacity: 0.25;
+  }
+  30% {
+    opacity: 1;
+  }
+}
+
+/* ---- the routing offer ---- */
+.offer {
+  margin-right: auto;
+  max-width: 92%;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.4rem 0.65rem;
+  padding: 0.75rem 0.85rem;
+  background: var(--surface);
+  border: 1px solid var(--accent-line);
+  border-radius: var(--r);
+}
+.offer__icon {
+  width: 1.75rem;
+  height: 1.75rem;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: var(--r-sm);
+  background: var(--accent-fill);
+  color: var(--accent);
+}
+.offer__text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+.offer__title {
+  font-size: 0.86rem;
+  font-weight: 500;
+}
+.offer__note {
+  font-size: 0.76rem;
+  line-height: 1.5;
+  color: var(--ink-3);
+}
+.offer__actions {
+  grid-column: 2;
+  display: flex;
+  gap: 0.35rem;
+}
+
+/* ---- the composer, and what sits above it ---- */
+.home__foot {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding-bottom: 0.9rem;
+}
+.home__error {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  color: var(--critical);
+}
+.home__note {
+  margin: 0;
+  font-size: 0.76rem;
+  color: var(--ink-3);
+}
+
+.composer {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.28rem;
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-radius: var(--r);
+  transition:
+    border-color var(--t-hover) var(--ease),
+    box-shadow var(--t-hover) var(--ease);
+}
+.composer:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+.composer__input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font-family: var(--ui);
+  font-size: 0.88rem;
+  padding: 0.45rem 0.3rem;
+}
+.composer__input::placeholder {
+  color: var(--ink-3);
+}
+.composer__input:focus {
+  outline: none;
+}
+/* Listening is the one state the composer carries colour for. */
+.composer__mic--on {
+  background: var(--accent-fill);
+  color: var(--accent);
+  border-color: var(--accent-line);
+}
+
+@media (min-width: 900px) {
+  .home {
+    padding-inline: 1.8rem;
+  }
+  .home__opener {
+    font-size: 1.7rem;
+    max-width: 28ch;
+  }
+}
