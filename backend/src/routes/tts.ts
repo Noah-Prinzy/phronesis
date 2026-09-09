@@ -3,7 +3,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { env } from '../config/env';
-import { getElevenLabsSpeech } from '../services/elevenlabs.service';
 import { getPiperSpeech, piperAvailable } from '../services/piper.service';
 import { getGeminiSpeech } from '../services/tts.service';
 
@@ -24,20 +23,20 @@ interface Provider {
 /**
  * The provider chain, in the order it is tried.
  *
- * Piper is first because it is the only one that cannot run out. It runs
- * locally on the CPU with no key and no per-character cost, so it is the only
- * tier whose availability does not depend on a balance. The hosted providers
- * sit behind it as quality options for when they are funded, and the browser's
- * own synthesiser sits behind all of them in the frontend, for when the server
- * itself is unreachable.
+ * Piper IS the voice. It runs locally on the CPU with no key, no quota and no
+ * per-character cost, which makes it the only tier whose availability does not
+ * depend on a balance somewhere. Gemini sits behind it for the case where the
+ * model has not been downloaded yet, and the browser's own synthesiser sits
+ * behind that in the frontend, for when the server itself is unreachable.
  *
- * This used to be `if (ELEVENLABS_API_KEY) { ... } else { gemini }`, which had
- * a quiet bug worth remembering: it branched on whether a key EXISTED, not on
- * whether the call SUCCEEDED. A key that was present but out of quota took the
- * ElevenLabs path on every request and threw, so the working fallback directly
- * beneath it could never run and the voice went silent with a 502. A key that
- * is configured is not the same as a key that works, and only trying it can
- * tell the difference.
+ * A hosted voice was tried first and removed. The lesson worth keeping is in
+ * how it failed: the route branched on `if (API_KEY)`, which tests whether a
+ * key EXISTS, not whether the call SUCCEEDS. Once the quota was spent the key
+ * was still there, so every request took that path and threw, and the working
+ * fallback directly beneath it could never run — the voice went silent with a
+ * 502 while a perfectly good provider sat configured and unused. Hence the
+ * shape below: a provider is skipped when it is ABSENT and moved past when it
+ * FAILS, and those are two different tests.
  */
 const PROVIDERS: Provider[] = [
   {
@@ -45,12 +44,6 @@ const PROVIDERS: Provider[] = [
     usable: piperAvailable,
     speak: getPiperSpeech,
     mime: 'audio/wav',
-  },
-  {
-    name: 'ElevenLabs',
-    usable: () => Boolean(env.ELEVENLABS_API_KEY),
-    speak: getElevenLabsSpeech,
-    mime: 'audio/mpeg',
   },
   {
     name: 'Gemini',

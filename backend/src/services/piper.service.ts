@@ -10,15 +10,16 @@ import path from 'node:path';
  *
  * Piper is a neural text-to-speech engine that runs on the CPU with no API
  * key, no per-character billing and no quota. That is the entire reason it is
- * the first provider tried: ElevenLabs' free grant is ten thousand characters
- * for the life of the account — roughly fifteen of her replies — and every
- * hosted alternative has some version of the same ceiling. A voice that stops
- * working when a counter runs out is not a voice you can build a product on.
+ * the voice rather than a fallback. The hosted service used before it granted
+ * ten thousand characters for the life of the account — roughly fifteen of her
+ * replies — and every hosted alternative has some version of the same ceiling.
+ * A voice that stops working when a counter runs out is not a voice you can
+ * build a product on.
  *
  * The binary and the model are not in git (~80MB). `npm run setup:piper`
  * fetches them into vendor/piper; if they are absent this service reports
- * itself unavailable and the route falls through to the hosted providers,
- * so a fresh clone still speaks without running setup first.
+ * itself unavailable and the route falls through to Gemini, so a fresh clone
+ * still speaks before anyone has run setup.
  */
 
 const VENDOR = path.resolve(__dirname, '..', '..', 'vendor', 'piper');

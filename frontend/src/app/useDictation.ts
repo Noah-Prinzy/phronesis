@@ -3,7 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 /**
  * Speech to text, using the browser's own recogniser.
  *
- * Chosen over uploading audio to Whisper or ElevenLabs Scribe for one reason:
+ * Chosen over uploading audio to a cloud transcription service for one reason:
  * latency. This streams partial results *while the user is still talking*, so
  * their words appear in the composer as they speak, and the final transcript
  * lands the instant they stop. A record-then-upload round trip cannot do that

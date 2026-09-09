@@ -1,11 +1,11 @@
 /**
  * Phronesis' voice of last resort: the browser's own speech synthesiser.
  *
- * Every hosted provider runs out. ElevenLabs' free grant is ten thousand
- * characters for the life of the account — about fifteen of her replies —
- * and Gemini's is generous but still finite. `speechSynthesis` ships with the
- * browser: no key, no quota, no network, and it still works when the backend
- * is down. It is the only tier that cannot fail for reasons of billing.
+ * Piper already gives her a voice that cannot run out of credit, but it runs
+ * on the server, and a server can be unreachable, asleep or not yet deployed.
+ * `speechSynthesis` ships with the browser: no key, no quota, no network, no
+ * backend at all. It is the only tier that keeps working when nothing else
+ * is reachable.
  *
  * What it costs is consistency. The voice is whatever the device has, so she
  * sounds different on a Windows laptop and an Android phone. That is the
