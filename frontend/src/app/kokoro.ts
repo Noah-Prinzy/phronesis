@@ -31,21 +31,32 @@ const MODEL_ID = 'onnx-community/Kokoro-82M-v1.0-ONNX'
 export const VOICE = 'bf_emma'
 
 /**
- * The weights, and roughly what the user is agreeing to download.
+ * fp32. NOT fp16, and this was an expensive thing to get wrong.
  *
- * fp16 rather than fp32: half the size (163MB against 326MB) and WebGPU
- * handles half precision natively, so it is usually the faster of the two on a
- * GPU as well as the cheaper to fetch. The int8 builds are smaller still but
- * were measured far slower — q8 ran at a real-time factor of 3.0 against
- * fp32's 1.3 on CPU — because integer kernels fall back to slow paths.
+ * fp16 is half the size and looked like the obvious pick — it benchmarked
+ * marginally slower but well inside real time, so it shipped. It produced
+ * audible garbage: crackling, harsh, barely intelligible. Auditing the samples
+ * rather than the clock showed why. On this Intel GPU the fp16 path overflows:
  *
- * The weights are not the whole bill. onnxruntime's WebGPU build is another
- * 21.6MB of wasm (5.2MB over the wire), so a first load is about 170MB all
- * told. Both are cached by the browser afterwards, and neither is fetched at
- * all on a connection that says not to — see `shouldAutoLoad`.
+ *            peak    clipped   sample-to-sample jumps
+ *   fp16     2.03      612            2413
+ *   fp32     0.78        0              99
+ *
+ * Audio must stay inside ±1.0. Values of 2.03 wrap when they are converted to
+ * 16-bit, and every wrap is a click — 2413 of them across four seconds is the
+ * crackle. fp32 also measured FASTER here (0.58 against 0.61), so half
+ * precision bought nothing at all except a smaller download.
+ *
+ * The lesson is the one this cost a round trip to learn: a speed benchmark
+ * says the audio ARRIVED, never that it is worth listening to. Anything that
+ * changes the numeric path now gets audited with `kokoro-audit.html`.
+ *
+ * The price is size: 326MB of weights, plus 21.6MB of onnxruntime wasm, so a
+ * first load is roughly 350MB. Cached by the browser afterwards, and never
+ * fetched at all on a connection that says not to — see `shouldAutoLoad`.
  */
-const DTYPE = 'fp16' as const
-export const MODEL_MB = 170
+const DTYPE = 'fp32' as const
+export const MODEL_MB = 350
 
 type KokoroModule = typeof import('kokoro-js')
 type KokoroInstance = Awaited<ReturnType<KokoroModule['KokoroTTS']['from_pretrained']>>
@@ -77,7 +88,7 @@ interface NetworkInformation {
 }
 
 /**
- * Whether to fetch ~92MB without being asked.
+ * Whether to fetch ~350MB without being asked.
  *
  * Never on a metered or slow connection, and never when the user has asked
  * their browser to save data — Data Saver is an explicit request not to do
@@ -112,7 +123,7 @@ export function loadKokoro(onProgress?: (p: number) => void): Promise<KokoroInst
         return null
       }
 
-      // Dynamic, so ~90MB of runtime is a separate chunk that pages without a
+      // Dynamic, so the runtime is a separate chunk that pages without a
       // voice never pay for.
       const { KokoroTTS } = await import('kokoro-js')
 
@@ -182,6 +193,30 @@ export async function speakWithKokoro(text: string): Promise<KokoroAudio | null>
   if (!tts) return null
 
   const audio = await tts.generate(text, { voice: VOICE })
+
+  /**
+   * Bring the level up to a consistent peak.
+   *
+   * Kokoro's output sits around 0.78 peak and varies line to line, which reads
+   * as quiet against everything else on the device and made her hard to hear.
+   * Scaling to a fixed 0.95 headroom makes every line the same loudness
+   * without touching what is inside it — and the clamp is a guard, not a
+   * feature: nothing should ever exceed 1.0 now, and if it does the sample is
+   * held at the ceiling rather than allowed to wrap into a click.
+   */
+  const pcm = audio.audio
+  let peak = 0
+  for (let i = 0; i < pcm.length; i++) {
+    const m = Math.abs(pcm[i])
+    if (Number.isFinite(m) && m > peak) peak = m
+  }
+  if (peak > 0.001) {
+    const gain = 0.95 / peak
+    for (let i = 0; i < pcm.length; i++) {
+      pcm[i] = Math.max(-1, Math.min(1, pcm[i] * gain))
+    }
+  }
+
   const blob = audio.toBlob()
-  return { blob, duration: audio.audio.length / audio.sampling_rate }
+  return { blob, duration: pcm.length / audio.sampling_rate }
 }

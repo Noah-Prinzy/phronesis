@@ -1,0 +1,83 @@
+<!doctype html><meta charset="utf-8"><title>kokoro audit</title>
+<pre id="o" style="font:13px monospace;white-space:pre-wrap">starting…</pre>
+<script type="module">
+const o = document.getElementById('o');
+function log(s) {
+  o.textContent += '\n' + s;
+  fetch('http://localhost:3999/', { method: 'POST', body: s }).catch(() => {});
+}
+window.addEventListener('unhandledrejection', (e) => log('REJECT: ' + (e.reason?.message ?? e.reason)));
+
+function audit(pcm) {
+  let nan = 0, clipped = 0, peak = 0, sum = 0, jumps = 0;
+  for (let i = 0; i < pcm.length; i++) {
+    const v = pcm[i];
+    if (!Number.isFinite(v)) { nan++; continue; }
+    const m = Math.abs(v);
+    if (m > 0.999) clipped++;
+    if (m > peak) peak = m;
+    sum += v * v;
+    if (i && Math.abs(v - pcm[i - 1]) > 0.5) jumps++;
+  }
+  return { nan, clipped, jumps, peak: +peak.toFixed(3), rms: +Math.sqrt(sum / pcm.length).toFixed(4) };
+}
+
+const LINE = 'Right, a rattle only under braking usually means the pads are worn. Has it been getting worse?';
+
+(async () => {
+  try {
+    const { KokoroTTS } = await import('kokoro-js');
+    const t0 = performance.now();
+    const tts = await KokoroTTS.from_pretrained('onnx-community/Kokoro-82M-v1.0-ONNX', {
+      dtype: 'fp32', device: 'webgpu',
+    });
+    await tts.generate('Warm up.', { voice: 'bf_emma' });
+    log('load+warm ' + ((performance.now() - t0) / 1000).toFixed(1) + 's');
+
+    const t1 = performance.now();
+    const a = await tts.generate(LINE, { voice: 'bf_emma' });
+    const wall = (performance.now() - t1) / 1000;
+    const secs = a.audio.length / a.sampling_rate;
+
+    log('RAW    ' + JSON.stringify(audit(a.audio)) + ' | ' + secs.toFixed(2) + 's RTF ' + (wall / secs).toFixed(2));
+
+    // The normalisation the app now applies.
+    const pcm = a.audio;
+    let peak = 0;
+    for (let i = 0; i < pcm.length; i++) { const m = Math.abs(pcm[i]); if (m > peak) peak = m; }
+    if (peak > 0.001) {
+      const g = 0.95 / peak;
+      for (let i = 0; i < pcm.length; i++) pcm[i] = Math.max(-1, Math.min(1, pcm[i] * g));
+    }
+    log('NORMED ' + JSON.stringify(audit(pcm)));
+
+    // --- the materialisation chain: blob -> <audio> -> timeupdate -> progress
+    const blob = a.toBlob();
+    log('blob ' + (blob.size / 1024).toFixed(0) + 'kB type=' + blob.type);
+    const url = URL.createObjectURL(blob);
+    const el = new Audio(url);
+    el.muted = true;
+
+    const ticks = [];
+    await new Promise((resolve) => {
+      let settled = false;
+      const done = (why) => { if (!settled) { settled = true; log('ended via ' + why); resolve(); } };
+      el.addEventListener('loadedmetadata', () => log('duration=' + el.duration + ' finite=' + Number.isFinite(el.duration)));
+      el.addEventListener('timeupdate', () => {
+        const d = el.duration;
+        if (Number.isFinite(d) && d > 0) ticks.push(+(el.currentTime / d).toFixed(3));
+      });
+      el.addEventListener('ended', () => done('ended'));
+      el.addEventListener('error', () => done('error'));
+      el.play().catch((e) => { log('PLAY REFUSED: ' + e.name); done('refused'); });
+      setTimeout(() => done('timeout'), 15000);
+    });
+
+    log('PROGRESS ticks=' + ticks.length + ' first=' + ticks[0] + ' last=' + ticks[ticks.length - 1]);
+    const monotonic = ticks.every((v, i) => i === 0 || v >= ticks[i - 1]);
+    log('MATERIALISATION ' + (ticks.length > 3 && monotonic && ticks[ticks.length - 1] > 0.8 ? 'OK' : 'BROKEN')
+        + ' (monotonic=' + monotonic + ')');
+    log('AUDITDONE');
+  } catch (e) { log('AUDITFAIL: ' + (e?.message ?? e)); }
+})();
+</script>
