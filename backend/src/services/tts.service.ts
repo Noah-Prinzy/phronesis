@@ -4,7 +4,32 @@ import { GoogleGenAI } from '@google/genai';
 import { env } from '../config/env';
 
 const TTS_MODEL = 'gemini-3.1-flash-tts-preview';
-const VOICE_NAME = 'Kore';
+
+/**
+ * Sulafat, described by Google as the warm one. Phronesis is usually
+ * explaining a fault to someone who is worried about money, so warmth is the
+ * job — Kore, the previous pick, is the firm voice and read as brisk.
+ * Override with GEMINI_TTS_VOICE to audition another without a code change.
+ */
+const VOICE_NAME = process.env.GEMINI_TTS_VOICE ?? 'Sulafat';
+
+/**
+ * Gemini's TTS takes a plain-English direction before the line, and this is
+ * the whole reason it is worth using over a small local model. Kokoro and
+ * Piper have no equivalent: their delivery is fixed in the weights, which is
+ * why they sound like something reading rather than someone talking. Here the
+ * accent, the pace and the attitude are all instructions.
+ *
+ * The direction is deliberately about ATTITUDE rather than performance —
+ * "unhurried", "reassuring" — because asking a TTS model to emote tends to
+ * produce something theatrical, which is worse than flat.
+ */
+const STYLE =
+  process.env.GEMINI_TTS_STYLE ??
+  'Speak in a warm, natural British accent, unhurried and reassuring, like a ' +
+    'knowledgeable friend explaining a car problem to someone who is worried ' +
+    'about what it will cost. Use natural sentence phrasing and let questions ' +
+    'genuinely rise at the end. Do not sound like an announcer.';
 
 /** Gemini's TTS returns headerless raw PCM (confirmed live: `audio/l16; rate=24000; channels=1`) — browsers can't play that directly via an <audio> element, so it needs a real WAV header wrapped around it. */
 function pcmToWav(pcmData: Buffer, sampleRate: number, channels: number, bitsPerSample: number): Buffer {
@@ -45,7 +70,10 @@ export async function getGeminiSpeech(text: string): Promise<Buffer> {
   const ai = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
   const response = await ai.models.generateContent({
     model: TTS_MODEL,
-    contents: text,
+    // The direction and the line, which is the shape Gemini's TTS expects.
+    contents: `${STYLE}
+
+${text}`,
     config: {
       responseModalities: ['AUDIO'],
       speechConfig: {
