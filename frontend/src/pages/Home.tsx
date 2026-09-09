@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Bubble, Button, Chip, IconButton, SpokenText } from '../ui'
+import { Bubble, Button, IconButton, SpokenText } from '../ui'
 import { Halo } from '../avatar/Halo'
 import type { HaloState } from '../avatar/Halo'
 import { useMicLevel } from '../avatar/useMicLevel'
@@ -18,12 +18,14 @@ import type { CarPart } from '../data/findings'
 /**
  * Home is a conversation, not a form.
  *
- * Three states, and the chrome thins out as it gets more personal:
+ * Three states, and there is no chrome in any of them — no wordmark, no page
+ * title, no vehicle label. The orb is the only branding the hub carries:
  *
- *   fresh     — nothing said yet. Big orb, a greeting, some openers.
- *   speaking  — the user is talking. The openers go; their words appear
- *               under the orb as the recogniser hears them.
- *   thread    — there is a conversation. Compact header, messages.
+ *   fresh     — nothing said yet. A large orb and the line she is saying.
+ *   speaking  — the user is talking. Their words appear under the orb as the
+ *               recogniser hears them.
+ *   thread    — there is a conversation. The orb sits above the messages and
+ *               stays put while they scroll beneath it.
  *
  * Phronesis' replies are deliberately NOT painted as they stream in. The
  * text is held back until she actually starts speaking, and then arrives in
@@ -35,8 +37,8 @@ import type { CarPart } from '../data/findings'
 /** The orb's two sizes, in rem. It is the same mounted element either way — the
     size prop changes and CSS transitions the box, so the video never remounts
     and the loop never restarts mid-conversation. */
-const ORB_HERO = 7.6
-const ORB_DOCKED = 2.4
+const ORB_HERO = 19
+const ORB_DOCKED = 6
 
 interface Msg {
   id: number
@@ -68,8 +70,13 @@ function offerFor(owner: boolean): RouteOffer {
       }
 }
 
-const OWNER_CHIPS = ["It's making a noise", 'Warning light', 'Is this safe to drive?']
-const BUYER_CHIPS = ['What car under 20M?', 'Compare two cars', 'Is this price fair?']
+/**
+ * What she says when you take the turn back off her.
+ *
+ * Several of them, chosen at random: a single canned apology is charming the
+ * first time and grating the fourth.
+ */
+const RESUME_LINES = ['Sorry — go on.', 'Sorry, you were saying?', "Go on, I'm listening."]
 
 /**
  * Which car part a reply was about, guessed from its own words.
@@ -114,19 +121,34 @@ export function Home() {
    * Spoken, and written as she says it — the name included, so the one thing
    * the account step exists to collect is actually used out loud rather than
    * just printed in a heading.
+   *
+   * The line **ends** on the question mark, with the examples folded into the
+   * question rather than trailing after it. Text-to-speech takes its
+   * intonation from where the sentence lands: a question followed by a
+   * declarative fragment gets read with a falling, statement-like tone, which
+   * made her sound like she was announcing something rather than asking.
    */
   const opener = owner
-    ? `${firstName ? `Hey ${firstName}. ` : ''}What's your car been doing? Sounds, warning lights — anything that feels off.`
-    : `${firstName ? `Hey ${firstName}. ` : ''}What are you looking for? Tell me your budget and what you'll use it for.`
+    ? `${firstName ? `Hey ${firstName}. ` : ''}Tap my orb or the mic whenever you want to talk. So, what's your car been doing — a noise, a warning light, something that just feels off?`
+    : `${firstName ? `Hey ${firstName}. ` : ''}Tap my orb or the mic whenever you want to talk. So, what are you looking for — a budget, a make you like, something for work?`
 
-  // Greet on arrival, once. Waits for auth to settle first, or she would say
-  // the line before the name has loaded and greet a stranger.
-  const greeted = useRef(false)
+  // Greet on arrival, once auth has settled — speaking any earlier would
+  // deliver the line before the name loads and greet a stranger.
+  //
+  // Deliberately not guarded by a ref. StrictMode mounts, tears down and
+  // remounts every effect in development, and `useSpeak`'s own teardown
+  // aborts the request in flight. A ref survives that simulated remount, so
+  // it would block the second, real attempt and leave the line stuck at zero
+  // progress forever — one word on screen and silence. Re-running on a genuine
+  // remount is the correct behaviour anyway: coming back to Home should greet.
+  const authSettled = authStatus !== 'loading'
   useEffect(() => {
-    if (greeted.current || authStatus === 'loading') return
-    greeted.current = true
+    if (!authSettled) return
     speakLine(opener)
-  }, [authStatus, opener, speakLine])
+    // Only when auth settles. `opener` and `speakLine` would re-greet on every
+    // identity change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authSettled])
 
   /* ---------------------------------------------------------- speech in
      `send` is a hoisted function declaration and the hook re-reads these
@@ -144,6 +166,50 @@ export function Home() {
 
   // Amplitude for the orb, only while the recogniser is actually open.
   const { levelRef } = useMicLevel(listening)
+
+  /* ------------------------------------------------------------ barge-in
+     Reaching for the mic while she is mid-sentence means she got ahead of
+     you. She stops, says so, and hands the turn back. */
+
+  const resumeAfterApology = useRef(false)
+  const wasTalking = useRef(false)
+  const resumeTimer = useRef(0)
+
+  function beginListening() {
+    resumeAfterApology.current = false
+    if (resumeTimer.current) window.clearTimeout(resumeTimer.current)
+    resumeTimer.current = 0
+    listen()
+  }
+
+  // Open the mic on the *falling edge* of her voice, not the moment the
+  // apology is queued — at that instant `talking` is still false and the mic
+  // would open over the top of her own apology.
+  useEffect(() => {
+    if (wasTalking.current && !talking && resumeAfterApology.current) beginListening()
+    wasTalking.current = talking
+  })
+
+  useEffect(() => () => window.clearTimeout(resumeTimer.current), [])
+
+  function toggleMic() {
+    if (listening) {
+      stopListening()
+      return
+    }
+    if (talking) {
+      stopSpeaking()
+      resumeAfterApology.current = true
+      speakLine(RESUME_LINES[Math.floor(Math.random() * RESUME_LINES.length)])
+      // If the apology cannot be spoken at all — TTS down, autoplay refused —
+      // the microphone must not be left waiting on a voice that never comes.
+      resumeTimer.current = window.setTimeout(() => {
+        if (resumeAfterApology.current) beginListening()
+      }, 2500)
+      return
+    }
+    listen()
+  }
 
   // Whatever was heard belongs to one utterance. When the mic closes — sent
   // or abandoned — it should not linger under the orb.
@@ -258,7 +324,6 @@ export function Home() {
     }
   }
 
-  const chips = owner ? OWNER_CHIPS : BUYER_CHIPS
 
   return (
     <main id="main" className="home" data-mode={mode}>
@@ -269,32 +334,16 @@ export function Home() {
           size={orbSize}
           state={state}
           levelRef={levelRef}
-          onActivate={() => (listening ? stopListening() : listen())}
-          label={listening ? 'Stop listening' : 'Talk to Phronesis'}
+          onActivate={toggleMic}
+          label={listening ? 'Stop listening' : talking ? 'Interrupt' : 'Talk to Phronesis'}
         />
-
-        {mode === 'thread' && (
-          <>
-            <span className="home__mark">PHRONESIS</span>
-            <span className="home__car">{owner ? '2015 Premio' : 'Looking to buy'}</span>
-          </>
-        )}
 
         {mode === 'speaking' && (
           <SpokenText text={heard || '…'} live className="home__heard" />
         )}
 
         {mode === 'fresh' && (
-          <>
-            <SpokenText text={opener} progress={progress} className="home__opener" />
-            <div className="home__chips">
-              {chips.map((c) => (
-                <Chip key={c} onClick={() => send(c)}>
-                  {c}
-                </Chip>
-              ))}
-            </div>
-          </>
+          <SpokenText text={opener} progress={progress} className="home__opener" />
         )}
       </div>
 
@@ -382,11 +431,11 @@ export function Home() {
           }}
         >
           <IconButton
-            label={listening ? 'Stop listening' : 'Speak instead of typing'}
+            label={listening ? 'Stop listening' : talking ? 'Interrupt' : 'Speak instead of typing'}
             title={canDictate ? undefined : 'This browser cannot listen — try Chrome or Edge'}
             className={listening ? 'composer__mic--on' : undefined}
             disabled={!canDictate}
-            onClick={() => (listening ? stopListening() : listen())}
+            onClick={toggleMic}
           >
             <IconMic />
           </IconButton>

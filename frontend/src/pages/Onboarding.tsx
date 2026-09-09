@@ -38,7 +38,7 @@ export function OnboardingJourney() {
   }
 
   return (
-    <main id="main" className="screen onboarding">
+    <main id="main" className="screen onboarding onboarding--center">
       <Steps total={ONBOARDING_STEPS} current={1} className="onboarding__steps" />
 
       <div className="onboarding__body">

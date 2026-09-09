@@ -36,11 +36,6 @@ export function Rail<T extends string>({
 }: RailProps<T>) {
   return (
     <nav className={cx('ph-rail', className)} aria-label="Main">
-      <div className="ph-rail__brand">
-        <HexMark />
-        <span className="ph-rail__mark">PHRONESIS</span>
-      </div>
-
       {items.map((item) => (
         <button
           key={item.value}
@@ -80,26 +75,6 @@ export function TabBar<T extends string>({ items, value, onChange, className }: 
         </button>
       ))}
     </nav>
-  )
-}
-
-/** The brand mark: one hex plate, borrowed from the orb's shell. */
-function HexMark() {
-  return (
-    <svg
-      width="17"
-      height="17"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinejoin="round"
-      aria-hidden="true"
-      style={{ color: 'var(--accent)', flex: 'none' }}
-    >
-      <path d="M12 2.6 20.1 7.3v9.4L12 21.4 3.9 16.7V7.3z" />
-      <path d="M12 8.2 15.9 10.4v4.4L12 17l-3.9-2.2v-4.4z" opacity="0.55" />
-    </svg>
   )
 }
 
