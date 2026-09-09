@@ -117,12 +117,12 @@ const RESPONSE_JSON_SCHEMA = {
 // Example the doc itself provides (section 9.4) — used to anchor both the
 // Anthropic prompt (as a literal template) and to keep the shape obvious
 // to a human reading this file.
-const EXAMPLE_JSON = `{"issue":"Engine Knock","root_cause":"Low-quality fuel or carbon buildup","category":"engine","urgency_level":"high","confidence":92,"cost_estimate_low":120,"cost_estimate_high":400,"timeline":"Fix within 2 weeks","solutions":[{"option":"Carbon cleaning (labor only)","cost_low":120,"cost_high":180},{"option":"Replace knock sensor","cost_low":250,"cost_high":400}]}`;
+const EXAMPLE_JSON = `{"issue":"Engine Knock","root_cause":"Low-quality fuel or carbon buildup","category":"engine","urgency_level":"high","confidence":92,"cost_estimate_low":180000,"cost_estimate_high":600000,"timeline":"Fix within 2 weeks","solutions":[{"option":"Carbon cleaning (labor only)","cost_low":180000,"cost_high":320000},{"option":"Replace knock sensor","cost_low":420000,"cost_high":600000}]}`;
 
 function buildSystemPrompt(): string {
   return `You are Phronesis' diagnostic engine, generating a structured car diagnosis report for African drivers. Respond with ONLY a single raw JSON object matching this exact shape — no markdown fences, no prose before or after:
 ${EXAMPLE_JSON}
-Field notes: category must be one of engine/electrical/brakes/transmission/general. urgency_level must be one of critical/high/medium/low. confidence is 0-100. All costs are in USD. Base the diagnosis on the symptoms, car details, and OBD data given. If OBD DTC codes are present, weight them heavily. Be realistic and specific, not generic.`;
+Field notes: category must be one of engine/electrical/brakes/transmission/general. urgency_level must be one of critical/high/medium/low. confidence is 0-100. All costs are in UGX (Ugandan shillings), the currency this app's users actually pay in — never USD. Use realistic Kampala prices: a common independent-garage repair on a used Toyota runs roughly UGX 80,000 to 900,000, with major work into the millions. Round to the nearest 10,000. Base the diagnosis on the symptoms, car details, and OBD data given. If OBD DTC codes are present, weight them heavily. Be realistic and specific, not generic.`;
 }
 
 function buildUserPrompt(request: DiagnosisRequest): string {

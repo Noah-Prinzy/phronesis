@@ -242,3 +242,57 @@ export async function downloadMyData(token: string): Promise<void> {
 export function deleteAccount(token: string): Promise<{ deleted: boolean }> {
   return authed<{ deleted: boolean }>('/account', token, { method: 'DELETE' })
 }
+
+// -------------------------------------------------------------- diagnosis
+
+export interface DiagnosisSolution {
+  option: string
+  costLow: number
+  costHigh: number
+}
+
+export interface DiagnosisReport {
+  issue: string
+  rootCause: string
+  category: string
+  urgencyLevel: 'critical' | 'high' | 'medium' | 'low'
+  confidence: number
+  costEstimateLow: number
+  costEstimateHigh: number
+  timeline: string
+  solutions: DiagnosisSolution[]
+  detectedCodes?: string[]
+}
+
+/**
+ * Ask her to work out what is wrong.
+ *
+ * The token is optional and deliberately so: someone who has not signed in
+ * still gets a diagnosis, it simply is not written to their history. Gating
+ * the core of the product behind an account would be the wrong trade for a
+ * driver standing beside a car that is making a noise.
+ */
+export async function runDiagnosis(
+  symptomText: string,
+  car: CarProfile | null,
+  token: string | null,
+  signal?: AbortSignal,
+): Promise<DiagnosisReport> {
+  const res = await fetch(`${BASE}/api/diagnosis`, {
+    method: 'POST',
+    signal,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({
+      symptomText,
+      carProfile: car
+        ? { make: car.make, model: car.model, year: car.year, mileage: car.mileage }
+        : undefined,
+    }),
+  })
+  if (!res.ok) throw new Error(`Diagnosis failed (${res.status})`)
+  const body = (await res.json()) as { report: DiagnosisReport }
+  return body.report
+}

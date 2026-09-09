@@ -67,7 +67,7 @@
    between a rectangle and a key you want to press. */
 .ph-btn[data-variant='primary'] {
   background: linear-gradient(180deg, var(--accent-fill-hi), var(--accent-fill));
-  color: #fff;
+  color: var(--accent-on);
   font-weight: 600;
   box-shadow:
     inset 0 1px 0 rgb(255 255 255 / 0.5),
@@ -76,7 +76,7 @@
     0 12px 22px -9px var(--accent-glow);
 }
 .ph-btn[data-variant='primary']:hover:not(:disabled) {
-  background: linear-gradient(180deg, #4a92d6, #2b7cc7);
+  background: linear-gradient(180deg, #74b6f0, #4a97e0);
 }
 /* Pressed: the button travels the full height of its own extruded edge and
    the edge collapses with it, so it lands flush rather than just shifting. */
@@ -96,7 +96,7 @@
   backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
   box-shadow:
     var(--sheen),
-    0 2px 0 rgb(var(--shade) / 0.26),
+    0 2px 0 rgb(0 0 0 / 0.45),
     var(--lift-2);
 }
 .ph-btn[data-variant='secondary']:hover:not(:disabled) {
@@ -185,7 +185,7 @@
 }
 .ph-icb[data-variant='filled'] {
   background: linear-gradient(180deg, var(--accent-fill-hi), var(--accent-fill));
-  color: #fff;
+  color: var(--accent-on);
   box-shadow:
     inset 0 1px 0 rgb(255 255 255 / 0.5),
     var(--underside),
@@ -193,7 +193,7 @@
     0 10px 18px -8px var(--accent-glow);
 }
 .ph-icb[data-variant='filled']:hover:not(:disabled) {
-  background: linear-gradient(180deg, #4a92d6, #2b7cc7);
+  background: linear-gradient(180deg, #74b6f0, #4a97e0);
 }
 .ph-icb[data-variant='filled']:active:not(:disabled) {
   box-shadow:
@@ -414,10 +414,10 @@
   color: var(--ink);
   /* Sunk rather than raised: an input is a slot you put something into, and
      the inner shadow is what says so without an outline shouting it. */
-  background: linear-gradient(180deg, rgb(255 255 255 / 0.5), transparent 62%), var(--surface);
+  background: linear-gradient(180deg, rgb(0 0 0 / 0.3), transparent 62%), var(--surface);
   border: 1px solid var(--hairline);
   border-radius: var(--r);
-  box-shadow: inset 0 1px 2px rgb(90 78 66 / 0.16);
+  box-shadow: inset 0 1px 2px rgb(0 0 0 / 0.45);
   transition:
     border-color var(--t-hover) var(--ease),
     background var(--t-hover) var(--ease),
@@ -433,7 +433,7 @@
   outline: none;
   background: var(--surface-2);
   border-color: var(--accent);
-  box-shadow: 0 0 0 1px var(--accent), inset 0 1px 2px rgb(90 78 66 / 0.14);
+  box-shadow: 0 0 0 1px var(--accent), inset 0 1px 2px rgb(0 0 0 / 0.4);
 }
 .ph-input:disabled {
   opacity: 0.45;
@@ -625,7 +625,7 @@
   left: 0;
   border-radius: var(--r-sm);
   background: linear-gradient(180deg, var(--surface-3), var(--surface-2));
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.9), var(--lift);
+  box-shadow: var(--sheen), var(--lift);
   transition:
     transform var(--t-move) var(--ease-out),
     width var(--t-move) var(--ease-out);
@@ -780,7 +780,7 @@
   min-height: 0;
 }
 .ph-stars__off {
-  color: rgb(var(--shade) / 0.3);
+  color: rgb(255 255 255 / 0.22);
 }
 /* Interactive stars need a real hit area. The glyph stays small; the
    target does not (WCAG 2.5.8). */
@@ -971,7 +971,7 @@
   background: linear-gradient(180deg, var(--surface-2), var(--surface));
   border: 1px solid var(--hairline);
   border-radius: var(--r);
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.9);
+  box-shadow: var(--sheen);
   overflow: hidden;
 }
 
@@ -1239,7 +1239,7 @@
   border: 1px solid var(--hairline);
   border-radius: var(--r);
   background: linear-gradient(180deg, var(--surface-2), var(--surface));
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.9);
+  box-shadow: var(--sheen);
 }
 .ph-rail__carLabel {
   font-family: var(--display);
@@ -1385,4 +1385,123 @@
 /* main is focused on route change; it must never show a ring for that. */
 main:focus {
   outline: none;
+}
+
+/* ==================================================== the living surface
+   Fixed behind every page. z-index 0 with the app shell above it, rather
+   than a negative index, because a negative one escapes the stacking
+   context whenever an ancestor paints a background and the layer vanishes. */
+
+.ph-surface {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* One blur over all three pools rather than three: a third of the work, and
+   it melts their edges into one another instead of leaving three discs. */
+.ph-surface__blooms {
+  position: absolute;
+  inset: 0;
+  filter: blur(46px);
+}
+
+.ph-bloom {
+  position: absolute;
+  display: block;
+  will-change: transform;
+}
+
+.ph-bloom--a {
+  width: 62%;
+  height: 62%;
+  inset: auto auto 26% -8%;
+  background: radial-gradient(closest-side, var(--bloom-warm), transparent 70%);
+  animation: ph-drift-a var(--drift-a) ease-in-out infinite;
+}
+.ph-bloom--b {
+  width: 56%;
+  height: 56%;
+  inset: -10% -8% auto auto;
+  background: radial-gradient(closest-side, var(--bloom-neutral), transparent 70%);
+  animation: ph-drift-b var(--drift-b) ease-in-out infinite;
+}
+.ph-bloom--c {
+  width: 60%;
+  height: 60%;
+  inset: auto -6% -20% auto;
+  background: radial-gradient(closest-side, var(--bloom-cool), transparent 70%);
+  animation: ph-drift-c var(--drift-c) ease-in-out infinite;
+}
+
+@keyframes ph-drift-a {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  33% {
+    transform: translate3d(14%, -8%, 0) scale(1.12);
+  }
+  66% {
+    transform: translate3d(-6%, 10%, 0) scale(0.94);
+  }
+}
+@keyframes ph-drift-b {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  40% {
+    transform: translate3d(-16%, 12%, 0) scale(1.08);
+  }
+  70% {
+    transform: translate3d(6%, -6%, 0) scale(0.96);
+  }
+}
+@keyframes ph-drift-c {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  45% {
+    transform: translate3d(-10%, -14%, 0) scale(1.1);
+  }
+  75% {
+    transform: translate3d(12%, 4%, 0) scale(0.92);
+  }
+}
+
+/* Dust catching the light. Warm, because this is a lit surface and not a
+   night sky — blue points would read as stars, which is a different room. */
+.ph-surface__motes {
+  position: absolute;
+  inset: 0;
+}
+
+.ph-mote {
+  position: absolute;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgb(255 246 232 / 0.9), transparent 70%);
+  animation-name: ph-rise;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+@keyframes ph-rise {
+  0% {
+    transform: translate3d(0, 0, 0);
+    opacity: 0;
+  }
+  12% {
+    opacity: 0.75;
+  }
+  86% {
+    opacity: 0.6;
+  }
+  100% {
+    transform: translate3d(24px, -210px, 0);
+    opacity: 0;
+  }
 }

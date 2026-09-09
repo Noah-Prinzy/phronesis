@@ -3,6 +3,7 @@ import { JourneyProvider } from './journey'
 import { AuthProvider } from './auth'
 import { VoiceProvider } from './voice'
 import { CarProvider } from './car'
+import { Surface } from './Surface'
 import { FocusProvider } from './focus'
 import { useRouteAnnounce } from './useRouteAnnounce'
 import '../styles/tokens.css'
@@ -19,6 +20,7 @@ export function Root() {
   useRouteAnnounce()
   return (
     <AuthProvider>
+      <Surface />
       <JourneyProvider>
         <VoiceProvider>
           <CarProvider>
