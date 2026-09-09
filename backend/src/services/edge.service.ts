@@ -18,7 +18,7 @@ import { MsEdgeTTS, OUTPUT_FORMAT } from 'msedge-tts';
  *   Gemini TTS  genuinely good and directable, but 9s per line and a free
  *               tier of TEN REQUESTS PER DAY
  *
- * Measured here on the same sentence: Sonia 0.43s, Libby 1.12s, Maisie 1.75s,
+ * Measured here on the same sentence: Emily and Sonia both around 0.45s,
  * against Gemini's 9.1s and Kokoro's 4.4s. No key, no account, no quota.
  *
  * It runs on the SERVER, which is the property that matters most for reach:
@@ -30,23 +30,34 @@ import { MsEdgeTTS, OUTPUT_FORMAT } from 'msedge-tts';
  * uses, and it is not a documented public API. It is fine for building; for a
  * commercial release it is a grey area and should not be relied on. The clean
  * swap is Azure's official Speech service, which serves the IDENTICAL voices
- * (en-GB-SoniaNeural is the same voice) on a free tier of 500,000 characters a
+ * (en-IE-EmilyNeural is the same voice) on a free tier of 500,000 characters a
  * month that does not expire. Same sound, supported transport, one key.
  */
 
 /**
- * Sonia. Chosen on measurement as much as taste: she was also the fastest of
- * the British voices by a wide margin. Libby and Maisie are the alternatives,
- * Ryan and Thomas are the male ones.
+ * Emily, Irish. Picked by ear from an audition of all seven British and Irish
+ * voices speaking the same two lines — the only way this decision has ever
+ * gone well, since every attempt to predict which model would sound human was
+ * wrong.
+ *
+ * Her first measurement was 6.06s against Sonia's 0.46s, which nearly ruled
+ * her out. It was a cold connection: re-measured over four runs she lands at
+ * 0.44 / 0.49 / 0.58s against Sonia's 0.43 / 0.38 / 0.43. Effectively the same
+ * voice cost. Worth recording, because the number that almost lost her the job
+ * was an artefact of measuring once.
+ *
+ * Alternatives: en-GB-SoniaNeural, LibbyNeural, MaisieNeural; the male voices
+ * are RyanNeural, ThomasNeural and en-IE-ConnorNeural.
  */
-const VOICE = process.env.EDGE_TTS_VOICE ?? 'en-GB-SoniaNeural';
+const VOICE = process.env.EDGE_TTS_VOICE ?? 'en-IE-EmilyNeural';
 
 /**
- * Delivery. Unlike a local model, this one takes direction — slightly slower
- * than default, because Phronesis is usually explaining a fault to someone
- * worried about the bill and rushing that is the wrong register.
+ * Her own pace, unmodified. An earlier voice was slowed 6% on the theory that
+ * explaining a fault to a worried owner should not be rushed; auditioned
+ * against 0%, −12% and −18%, the untouched delivery won. The theory was fine
+ * and the ear disagreed.
  */
-const RATE = process.env.EDGE_TTS_RATE ?? '-6%';
+const RATE = process.env.EDGE_TTS_RATE ?? '0%';
 const PITCH = process.env.EDGE_TTS_PITCH ?? '+0Hz';
 
 /** 24kHz mono MP3: small enough to send quickly, good enough for speech. */
@@ -71,17 +82,48 @@ function remember(key: string, mp3: Buffer): void {
 /** A wedged socket must never hold a request open. */
 const TIMEOUT_MS = 15_000;
 
-export async function getEdgeSpeech(text: string): Promise<Buffer> {
-  const key = createHash('sha1').update(`${VOICE}|${RATE}|${PITCH}|${text}`).digest('hex');
-  const hit = cache.get(key);
-  if (hit) return hit;
+/**
+ * One socket, reused.
+ *
+ * Every request used to open its own connection to Microsoft, and the
+ * handshake — not the synthesis — was most of the latency. Measured with two
+ * seconds between calls, which is roughly how a conversation arrives:
+ *
+ *   fresh connection each time   2.89 / 2.14 / 4.15 / 4.24s
+ *   one connection reused        2.39 / 1.20 / 1.44 / 2.11s
+ *
+ * Back-to-back in a tight loop the same calls take 0.44s, so the remaining
+ * cost is the endpoint waking up rather than anything this code controls.
+ *
+ * The socket carries one stream at a time, so requests are SERIALISED through
+ * a promise chain. Two concurrent `toStream` calls on one connection interleave
+ * their audio, which would be a maddening bug to find: not an error, just two
+ * replies spliced into each other.
+ */
+let shared: MsEdgeTTS | null = null;
+let queue: Promise<unknown> = Promise.resolve();
 
-  // A fresh instance per request. Reusing one across calls leaves the previous
-  // stream's state behind and the second voice throws on `voiceLocale`.
+async function connection(): Promise<MsEdgeTTS> {
+  if (shared) return shared;
   const tts = new MsEdgeTTS();
   await tts.setMetadata(VOICE, FORMAT);
+  shared = tts;
+  return tts;
+}
 
-  const mp3 = await new Promise<Buffer>((resolve, reject) => {
+/** Run `job` after everything already queued, whatever happened to those. */
+function serialise<T>(job: () => Promise<T>): Promise<T> {
+  const run = queue.then(job, job);
+  // Swallow rejections on the CHAIN only — the caller still sees its own.
+  queue = run.then(
+    () => undefined,
+    () => undefined,
+  );
+  return run;
+}
+
+function streamOnce(tts: MsEdgeTTS, text: string): Promise<Buffer> {
+  return new Promise<Buffer>((resolve, reject) => {
     const chunks: Buffer[] = [];
     let settled = false;
 
@@ -108,6 +150,26 @@ export async function getEdgeSpeech(text: string): Promise<Buffer> {
       audioStream.on('error', (e: Error) => finish(e));
     } catch (e) {
       finish(e as Error);
+    }
+  });
+}
+
+export async function getEdgeSpeech(text: string): Promise<Buffer> {
+  const key = createHash('sha1').update(`${VOICE}|${RATE}|${PITCH}|${text}`).digest('hex');
+  const hit = cache.get(key);
+  if (hit) return hit;
+
+  const mp3 = await serialise(async () => {
+    try {
+      return await streamOnce(await connection(), text);
+    } catch (err) {
+      // A socket that has been idle long enough gets closed at the far end,
+      // and the failure looks like any other. Drop it and try once more on a
+      // fresh one before giving up — a reconnect is far cheaper than a line
+      // of silence.
+      shared = null;
+      console.warn('Edge TTS connection failed, reconnecting once:', err instanceof Error ? err.message : err);
+      return streamOnce(await connection(), text);
     }
   });
 
