@@ -167,6 +167,13 @@
 /* ==================================================== page stub (phase 0)
    Every page starts here and grows its own section as it is built. */
 
+/* With the rail gone, nothing reserves horizontal space any more, so the
+   page owns the full width and centres its own content instead of being
+   pushed off-centre by a column beside it.
+
+   The extra top padding on desktop is for the floating nav pill: it is
+   fixed rather than in flow, so without this it lands on top of whatever
+   the page puts first. */
 .page {
   flex: 1;
   min-height: 0;
@@ -175,6 +182,26 @@
   gap: 0.9rem;
   padding: 1.1rem 1.15rem 1.4rem;
   overflow-y: auto;
+}
+
+@media (min-width: 900px) {
+  .page {
+    padding: 1.15rem 2rem 1.6rem;
+  }
+  /* The title sits beside the pill rather than under it, so the first row
+     of every page is one line rather than two. */
+  .page__head {
+    padding-left: 10.5rem;
+    min-height: 2.533rem;
+    align-items: center;
+  }
+  /* Content below the head is centred in the full width — the whole point
+     of reclaiming it. */
+  .page__body {
+    width: 100%;
+    max-width: 76rem;
+    margin-inline: auto;
+  }
 }
 .page__head {
   flex: none;
@@ -847,9 +874,11 @@
   max-width: min(26rem, calc(100vw - 2rem));
 }
 @media (min-width: 900px) {
+  /* Dead centre now. It used to be offset by half the rail's width to sit
+     in the middle of the CONTENT rather than the window; with no rail,
+     those are the same thing. */
   .acct__toast {
     bottom: 1.25rem;
-    left: calc(50% + var(--rail-w) / 2);
   }
 }
 
@@ -1134,7 +1163,10 @@
    Only wide enough to place things by hand. The car sits in the middle
    and the cards take the corners around it. */
 @media (min-width: 64rem) {
-  .dg {
+  /* Only the RESULT is placed by hand. The ask state stays a centred
+     column — switching it to block as well is what left it hugging the
+     left edge while the car sat centred above it. */
+  .dg:not(.dg--ask) {
     display: block;
     min-height: 32rem;
   }

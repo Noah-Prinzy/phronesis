@@ -14,7 +14,7 @@ import {
   Meter,
   PasswordInput,
   Radio,
-  Rail,
+  NavMenu,
   Row,
   SearchField,
   SectionHead,
@@ -390,7 +390,7 @@ export function StyleGuide() {
         >
           <Case label="rail — 900px and up">
             <div className="navdemo navdemo--rail">
-              <Rail items={items} value={nav} onChange={setNav} />
+              <NavMenu items={items} value={nav} onChange={setNav} />
             </div>
           </Case>
           <Case label="tab bar — below 900px">

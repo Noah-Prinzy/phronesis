@@ -1,7 +1,5 @@
-import { useCallback, useState } from 'react'
-import type { CSSProperties } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { Rail, TabBar } from '../ui'
+import { NavMenu, TabBar } from '../ui'
 import type { NavItem } from '../ui'
 import {
   IconAccount,
@@ -47,46 +45,12 @@ const BUYER: Array<NavItem<NavKey>> = [
   { value: '/account', label: 'Account', icon: <IconAccount /> },
 ]
 
-/**
- * Whether the rail is collapsed, remembered per device.
- *
- * A preference about how much screen this person wants given to navigation,
- * which is a property of the screen they are on — a wide monitor and a small
- * laptop deserve different answers from the same user — so localStorage
- * rather than the account.
- */
-const RAIL_KEY = 'phronesis:rail-collapsed'
-
-function readCollapsed(): boolean {
-  try {
-    return localStorage.getItem(RAIL_KEY) === '1'
-  } catch {
-    // Private mode or storage disabled. Expanded is the safer default: it is
-    // the state where every destination is legible without knowing the icons.
-    return false
-  }
-}
-
 export function AppLayout() {
   const { car } = useCar()
   const { journey } = useJourney()
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const wide = useMediaQuery('(min-width: 900px)')
-  const [collapsed, setCollapsed] = useState(readCollapsed)
-
-  const toggleRail = useCallback(() => {
-    setCollapsed((was) => {
-      const next = !was
-      try {
-        localStorage.setItem(RAIL_KEY, next ? '1' : '0')
-      } catch {
-        // Not being able to remember it is survivable; refusing to collapse
-        // because we cannot write it down is not.
-      }
-      return next
-    })
-  }, [])
 
   const owner = journey !== 'buyer'
   const items = owner ? OWNER : BUYER
@@ -99,21 +63,12 @@ export function AppLayout() {
     : 'Looking to buy'
 
   return (
-    <div
-      className="hub"
-      /* The rail's width is a live value, not a constant: pages reserve
-         space against --rail-w and Account positions its toast from it, so
-         a collapse that did not update the token would silently misalign
-         everything that reads it. */
-      style={wide ? ({ '--rail-w': collapsed ? '3.9rem' : '14.5rem' } as CSSProperties) : undefined}
-    >
+    <div className="hub" data-nav={wide ? 'menu' : 'tabbar'}>
       {wide && (
-        <Rail
+        <NavMenu
           items={items}
           value={current}
           onChange={navigate}
-          collapsed={collapsed}
-          onToggleCollapsed={toggleRail}
           footer={
             <button
               type="button"
@@ -128,7 +83,6 @@ export function AppLayout() {
                 <span className="ph-rail__carName">{vehicle}</span>
                 {car?.plate ? <span className="ph-rail__carPlate">{car.plate}</span> : null}
               </span>
-              {collapsed ? <span className="sr-only">{vehicle}</span> : null}
             </button>
           }
         />
