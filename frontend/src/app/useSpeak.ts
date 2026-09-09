@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { textToSpeech } from '../lib/api'
 import { browserSpeechAvailable, speakInBrowser, type BrowserSpeechHandle } from './browserSpeech'
-import { speakWithKokoro } from './kokoro'
 import { useVoice } from './voice'
 
 export interface UseSpeakResult {
@@ -42,19 +41,6 @@ function isAutoplayBlocked(err: unknown): boolean {
  * otherwise. Throwing means neither worked, and the caller drops to the
  * browser's own synthesiser.
  */
-async function synthesise(body: string, signal: AbortSignal): Promise<Blob> {
-  try {
-    return await textToSpeech(body, signal)
-  } catch (err) {
-    if (signal.aborted) throw err
-    console.warn('Server voice failed; falling back to Kokoro in this browser:', err)
-  }
-  const local = await speakWithKokoro(body)
-  if (signal.aborted) throw new Error('aborted')
-  if (!local) throw new Error('no local voice available')
-  return local.blob
-}
-
 /**
  * Plays a line of Phronesis' voice, respecting the "Speak replies aloud"
  * setting. One line plays
@@ -62,16 +48,15 @@ async function synthesise(body: string, signal: AbortSignal): Promise<Blob> {
  * still going — every screen that uses this shares that same barge-in rule
  * rather than each re-deriving it.
  *
- * **Three tiers, best first.**
+ * **Two tiers.**
  *
- * 1. **`/api/tts`** — a hosted model, which is the only kind that gets
- *    phrasing right. A small model that runs locally has its delivery fixed
- *    in its weights and reads text rather than saying it; a hosted one can
- *    be TOLD how to speak. That difference is audible immediately and is
- *    not something any local parameter recovers.
- * 2. **Kokoro**, in this browser on the GPU, when the server cannot be
- *    reached. Robotic by comparison, but it costs nothing and needs nobody.
- * 3. **The browser's own synthesiser**, when neither of those works.
+ * 1. **`/api/tts`** — Microsoft's neural speech, generated on the server.
+ *    Because the work happens there and the browser only plays an MP3, every
+ *    device and every browser gets the same voice. Running a model in the
+ *    browser instead was tried and abandoned: it needed WebGPU, a 350MB
+ *    download, and still read text rather than saying it.
+ * 2. **The browser's own synthesiser**, when the server cannot be reached at
+ *    all. It sounds least like her, which is a far smaller loss than silence.
  *
  * Each tier is tried and moved past on FAILURE rather than skipped on a
  * guess about availability — the same rule the backend chain follows, and
@@ -214,7 +199,7 @@ export function useSpeak(): UseSpeakResult {
 
       void (async () => {
         try {
-          const blob = await synthesise(body, controller.signal)
+          const blob = await textToSpeech(body, controller.signal)
           if (controller.signal.aborted) return
           const url = URL.createObjectURL(blob)
           const audio = new Audio(url)
