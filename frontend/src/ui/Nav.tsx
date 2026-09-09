@@ -20,11 +20,21 @@ export interface NavProps<T extends string> {
 
 /* ------------------------------------------------------------------- rail
    900px and up. A sibling of the content, never an overlay, so no page has
-   to reserve space for it or guess its width. */
+   to reserve space for it or guess its width.
+
+   It is NOT a panel. No background, no border, no blur — the items sit
+   directly on the app's surface, and only the active one is drawn as an
+   object, because it is the only thing that needs to look like one. Given a
+   background it reads as a separate column with a hard edge down the middle
+   of the app, which is exactly what it looked like before. */
 
 export interface RailProps<T extends string> extends NavProps<T> {
-  /** Pinned to the bottom — the vehicle readout on the hub. */
+  /** Pinned to the bottom — the vehicle glyph on the hub. */
   footer?: ReactNode
+  /** Icons only, no labels. */
+  collapsed?: boolean
+  /** Omit to hide the toggle entirely. */
+  onToggleCollapsed?: () => void
 }
 
 export function Rail<T extends string>({
@@ -32,10 +42,32 @@ export function Rail<T extends string>({
   value,
   onChange,
   footer,
+  collapsed = false,
+  onToggleCollapsed,
   className,
 }: RailProps<T>) {
   return (
-    <nav className={cx('ph-rail', className)} aria-label="Main">
+    <nav
+      className={cx('ph-rail', className)}
+      data-collapsed={collapsed || undefined}
+      aria-label="Main"
+    >
+      {onToggleCollapsed ? (
+        <button
+          type="button"
+          className="ph-rail__toggle"
+          onClick={onToggleCollapsed}
+          aria-expanded={!collapsed}
+          aria-label={collapsed ? 'Expand navigation' : 'Collapse navigation'}
+        >
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+            <path d="M4 7h16" />
+            <path d="M4 12h16" />
+            <path d="M4 17h16" />
+          </svg>
+        </button>
+      ) : null}
+
       {items.map((item) => (
         <button
           key={item.value}
@@ -45,7 +77,13 @@ export function Rail<T extends string>({
           onClick={() => onChange(item.value)}
         >
           {item.icon}
-          <span>{item.label}</span>
+          {/*
+            The label stays in the DOM when collapsed and is hidden visually,
+            so the button keeps its accessible name. Rendering icon-only
+            buttons with no name is the standard way an icon rail becomes
+            unusable with a screen reader.
+          */}
+          <span className={collapsed ? 'sr-only' : undefined}>{item.label}</span>
         </button>
       ))}
 

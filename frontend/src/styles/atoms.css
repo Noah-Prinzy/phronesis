@@ -1172,15 +1172,50 @@
 /* No rule down the edge. The rail and the content share one ground, and the
    nav items' own active marker is all the separation the eye needs — a
    divider here only drew a line through an otherwise continuous surface. */
+/* NOT a panel. No background, no border, no blur — the items sit on the
+   app's own surface. Given a ground of its own it reads as a separate
+   column with a hard edge down the middle of the app, which is exactly
+   what it looked like before. Only the active item is drawn as an object,
+   because it is the only thing that needs to look like one. */
 .ph-rail {
   flex: none;
   width: var(--rail-w);
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
-  padding: 1.5rem 0.7rem 0.9rem;
-  background: var(--ground);
+  padding: 1.1rem 0.7rem 0.9rem;
   overflow-y: auto;
+  overflow-x: hidden;
+  transition: width var(--t-move) var(--ease-out);
+}
+.ph-rail[data-collapsed] {
+  align-items: center;
+  padding-inline: 0.45rem;
+}
+
+.ph-rail__toggle {
+  flex: none;
+  width: 2.4rem;
+  height: 2.4rem;
+  margin-bottom: 0.5rem;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--ink-3);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition:
+    color var(--t-hover) var(--ease),
+    background var(--t-hover) var(--ease);
+}
+.ph-rail:not([data-collapsed]) .ph-rail__toggle {
+  align-self: flex-start;
+  margin-left: 0.15rem;
+}
+.ph-rail__toggle:hover {
+  color: var(--ink);
+  background: var(--surface-2);
 }
 .ph-rail__spacer {
   flex: 1;
@@ -1192,11 +1227,12 @@
   display: flex;
   align-items: center;
   gap: 0.7rem;
-  padding: 0.6rem 0.65rem;
+  padding: 0.6rem 0.75rem;
   border: 0;
-  border-radius: var(--r);
+  border-radius: var(--r-pill);
   background: transparent;
   color: var(--ink-3);
+  white-space: nowrap;
   font-family: var(--ui);
   font-size: 0.85rem;
   font-weight: 500;
@@ -1233,29 +1269,64 @@
 /* ---- the rail's footer readout ---- */
 .ph-rail__car {
   display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-  padding: 0.6rem 0.65rem;
-  border: 1px solid var(--hairline);
-  border-radius: var(--r);
-  background: linear-gradient(180deg, var(--surface-2), var(--surface));
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 0.45rem 0.5rem;
+  border: 0;
+  border-radius: var(--r-pill);
+  background: transparent;
+  color: var(--ink-3);
+  cursor: pointer;
+  text-align: left;
+  font-family: var(--ui);
+  transition: background var(--t-hover) var(--ease);
+}
+.ph-rail__car:hover {
+  background: var(--surface-2);
+  color: var(--ink);
+}
+.ph-rail[data-collapsed] .ph-rail__car {
+  width: auto;
+  justify-content: center;
+  padding: 0.3rem;
+}
+
+/* The disc is the only thing that survives the collapse, so it carries the
+   whole identity: it is the car, and it opens Account. */
+.ph-rail__carDisc {
+  flex: none;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: var(--accent);
+  background: linear-gradient(180deg, var(--surface-3), var(--surface));
+  border: 1px solid var(--glass-border);
   box-shadow: var(--sheen);
 }
-.ph-rail__carLabel {
-  font-family: var(--display);
-  font-size: var(--label-size);
-  font-weight: 600;
-  letter-spacing: var(--label-track);
-  text-transform: uppercase;
-  color: var(--ink-3);
+
+.ph-rail__carText {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.ph-rail[data-collapsed] .ph-rail__carText {
+  display: none;
 }
 .ph-rail__carName {
-  font-size: 0.8rem;
-  color: var(--ink);
+  font-size: 0.78rem;
+  color: var(--ink-2);
+  /* The one column that may shrink. Without min-width:0 above and this,
+     "Tell her what you drive" pushes the rail wider than its own token. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .ph-rail__carPlate {
   font-family: var(--mono);
-  font-size: 0.7rem;
+  font-size: 0.66rem;
   color: var(--ink-3);
 }
 
