@@ -3,11 +3,16 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { requireAuth } from '../middleware/auth';
+import { auth } from '../config/firebase';
 import {
+  deleteUserData,
+  exportUserData,
   getCarProfile,
+  getPreferences,
   getUserChats,
   getUserDiagnoses,
   saveCarProfile,
+  savePreferences,
   syncUserProfile,
 } from '../services/history.service';
 
@@ -102,5 +107,74 @@ historyRouter.get('/chats', requireAuth, async (req, res) => {
   } catch (err) {
     console.error('Failed to fetch chats:', err);
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+
+// ----------------------------------------------------------- preferences
+
+const preferencesSchema = z.object({
+  faultAlerts: z.boolean().optional(),
+  serviceReminders: z.boolean().optional(),
+});
+
+historyRouter.get('/preferences', requireAuth, async (req, res) => {
+  try {
+    res.json(await getPreferences(req.user!.uid));
+  } catch (err) {
+    console.error('Failed to read preferences:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+historyRouter.patch('/preferences', requireAuth, async (req, res) => {
+  const parsed = preferencesSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: 'Invalid request', details: parsed.error.issues });
+    return;
+  }
+  try {
+    await savePreferences(req.user!.uid, parsed.data);
+    res.json(await getPreferences(req.user!.uid));
+  } catch (err) {
+    console.error('Failed to save preferences:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------- export
+
+historyRouter.get('/account/export', requireAuth, async (req, res) => {
+  try {
+    const data = await exportUserData(req.user!.uid);
+    // Named so the download lands as a real file rather than a browser tab
+    // full of JSON.
+    const stamp = new Date().toISOString().slice(0, 10);
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="phronesis-${stamp}.json"`);
+    res.send(JSON.stringify(data, null, 2));
+  } catch (err) {
+    console.error('Failed to export account:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------- delete
+
+/**
+ * Deleting the Firestore documents is only half of it — the Firebase Auth
+ * user has to go too, or the email stays registered and they cannot sign up
+ * again with it. Data first: if the auth record went first the request would
+ * lose its own credentials mid-flight and orphan everything else.
+ */
+historyRouter.delete('/account', requireAuth, async (req, res) => {
+  const uid = req.user!.uid;
+  try {
+    await deleteUserData(uid);
+    await auth.deleteUser(uid);
+    res.json({ deleted: true });
+  } catch (err) {
+    console.error('Failed to delete account:', err);
+    res.status(500).json({ error: 'Could not delete the account. Nothing has been removed.' });
   }
 });

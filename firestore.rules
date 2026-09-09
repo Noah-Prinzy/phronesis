@@ -19,6 +19,14 @@ service cloud.firestore {
     }
 
     // Diagnostic reports
+    // Alert switches. Same shape as /cars: the document id IS the uid, so a
+    // user can only ever reach their own. Written by the backend through the
+    // Admin SDK, which bypasses these rules — they exist for the case where
+    // a client reaches Firestore directly, and to make the intent explicit.
+    match /preferences/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
     match /diagnoses/{diagnosisId} {
       allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
       allow read, update, delete: if request.auth != null && resource.data.userId == request.auth.uid;

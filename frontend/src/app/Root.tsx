@@ -2,6 +2,7 @@ import { Outlet } from 'react-router-dom'
 import { JourneyProvider } from './journey'
 import { AuthProvider } from './auth'
 import { VoiceProvider } from './voice'
+import { CarProvider } from './car'
 import { FocusProvider } from './focus'
 import { useRouteAnnounce } from './useRouteAnnounce'
 import '../styles/tokens.css'
@@ -20,6 +21,7 @@ export function Root() {
     <AuthProvider>
       <JourneyProvider>
         <VoiceProvider>
+          <CarProvider>
           <FocusProvider>
             {/* First tab stop on every page. Keyboard users should not have to
                 walk the whole navigation to reach the content. */}
@@ -28,6 +30,7 @@ export function Root() {
             </a>
             <Outlet />
           </FocusProvider>
+          </CarProvider>
         </VoiceProvider>
       </JourneyProvider>
     </AuthProvider>

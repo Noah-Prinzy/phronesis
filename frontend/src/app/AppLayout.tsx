@@ -11,6 +11,7 @@ import {
   IconSearch,
 } from '../icons'
 import { useJourney } from './journey'
+import { carName, useCar } from './car'
 import { useMediaQuery } from './useMediaQuery'
 
 /**
@@ -44,6 +45,7 @@ const BUYER: Array<NavItem<NavKey>> = [
 ]
 
 export function AppLayout() {
+  const { car } = useCar()
   const { journey } = useJourney()
   const navigate = useNavigate()
   const { pathname } = useLocation()
@@ -65,9 +67,11 @@ export function AppLayout() {
           footer={
             owner ? (
               <div className="ph-rail__car">
-                <span className="ph-rail__carLabel">Paired</span>
-                <span className="ph-rail__carName">2015 Toyota Premio</span>
-                <span className="ph-rail__carPlate">UAX 123B</span>
+                <span className="ph-rail__carLabel">{car ? 'Your car' : 'No car yet'}</span>
+                <span className="ph-rail__carName">
+                  {carName(car) ?? 'Tell her what you drive'}
+                </span>
+                {car?.plate ? <span className="ph-rail__carPlate">{car.plate}</span> : null}
               </div>
             ) : (
               <div className="ph-rail__car">

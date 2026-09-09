@@ -693,3 +693,171 @@
     max-width: 38ch;
   }
 }
+
+/* ======================================================== account
+   A settings page is a list of decisions, so it reads as grouped rows
+   rather than as cards in a grid. The card is the group; the rows inside
+   it share one surface and are separated by a light hairline, which keeps
+   a screenful of switches from looking like a screenful of objects. */
+
+.acct {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  max-width: 44rem;
+  padding-bottom: 2rem;
+}
+
+.acct__group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.acct__card {
+  border-radius: var(--r);
+  overflow: hidden;
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-sat));
+  box-shadow: var(--sheen), var(--lift-3);
+}
+
+.acct__row,
+.acct__you {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.8rem 1rem;
+  border-bottom: 1px solid var(--hairline);
+}
+.acct__you {
+  padding: 1.05rem 1rem;
+}
+.acct__row:last-child,
+.acct__you:last-child {
+  border-bottom: 0;
+}
+
+/* The one column that may shrink. Without min-width:0 a long email refuses
+   to ellipsis and pushes the control off the edge instead. */
+.acct__rowmain {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+}
+
+.acct__rowtitle {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.acct__sub {
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: var(--ink-3);
+}
+
+.acct__mono {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  color: var(--ink-3);
+}
+
+.acct__name {
+  font-family: var(--display);
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+/* The avatar borrows the orb's night sky, so the one dark thing on the page
+   is the same dark thing everywhere else. */
+.acct__avatar {
+  width: 3.2rem;
+  height: 3.2rem;
+  flex: none;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-family: var(--display);
+  font-size: 1.15rem;
+  font-weight: 600;
+  color: var(--accent-hi, #8ad7fb);
+  background: radial-gradient(circle at 50% 42%, #14181f 0%, #0b0d10 62%, #07090c 100%);
+  box-shadow:
+    inset 0 2px 3px rgb(255 255 255 / 0.1),
+    0 0 0 1px rgb(255 255 255 / 0.5),
+    var(--lift-3);
+}
+
+.acct__out {
+  display: flex;
+  padding-top: 0.25rem;
+}
+
+.acct__signedout {
+  margin: 0 0 0.75rem;
+  color: var(--ink-2);
+}
+
+/* The signed-out view is two elements in a stretch-by-default column, so the
+   button would otherwise run the full width of the page. */
+.acct--empty {
+  align-items: flex-start;
+}
+
+.acct__form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.acct__formError {
+  margin: 0.7rem 0 0;
+  font-size: 0.82rem;
+  color: var(--critical);
+}
+
+.acct__dialogBody {
+  margin: 0 0 0.6rem;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  color: var(--ink-2);
+}
+.acct__dialogBody:last-child {
+  margin-bottom: 0;
+}
+
+.acct__toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--tabbar-h) + 1rem);
+  transform: translateX(-50%);
+  z-index: 60;
+  max-width: min(26rem, calc(100vw - 2rem));
+}
+@media (min-width: 900px) {
+  .acct__toast {
+    bottom: 1.25rem;
+    left: calc(50% + var(--rail-w) / 2);
+  }
+}
+
+/* On a phone the control drops under its own label rather than being
+   squeezed beside it — a segmented control next to two lines of hint text
+   at 360px leaves neither readable. */
+@media (max-width: 30rem) {
+  .acct__row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.6rem;
+  }
+  .acct__row > *:not(.acct__rowmain) {
+    align-self: flex-start;
+  }
+}
