@@ -700,12 +700,32 @@
    it share one surface and are separated by a light hairline, which keeps
    a screenful of switches from looking like a screenful of objects. */
 
+/* One layout across the whole page rather than a column down the middle.
+   A settings page capped at 44rem left half a desktop screen empty while the
+   rows inside it were cramped — the worst of both. The groups are laid out as
+   a grid that fills the width and collapses to one column on a phone.
+
+   `align-items: start` matters: without it every group stretches to the
+   tallest in its row, so a two-row card sits in the same height as a
+   five-row one with dead space under it. */
 .acct {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 1fr;
   gap: 1.25rem;
-  max-width: 44rem;
+  align-items: start;
   padding-bottom: 2rem;
+}
+
+@media (min-width: 62rem) {
+  .acct {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.25rem 1.5rem;
+  }
+  /* Sign out spans both columns and sits under everything, so it never
+     lands halfway up a page beside an unrelated card. */
+  .acct__out {
+    grid-column: 1 / -1;
+  }
 }
 
 .acct__group {
@@ -808,7 +828,8 @@
 /* The signed-out view is two elements in a stretch-by-default column, so the
    button would otherwise run the full width of the page. */
 .acct--empty {
-  align-items: flex-start;
+  justify-items: start;
+  align-content: start;
 }
 
 .acct__form {
