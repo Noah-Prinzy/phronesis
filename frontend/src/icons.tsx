@@ -97,6 +97,20 @@ export function IconCompare({ size }: IconProps) {
 
 /* --------------------------------------------------------------- actions */
 
+/** The car itself. Used for the vehicle glyph at the foot of the rail. */
+export function IconCar({ size }: IconProps) {
+  return (
+    <Svg size={size}>
+      <path d="M5 16.5h14" />
+      <path d="M6.5 16.5V19" />
+      <path d="M17.5 16.5V19" />
+      <path d="M4 16.5l1.6-5A2 2 0 0 1 7.5 10h9a2 2 0 0 1 1.9 1.5l1.6 5" />
+      <path d="M8 14h.01" />
+      <path d="M16 14h.01" />
+    </Svg>
+  )
+}
+
 export function IconSend({ size }: IconProps) {
   return (
     <Svg size={size}>

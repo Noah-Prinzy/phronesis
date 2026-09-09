@@ -1,8 +1,9 @@
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { Rail, TabBar } from '../ui'
+import { NavMenu, TabBar } from '../ui'
 import type { NavItem } from '../ui'
 import {
   IconAccount,
+  IconCar,
   IconCompare,
   IconDiagnose,
   IconFix,
@@ -11,6 +12,7 @@ import {
   IconSearch,
 } from '../icons'
 import { useJourney } from './journey'
+import { carName, useCar } from './car'
 import { useMediaQuery } from './useMediaQuery'
 
 /**
@@ -44,6 +46,7 @@ const BUYER: Array<NavItem<NavKey>> = [
 ]
 
 export function AppLayout() {
+  const { car } = useCar()
   const { journey } = useJourney()
   const navigate = useNavigate()
   const { pathname } = useLocation()
@@ -55,26 +58,32 @@ export function AppLayout() {
   // item reads as "you are nowhere".
   const current = (items.find((i) => i.value === pathname)?.value ?? '/home') as NavKey
 
+  const vehicle = owner
+    ? (carName(car) ?? 'Tell her what you drive')
+    : 'Looking to buy'
+
   return (
-    <div className="hub">
+    <div className="hub" data-nav={wide ? 'menu' : 'tabbar'}>
       {wide && (
-        <Rail
+        <NavMenu
           items={items}
           value={current}
           onChange={navigate}
           footer={
-            owner ? (
-              <div className="ph-rail__car">
-                <span className="ph-rail__carLabel">Paired</span>
-                <span className="ph-rail__carName">2015 Toyota Premio</span>
-                <span className="ph-rail__carPlate">UAX 123B</span>
-              </div>
-            ) : (
-              <div className="ph-rail__car">
-                <span className="ph-rail__carLabel">Journey</span>
-                <span className="ph-rail__carName">Looking to buy</span>
-              </div>
-            )
+            <button
+              type="button"
+              className="ph-rail__car"
+              onClick={() => navigate('/account')}
+              title={car?.plate ? `${vehicle} · ${car.plate}` : vehicle}
+            >
+              <span className="ph-rail__carDisc" aria-hidden="true">
+                <IconCar />
+              </span>
+              <span className="ph-rail__carText">
+                <span className="ph-rail__carName">{vehicle}</span>
+                {car?.plate ? <span className="ph-rail__carPlate">{car.plate}</span> : null}
+              </span>
+            </button>
           }
         />
       )}

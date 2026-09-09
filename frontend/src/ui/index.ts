@@ -69,8 +69,8 @@ export type {
 export { SpokenText } from './SpokenText'
 export type { SpokenTextProps } from './SpokenText'
 
-export { AppBar, Rail, TabBar, Tabs } from './Nav'
-export type { AppBarProps, NavItem, NavProps, RailProps, TabsProps } from './Nav'
+export { AppBar, NavMenu, TabBar, Tabs } from './Nav'
+export type { AppBarProps, NavItem, NavProps, NavMenuProps, TabsProps } from './Nav'
 
 export { EmptyState, Meter, Skeleton, Spinner, SplitBar, Steps, Toast } from './Status'
 export type { EmptyStateProps, MeterProps, SplitBarProps, ToastLevel, ToastProps } from './Status'

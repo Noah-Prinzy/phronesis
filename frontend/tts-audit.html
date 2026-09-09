@@ -1,0 +1,33 @@
+<!doctype html><meta charset="utf-8"><title>tts audit</title>
+<pre id="o" style="font:13px monospace;white-space:pre-wrap">…</pre>
+<script type="module">
+const o = document.getElementById('o');
+const log = (s) => { o.textContent += '\n' + s; fetch('http://localhost:3999/', {method:'POST', body:s}).catch(()=>{}); };
+(async () => {
+  try {
+    const t0 = performance.now();
+    const r = await fetch('http://localhost:3001/api/tts', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ text: 'Right, a rattle only under braking usually means the pads are worn. Has it been getting worse, or has it sounded like that for a while?' }),
+    });
+    const blob = await r.blob();
+    log('fetched ' + (blob.size/1024).toFixed(0) + 'kB ' + blob.type + ' in ' + ((performance.now()-t0)/1000).toFixed(2) + 's');
+    const el = new Audio(URL.createObjectURL(blob));
+    el.muted = true;
+    const ticks = [];
+    await new Promise((res) => {
+      let done = false; const fin = (w) => { if(!done){done=true; log('end: '+w); res();} };
+      el.addEventListener('loadedmetadata', () => log('duration=' + el.duration + ' finite=' + Number.isFinite(el.duration)));
+      el.addEventListener('timeupdate', () => { const d = el.duration; if (Number.isFinite(d) && d>0) ticks.push(+(el.currentTime/d).toFixed(3)); });
+      el.addEventListener('ended', () => fin('ended'));
+      el.addEventListener('error', () => fin('error'));
+      el.play().catch(e => { log('PLAY REFUSED ' + e.name); fin('refused'); });
+      setTimeout(() => fin('timeout'), 20000);
+    });
+    const mono = ticks.every((v,i) => i===0 || v >= ticks[i-1]);
+    log('ticks=' + ticks.length + ' first=' + ticks[0] + ' last=' + ticks[ticks.length-1] + ' monotonic=' + mono);
+    log('MATERIALISATION ' + (ticks.length>3 && mono && ticks[ticks.length-1]>0.8 ? 'OK' : 'BROKEN'));
+    log('AUDITDONE');
+  } catch(e) { log('FAIL ' + e.message); }
+})();
+</script>

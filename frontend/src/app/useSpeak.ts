@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { textToSpeech } from '../lib/api'
 import { browserSpeechAvailable, speakInBrowser, type BrowserSpeechHandle } from './browserSpeech'
-import { loadKokoro, shouldAutoLoad, speakWithKokoro } from './kokoro'
 import { useVoice } from './voice'
 
 export interface UseSpeakResult {
@@ -42,18 +41,6 @@ function isAutoplayBlocked(err: unknown): boolean {
  * otherwise. Throwing means neither worked, and the caller drops to the
  * browser's own synthesiser.
  */
-async function synthesise(body: string, signal: AbortSignal): Promise<Blob> {
-  try {
-    const local = await speakWithKokoro(body)
-    if (signal.aborted) throw new Error('aborted')
-    if (local) return local.blob
-  } catch (err) {
-    if (signal.aborted) throw err
-    console.warn('Kokoro failed; falling back to the server voice:', err)
-  }
-  return textToSpeech(body, signal)
-}
-
 /**
  * Plays a line of Phronesis' voice, respecting the "Speak replies aloud"
  * setting. One line plays
@@ -61,16 +48,15 @@ async function synthesise(body: string, signal: AbortSignal): Promise<Blob> {
  * still going — every screen that uses this shares that same barge-in rule
  * rather than each re-deriving it.
  *
- * **Three tiers, best first.**
+ * **Two tiers.**
  *
- * 1. **Kokoro**, in this browser, on the GPU. Her actual voice. Nothing
- *    leaves the device, so there is no quota, no cost and no server to be
- *    down — but it needs WebGPU and a one-time model download.
- * 2. **`/api/tts`**, when Kokoro cannot run here: no WebGPU, or the user is
- *    on a metered connection and we have not spent their data on a model.
- * 3. **The browser's own synthesiser**, when the server cannot be reached
- *    either. It sounds least like her, which is a far smaller loss than
- *    saying nothing.
+ * 1. **`/api/tts`** — Microsoft's neural speech, generated on the server.
+ *    Because the work happens there and the browser only plays an MP3, every
+ *    device and every browser gets the same voice. Running a model in the
+ *    browser instead was tried and abandoned: it needed WebGPU, a 350MB
+ *    download, and still read text rather than saying it.
+ * 2. **The browser's own synthesiser**, when the server cannot be reached at
+ *    all. It sounds least like her, which is a far smaller loss than silence.
  *
  * Each tier is tried and moved past on FAILURE rather than skipped on a
  * guess about availability — the same rule the backend chain follows, and
@@ -114,16 +100,11 @@ export function useSpeak(): UseSpeakResult {
   useEffect(() => stop, [stop])
 
   /**
-   * Fetch the model in the background as soon as we know the voice is wanted,
-   * so the first reply is not waiting on a download. Gated on the connection:
-   * `shouldAutoLoad` is false on a metered or slow one, and on Data Saver,
-   * where quietly spending someone's bundle on a nicer voice is the wrong
-   * trade. Those users get the server voice instead.
+   * Kokoro is the FALLBACK now, so it is no longer downloaded eagerly — 350MB
+   * fetched on the chance the server goes down is not a trade worth making,
+   * least of all for users on mobile data. It loads on first need instead,
+   * which costs the first fallback line a long wait and nobody else anything.
    */
-  useEffect(() => {
-    if (!enabled || !shouldAutoLoad()) return
-    void loadKokoro()
-  }, [enabled])
 
   /**
    * Speak a line with the browser's own synthesiser. Returns false if this
@@ -218,7 +199,7 @@ export function useSpeak(): UseSpeakResult {
 
       void (async () => {
         try {
-          const blob = await synthesise(body, controller.signal)
+          const blob = await textToSpeech(body, controller.signal)
           if (controller.signal.aborted) return
           const url = URL.createObjectURL(blob)
           const audio = new Audio(url)

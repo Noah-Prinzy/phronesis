@@ -154,3 +154,145 @@ export async function health(signal?: AbortSignal): Promise<boolean> {
     return false
   }
 }
+
+// ---------------------------------------------------------------- account
+
+/** What Phronesis knows about the car. Every field optional but the identity. */
+export interface CarProfile {
+  make: string
+  model: string
+  year: number
+  mileage?: number
+  plate?: string
+  fuelType?: string
+  transmission?: string
+}
+
+export interface Preferences {
+  faultAlerts: boolean
+  serviceReminders: boolean
+}
+
+/**
+ * Every account call needs the signed-in user's token, and there is no useful
+ * behaviour without one — an unauthenticated read would just be a 401. So the
+ * token is a required argument rather than something fetched in here, which
+ * keeps this module free of a dependency on the auth context.
+ */
+async function authed<T>(
+  path: string,
+  token: string,
+  init: RequestInit = {},
+): Promise<T> {
+  const res = await fetch(`${BASE}/api${path}`, {
+    ...init,
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+      ...init.headers,
+    },
+  })
+  if (!res.ok) {
+    const body = (await res.json().catch(() => null)) as { error?: string } | null
+    throw new Error(body?.error ?? `Request failed (${res.status})`)
+  }
+  return (await res.json()) as T
+}
+
+export function getCar(token: string, signal?: AbortSignal): Promise<CarProfile | null> {
+  return authed<CarProfile | null>('/car-profile', token, { signal })
+}
+
+export function saveCar(token: string, car: CarProfile): Promise<unknown> {
+  return authed('/car-profile', token, { method: 'POST', body: JSON.stringify(car) })
+}
+
+export function getPreferences(token: string, signal?: AbortSignal): Promise<Preferences> {
+  return authed<Preferences>('/preferences', token, { signal })
+}
+
+export function savePreferences(token: string, patch: Partial<Preferences>): Promise<Preferences> {
+  return authed<Preferences>('/preferences', token, { method: 'PATCH', body: JSON.stringify(patch) })
+}
+
+/**
+ * Downloads the export as a file.
+ *
+ * Not `authed`, because this one is deliberately not JSON-parsed: the point is
+ * to hand the user a file, so the response becomes a blob and a synthetic
+ * click. Revoking the object URL matters — a few megabytes of conversation
+ * history would otherwise sit in memory for the life of the tab.
+ */
+export async function downloadMyData(token: string): Promise<void> {
+  const res = await fetch(`${BASE}/api/account/export`, {
+    headers: { Authorization: `Bearer ${token}` },
+  })
+  if (!res.ok) throw new Error('Could not prepare your data.')
+  const blob = await res.blob()
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `phronesis-${new Date().toISOString().slice(0, 10)}.json`
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
+}
+
+export function deleteAccount(token: string): Promise<{ deleted: boolean }> {
+  return authed<{ deleted: boolean }>('/account', token, { method: 'DELETE' })
+}
+
+// -------------------------------------------------------------- diagnosis
+
+export interface DiagnosisSolution {
+  option: string
+  costLow: number
+  costHigh: number
+}
+
+export interface DiagnosisReport {
+  issue: string
+  rootCause: string
+  category: string
+  urgencyLevel: 'critical' | 'high' | 'medium' | 'low'
+  confidence: number
+  costEstimateLow: number
+  costEstimateHigh: number
+  timeline: string
+  solutions: DiagnosisSolution[]
+  detectedCodes?: string[]
+}
+
+/**
+ * Ask her to work out what is wrong.
+ *
+ * The token is optional and deliberately so: someone who has not signed in
+ * still gets a diagnosis, it simply is not written to their history. Gating
+ * the core of the product behind an account would be the wrong trade for a
+ * driver standing beside a car that is making a noise.
+ */
+export async function runDiagnosis(
+  symptomText: string,
+  car: CarProfile | null,
+  token: string | null,
+  signal?: AbortSignal,
+): Promise<DiagnosisReport> {
+  const res = await fetch(`${BASE}/api/diagnosis`, {
+    method: 'POST',
+    signal,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({
+      symptomText,
+      carProfile: car
+        ? { make: car.make, model: car.model, year: car.year, mileage: car.mileage }
+        : undefined,
+    }),
+  })
+  if (!res.ok) throw new Error(`Diagnosis failed (${res.status})`)
+  const body = (await res.json()) as { report: DiagnosisReport }
+  return body.report
+}

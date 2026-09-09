@@ -1,3 +1,4 @@
+import { useCallback, useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { cx } from './cx'
 
@@ -18,40 +19,142 @@ export interface NavProps<T extends string> {
   className?: string
 }
 
-/* ------------------------------------------------------------------- rail
-   900px and up. A sibling of the content, never an overlay, so no page has
-   to reserve space for it or guess its width. */
+/* --------------------------------------------------------------- flyout
+   900px and up. Everything collapses into ONE control: closed there is no
+   rail at all and the page has the whole width; open, a menu floats OVER
+   the page rather than beside it.
 
-export interface RailProps<T extends string> extends NavProps<T> {
-  /** Pinned to the bottom — the vehicle readout on the hub. */
+   Two things that look like contradictions and are not.
+
+   The menu has a background where the old rail deliberately had none. The
+   rail was permanent, so a ground of its own made it a wall down the middle
+   of the app; this is temporary and floats above the page, so it has to read
+   as an object someone opened.
+
+   The opener carries the page name rather than being a bare hamburger.
+   With no permanent rail this is the only thing left saying which of five
+   places you are standing in, and removing that with nothing in its place
+   is how an app stops being navigable.
+
+   The cost, stated plainly because it is real: every navigation is two
+   clicks instead of one, forever. */
+
+export interface NavMenuProps<T extends string> extends NavProps<T> {
+  /** Shown below a rule — not a destination, so it sits apart. */
   footer?: ReactNode
 }
 
-export function Rail<T extends string>({
+export function NavMenu<T extends string>({
   items,
   value,
   onChange,
   footer,
   className,
-}: RailProps<T>) {
-  return (
-    <nav className={cx('ph-rail', className)} aria-label="Main">
-      {items.map((item) => (
-        <button
-          key={item.value}
-          type="button"
-          className="ph-navitem"
-          aria-current={item.value === value ? 'page' : undefined}
-          onClick={() => onChange(item.value)}
-        >
-          {item.icon}
-          <span>{item.label}</span>
-        </button>
-      ))}
+}: NavMenuProps<T>) {
+  const [open, setOpen] = useState(false)
+  const openerRef = useRef<HTMLButtonElement | null>(null)
+  const menuRef = useRef<HTMLDivElement | null>(null)
 
-      <div className="ph-rail__spacer" />
-      {footer}
-    </nav>
+  const here = items.find((i) => i.value === value)
+
+  const close = useCallback((restoreFocus = true) => {
+    setOpen(false)
+    // Focus has to come back to what opened the menu, or a keyboard user is
+    // dropped at the top of the document every time they navigate.
+    if (restoreFocus) openerRef.current?.focus()
+  }, [])
+
+  useEffect(() => {
+    if (!open) return
+
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation()
+        close()
+      }
+    }
+    const onDown = (e: PointerEvent) => {
+      const t = e.target as Node
+      if (menuRef.current?.contains(t) || openerRef.current?.contains(t)) return
+      close(false)
+    }
+
+    document.addEventListener('keydown', onKey)
+    document.addEventListener('pointerdown', onDown)
+    // Move focus into the menu so the first Tab lands inside it rather than
+    // somewhere behind the scrim.
+    menuRef.current?.querySelector<HTMLElement>('button')?.focus()
+
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      document.removeEventListener('pointerdown', onDown)
+    }
+  }, [open, close])
+
+  return (
+    <div className={cx('ph-nav', className)}>
+      <button
+        ref={openerRef}
+        type="button"
+        className="ph-nav__opener"
+        aria-expanded={open}
+        aria-haspopup="menu"
+        onClick={() => setOpen((v) => !v)}
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+          <path d="M4 7h16" />
+          <path d="M4 12h16" />
+          <path d="M4 17h16" />
+        </svg>
+        <span>{here?.label ?? 'Menu'}</span>
+      </button>
+
+      {open ? (
+        <>
+          <div className="ph-nav__scrim" aria-hidden="true" />
+          <div ref={menuRef} className="ph-nav__menu" role="menu" aria-label="Main">
+            <div className="ph-nav__menuhead">
+              <button
+                type="button"
+                className="ph-nav__close"
+                onClick={() => close()}
+                aria-label="Close menu"
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
+                  <path d="M6 6l12 12" />
+                  <path d="M18 6L6 18" />
+                </svg>
+              </button>
+              <span>Go to</span>
+            </div>
+
+            {items.map((item) => (
+              <button
+                key={item.value}
+                type="button"
+                role="menuitem"
+                className="ph-navitem"
+                aria-current={item.value === value ? 'page' : undefined}
+                onClick={() => {
+                  onChange(item.value)
+                  close()
+                }}
+              >
+                {item.icon}
+                <span>{item.label}</span>
+              </button>
+            ))}
+
+            {footer ? (
+              <>
+                <div className="ph-nav__rule" />
+                <div onClick={() => close(false)}>{footer}</div>
+              </>
+            ) : null}
+          </div>
+        </>
+      ) : null}
+    </div>
   )
 }
 
