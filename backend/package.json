@@ -7,7 +7,8 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "setup:piper": "node scripts/setup-piper.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.32.1",

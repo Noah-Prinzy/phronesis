@@ -2,3 +2,6 @@ node_modules
 dist
 .env
 *.log
+
+# Piper binary + voice model (~80MB), fetched by npm run setup:piper
+vendor/
