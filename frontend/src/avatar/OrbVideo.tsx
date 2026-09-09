@@ -1,25 +1,21 @@
 import { useEffect, useRef } from 'react'
 import { specAt } from './orbSpec'
-import type { OrbState } from './orbSpec'
-
-export interface OrbRendererProps {
-  state: OrbState
-  size: number
-  level?: number
-  levelRef?: React.RefObject<number>
-  /** The wrapper. Renderers write their `--orb-*` properties here. */
-  hostRef: React.RefObject<HTMLElement | null>
-}
+import type { OrbRendererProps } from './orbSpec'
 
 /**
- * The shipped orb: a pre-rendered hex-shell sphere, played as a seamless
- * 4.5s loop and composited additively.
+ * The shipped orb: the original hex-shell render, played as a seamless 4.5s
+ * loop and composited additively.
  *
- * It looks exactly like the reference because it *is* the reference — see
- * design/avatar-v2/README.md for how the loop was cut. The limit is that a
- * recording cannot change what it is doing, so of the state table it can only
- * honour speed, brightness, size and glow. The generative orb in OrbThree
- * honours the rest.
+ * See design/avatar-v2/README.md for how the loop was cut and what its
+ * palette is — the app's accent colour is sampled from it.
+ *
+ * Its limit is real: a recording cannot change what it is *doing*, so of the
+ * state table it honours only speed, brightness, size and glow. The band's
+ * width and the plates' lift are baked into the asset.
+ *
+ * NOTE: this clip is placeholder artwork of unknown provenance and is not
+ * cleared for release. It needs replacing with something owned or licensed
+ * before the app ships.
  */
 export function OrbVideo({ state, size, level = 0, levelRef, hostRef }: OrbRendererProps) {
   const videoRef = useRef<HTMLVideoElement>(null)
@@ -51,7 +47,6 @@ export function OrbVideo({ state, size, level = 0, levelRef, hostRef }: OrbRende
       }
       if (video.readyState >= 1) park()
       else video.addEventListener('loadedmetadata', park, { once: true })
-      // Still paint the resting state so it is not left at the CSS defaults.
       const spec = specAt(state, state, Number.POSITIVE_INFINITY)
       host.style.setProperty('--orb-bright', spec.peak.toFixed(3))
       host.style.setProperty('--orb-scale', spec.scale.toFixed(3))

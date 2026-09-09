@@ -320,3 +320,25 @@
   color: var(--ink-3);
   padding-top: 0.15rem;
 }
+
+/* The avatar bench: every state at once, which is the only way to judge
+   whether they actually read as different. */
+.orbrow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.6rem;
+}
+.orbrow__cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.7rem;
+}
+.orbrow__label {
+  font-family: var(--display);
+  font-size: var(--label-size);
+  font-weight: 600;
+  letter-spacing: var(--label-track);
+  text-transform: uppercase;
+  color: var(--ink-3);
+}

@@ -39,6 +39,8 @@ import {
 } from '../ui'
 import type { NavItem, Severity } from '../ui'
 import { IconAccount, IconCompare, IconDiagnose, IconFix, IconHome, IconMap, IconSearch } from '../icons'
+import { Halo } from '../avatar/Halo'
+import type { HaloState } from '../avatar/Halo'
 import { Principles } from './Principles'
 import '../styles/gallery.css'
 
@@ -63,6 +65,7 @@ const PRE_CAR: Array<NavItem<NavKey>> = [
 ]
 
 const SEVERITIES: Severity[] = ['critical', 'high', 'warning', 'routine', 'clear']
+const ORB_STATES: HaloState[] = ['idle', 'listening', 'thinking', 'responding']
 
 function Bench({
   id,
@@ -126,6 +129,7 @@ export function StyleGuide() {
             <a href="#display">Display</a>
             <a href="#nav">Nav</a>
             <a href="#status">Status</a>
+            <a href="#avatar">Avatar</a>
           </nav>
         </div>
       </header>
@@ -465,6 +469,25 @@ export function StyleGuide() {
               <Toast level="critical" title="Coolant temperature critical" body="Pull over when it is safe to do so." />
               <Toast level="accent" title="Premio dropped to 16.8M" body="Below your 17M alert." />
               <Toast title="Scan complete" body="Two findings." />
+            </div>
+          </Case>
+        </Bench>
+
+        {/* ---------------------------------------------------------- avatar */}
+        <Bench
+          id="avatar"
+          n="07"
+          title="Avatar"
+          note="Phronesis' four states, side by side. They are separated on several axes — sweep speed, band width, how far the plates float off the shell, brightness and bloom — because brightness alone left listening and responding indistinguishable, which is the one distinction a voice interface cannot afford to blur."
+        >
+          <Case label="states">
+            <div className="orbrow">
+              {ORB_STATES.map((st) => (
+                <div key={st} className="orbrow__cell">
+                  <Halo size={128} state={st} />
+                  <span className="orbrow__label">{st}</span>
+                </div>
+              ))}
             </div>
           </Case>
         </Bench>

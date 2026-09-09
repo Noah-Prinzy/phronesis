@@ -61,9 +61,9 @@ const CHECKS: Check[] = [
     heuristic: 'Perceivable · WCAG 1.4.3',
     claim: 'The dimmest text still clears AA',
     detail:
-      'Hierarchy here is brightness, which makes the bottom of the ramp the thing most likely to fail. --ink-3 is measured against --surface, the darkest plane text is ever set on.',
+      'Measured against --ground, not against glass. Glass is whiter than the thing it sits on, so measuring there flatters every value — and labels sit directly on the ground.',
     measure: () => {
-      const r = contrast(resolve('--ink-3'), resolve('--surface'))
+      const r = contrast(resolve('--ink-3'), resolve('--ground'))
       return { pass: r >= 4.5, value: `${r}:1 · needs 4.5` }
     },
   },
@@ -73,7 +73,7 @@ const CHECKS: Check[] = [
     claim: 'Every step of the ink ramp clears AA',
     detail: 'ink, ink-2 and ink-3 are three distinct levels, and all three are readable.',
     measure: () => {
-      const bg = resolve('--surface')
+      const bg = resolve('--ground')
       const rs = ['--ink', '--ink-2', '--ink-3'].map((t) => contrast(resolve(t), bg))
       return { pass: rs.every((r) => r >= 4.5), value: rs.map((r) => `${r}:1`).join(' · ') }
     },
@@ -85,7 +85,7 @@ const CHECKS: Check[] = [
     detail:
       'The one place colour carries meaning on its own has to be readable first. It was 4.37:1 and failed.',
     measure: () => {
-      const r = contrast(resolve('--critical'), resolve('--surface'))
+      const r = contrast(resolve('--critical'), resolve('--ground'))
       return { pass: r >= 4.5, value: `${r}:1 · needs 4.5` }
     },
   },

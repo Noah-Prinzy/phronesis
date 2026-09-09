@@ -29,7 +29,7 @@ export type Journey = 'pre-car' | 'post-car';
  *    mechanic asks you two questions first. So the instruction is not "be
  *    concise" — it is *ask before you conclude*, one question at a time.
  * 2. **Writing rather than speaking.** Every reply here is read aloud by
- *    ElevenLabs. Markdown, bullets and headings are audible garbage, and a
+ *    Kokoro. Markdown, bullets and headings are audible garbage, and a
  *    long paragraph is worse aloud than it looks on screen.
  */
 const BASE_PERSONA = `You are Phronesis — a car diagnostic assistant for drivers in Uganda and across East Africa.

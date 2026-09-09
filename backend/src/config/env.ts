@@ -20,14 +20,6 @@ const envSchema = z.object({
   // can voice), but the endpoint is ready for when local-language support
   // becomes a real feature. Get a key at https://sunbird.ai.
   SUNBIRD_API_KEY: z.string().optional().default(''),
-  // Phronesis' voice. Preferred over Gemini's native TTS in /api/tts when
-  // set — see elevenlabs.service.ts. Get a key at https://elevenlabs.io.
-  ELEVENLABS_API_KEY: z.string().optional().default(''),
-  // Which ElevenLabs voice to speak with. Blank falls back to "Rachel", a
-  // premade voice — see elevenlabs.service.ts. zod's `.default()` only fills
-  // in an *absent* key, and `ELEVENLABS_VOICE_ID=` in .env parses as `''`,
-  // so the actual fallback lives there rather than here.
-  ELEVENLABS_VOICE_ID: z.string().optional().default(''),
   PORT: z.coerce.number().int().positive().default(3001),
   CORS_ORIGIN: z.string().default('http://localhost:5173'),
   FIREBASE_PROJECT_ID: z.string().optional().default('phronesis-51bc9'),

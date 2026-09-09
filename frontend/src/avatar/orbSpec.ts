@@ -131,3 +131,13 @@ export const ORB_RAMP: Array<{ at: number; hex: number }> = [
   { at: 0.94, hex: 0x8ad7fb }, // band peak
   { at: 1.0, hex: 0xabf3fe }, // peak max
 ]
+
+/** What every orb renderer is handed. */
+export interface OrbRendererProps {
+  state: OrbState
+  size: number
+  level?: number
+  levelRef?: React.RefObject<number>
+  /** The wrapper. Renderers write their `--orb-*` properties here. */
+  hostRef: React.RefObject<HTMLElement | null>
+}
