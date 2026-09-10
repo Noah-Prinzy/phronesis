@@ -13,7 +13,7 @@ import {
   type Firestore,
 } from 'firebase/firestore'
 import { getFirebaseApp } from './firebase'
-import type { CarProfile, Preferences } from './api'
+import type { CarProfile, DiagnosisReport, Preferences } from './api'
 
 /**
  * The user's own data, read and written straight from the browser.
@@ -131,6 +131,52 @@ export function toAvatarDataUrl(file: File, size = 256): Promise<string> {
     })
     img.src = url
   })
+}
+
+/* -------------------------------------------------------- the diagnoses */
+
+export interface StoredDiagnosis extends DiagnosisReport {
+  userId: string
+  symptom: string
+  at: string
+}
+
+/**
+ * Every report she produces, kept.
+ *
+ * Nothing saved them before — not the Express route in production, because
+ * production does not run it, and not the page. So there was no history, and
+ * therefore nothing for an alert to fire from: "tell me when something needs
+ * attention" had no record of anything needing attention.
+ *
+ * Written with the id generated here rather than by the server, so the write
+ * is one round trip and the caller has the id immediately.
+ */
+export async function storeDiagnosis(
+  uid: string,
+  report: DiagnosisReport,
+  symptom: string,
+): Promise<void> {
+  const d = db()
+  if (!d) return
+  const id = `${uid}-${Date.now()}`
+  await setDoc(doc(d, 'diagnoses', id), {
+    ...report,
+    diagnosisId: id,
+    userId: uid,
+    symptom,
+    at: new Date().toISOString(),
+    createdAt: serverTimestamp(),
+  })
+}
+
+export async function loadDiagnoses(uid: string): Promise<StoredDiagnosis[]> {
+  const d = db()
+  if (!d) return []
+  const snap = await getDocs(query(collection(d, 'diagnoses'), where('userId', '==', uid)))
+  return snap.docs
+    .map((s) => s.data() as StoredDiagnosis)
+    .toSorted((a, b) => (b.at ?? '').localeCompare(a.at ?? ''))
 }
 
 /* -------------------------------------------------------------- the exit */

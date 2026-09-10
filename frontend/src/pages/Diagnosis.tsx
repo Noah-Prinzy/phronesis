@@ -4,6 +4,9 @@ import { Button, EmptyState, TextArea } from '../ui'
 import { CarHologram, type CarPart } from '../diagnosis/CarHologram'
 import { carName, useCar } from '../app/car'
 import { useAuth } from '../app/auth'
+import { useAlerts } from '../app/alerts'
+import { storeDiagnosis } from '../lib/userdata'
+import { sendAlert } from '../lib/alerts'
 import { money } from '../lib/money'
 import { runDiagnosis, type DiagnosisReport } from '../lib/api'
 
@@ -50,18 +53,19 @@ const URGENCY_WORD: Record<string, string> = {
 export function Diagnosis() {
   const navigate = useNavigate()
   const { car } = useCar()
-  const { getToken } = useAuth()
+  const { getToken, user } = useAuth()
+  const { live } = useAlerts()
 
   const [symptom, setSymptom] = useState('')
   const [report, setReport] = useState<DiagnosisReport | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const live = useRef(true)
+  const alive = useRef(true)
   useEffect(() => {
-    live.current = true
+    alive.current = true
     return () => {
-      live.current = false
+      alive.current = false
     }
   }, [])
 
@@ -75,11 +79,27 @@ export function Diagnosis() {
       // it simply is not saved to their history.
       const token = await getToken().catch(() => null)
       const result = await runDiagnosis(text, car, token)
-      if (live.current) setReport(result)
+      if (!alive.current) return
+      setReport(result)
+
+      // Keep it, so there is a history — and so an alert has something to
+      // fire from. Failing to save must not lose the diagnosis the user is
+      // already looking at, so this never throws upward.
+      if (user) void storeDiagnosis(user.uid, result, text).catch(() => {})
+
+      // Tell them, if they asked to be told and it is worth telling.
+      if (live('faultAlerts') && (result.urgencyLevel === 'critical' || result.urgencyLevel === 'high')) {
+        sendAlert({
+          key: `fault:${result.issue}`,
+          title: result.urgencyLevel === 'critical' ? 'This needs attention now' : 'Worth fixing soon',
+          body: `${result.issue} — ${result.timeline.toLowerCase()}.`,
+          href: '/diagnosis',
+        })
+      }
     } catch {
-      if (live.current) setError('She could not work that one out just now. Try again in a moment.')
+      if (alive.current) setError('She could not work that one out just now. Try again in a moment.')
     } finally {
-      if (live.current) setBusy(false)
+      if (alive.current) setBusy(false)
     }
   }, [symptom, busy, getToken, car])
 

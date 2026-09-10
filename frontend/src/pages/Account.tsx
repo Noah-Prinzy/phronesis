@@ -2,18 +2,18 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button, Dialog, Segmented, Switch, TextInput, Toast } from '../ui'
 import { useAuth } from '../app/auth'
+import { useAlerts } from '../app/alerts'
 import { useCar } from '../app/car'
 import { useJourney } from '../app/journey'
 import { useVoice } from '../app/voice'
 import type { CarProfile, Preferences } from '../lib/api'
+import { SERVICE_INTERVAL_KM, serviceDue } from '../lib/alerts'
 import {
   deleteEverything,
   downloadJson,
   exportEverything,
   loadAvatar,
-  loadPreferences,
   storeAvatar,
-  storePreferences,
   toAvatarDataUrl,
 } from '../lib/userdata'
 
@@ -42,8 +42,8 @@ export function Account() {
   // Shared with the navigation rail, so saving a car renames it there too
   // rather than only here.
   const { car, save: saveCarProfile } = useCar()
+  const { prefs, permission, setPreference } = useAlerts()
 
-  const [prefs, setPrefs] = useState<Preferences | null>(null)
   const [photo, setPhoto] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement | null>(null)
   const [toast, setToast] = useState<string | null>(null)
@@ -75,36 +75,27 @@ export function Account() {
   useEffect(() => {
     if (status !== 'signedIn' || !user) return
     void (async () => {
-      // Settled independently: a missing portrait should not also blank the
-      // alert switches.
-      const [p, a] = await Promise.allSettled([loadPreferences(user.uid), loadAvatar(user.uid)])
-      if (!live.current) return
-      if (p.status === 'fulfilled') setPrefs(p.value)
-      if (a.status === 'fulfilled') setPhoto(a.value)
+      // Preferences are owned by AlertsProvider, which needs them for the
+      // service check too; only the portrait is loaded here.
+      const a = await loadAvatar(user.uid).catch(() => null)
+      if (live.current) setPhoto(a)
     })()
   }, [status, user])
 
   /**
-   * Move the switch immediately, then persist. A toggle that waits for a round
-   * trip feels broken even when it works; if the write fails the switch goes
-   * back and says so, which is the only honest way to be optimistic.
+   * Move the switch immediately, then persist. A toggle that waits for a
+   * round trip feels broken even when it works; if the write fails the switch
+   * goes back and says so, which is the only honest way to be optimistic.
    */
   const patchPrefs = useCallback(
     async (patch: Partial<Preferences>) => {
-      if (!prefs) return
-      const before = prefs
-      setPrefs({ ...prefs, ...patch })
       try {
-        if (!user) throw new Error('Not signed in.')
-        const saved = await storePreferences(user.uid, patch)
-        if (live.current) setPrefs(saved)
+        await setPreference(patch)
       } catch {
-        if (!live.current) return
-        setPrefs(before)
         setToast('That did not save. Check your connection and try again.')
       }
     },
-    [prefs, user],
+    [setPreference],
   )
 
   const onSignOut = useCallback(async () => {
@@ -125,6 +116,21 @@ export function Account() {
       </main>
     )
   }
+
+  /**
+   * The setting promises mileage rather than a calendar, so it has to say
+   * plainly when it cannot keep that promise. A reminder that silently never
+   * fires because a number is missing is worse than one that is switched off.
+   */
+  const check = serviceDue(car?.mileage, car?.lastServiceKm)
+  const serviceLine =
+    check.reason === 'no-mileage'
+      ? 'Add your mileage to your car and she can time these properly.'
+      : check.reason === 'no-last-service'
+        ? 'Add the reading at your last service and she will count from there.'
+        : check.due
+          ? `Due now — ${(car?.mileage ?? 0).toLocaleString()} km, ${check.overdueKm.toLocaleString()} km over.`
+          : `Next at ${(((car?.lastServiceKm ?? 0) + SERVICE_INTERVAL_KM)).toLocaleString()} km.`
 
   const name = user?.displayName?.trim() || 'there'
   const initial = (user?.displayName?.trim()?.[0] ?? user?.email?.[0] ?? '?').toUpperCase()
@@ -264,6 +270,23 @@ export function Account() {
         <section className="acct__group">
           <h2 className="label">Alerts</h2>
           <div className="acct__card">
+            {permission === 'unsupported' || permission === 'denied' ? (
+              <div className="acct__row acct__note">
+                <span className="acct__rowmain">
+                  <span className="acct__rowtitle">
+                    {permission === 'denied'
+                      ? 'Notifications are blocked in this browser'
+                      : 'This browser cannot show notifications'}
+                  </span>
+                  <span className="acct__sub">
+                    {permission === 'denied'
+                      ? 'The switches below will save, but nothing will arrive until you allow notifications for this site in your browser settings.'
+                      : 'The switches below will save and follow you to a browser that can.'}
+                  </span>
+                </span>
+              </div>
+            ) : null}
+
             <div className="acct__row">
               <div className="acct__rowmain">
                 <span className="acct__rowtitle">Tell me when something needs attention</span>
@@ -278,10 +301,11 @@ export function Account() {
                 label="Tell me when something needs attention"
               />
             </div>
+
             <div className="acct__row">
               <div className="acct__rowmain">
                 <span className="acct__rowtitle">Service reminders</span>
-                <span className="acct__sub">Based on your mileage, not on a calendar.</span>
+                <span className="acct__sub">{serviceLine}</span>
               </div>
               <Switch
                 checked={prefs?.serviceReminders ?? false}
@@ -289,6 +313,15 @@ export function Account() {
                 disabled={!prefs}
                 label="Service reminders"
               />
+            </div>
+
+            <div className="acct__row acct__note">
+              <span className="acct__rowmain">
+                <span className="acct__sub">
+                  These arrive while Phronesis is open in a tab. Reaching you with the app
+                  closed needs push notifications, which are not set up yet.
+                </span>
+              </span>
             </div>
           </div>
         </section>
@@ -514,6 +547,7 @@ function CarDialog({
   const [year, setYear] = useState('')
   const [plate, setPlate] = useState('')
   const [mileage, setMileage] = useState('')
+  const [lastService, setLastService] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -524,6 +558,7 @@ function CarDialog({
     setYear(current?.year ? String(current.year) : '')
     setPlate(current?.plate ?? '')
     setMileage(current?.mileage ? String(current.mileage) : '')
+    setLastService(current?.lastServiceKm ? String(current.lastServiceKm) : '')
     setError(null)
   }, [open, current])
 
@@ -541,12 +576,22 @@ function CarDialog({
     }
     setBusy(true)
     try {
+      const km = mileage.trim() ? Number(mileage.replace(/[^\d]/g, '')) : undefined
+      const serviced = lastService.trim() ? Number(lastService.replace(/[^\d]/g, '')) : undefined
+      // A last-service reading above the odometer is a typo, and accepting it
+      // would silently push the next reminder years away.
+      if (km !== undefined && serviced !== undefined && serviced > km) {
+        setError('The last service reading cannot be higher than the mileage.')
+        setBusy(false)
+        return
+      }
       await onSave({
         make: make.trim(),
         model: model.trim(),
         year: y,
         plate: plate.trim() || undefined,
-        mileage: mileage.trim() ? Number(mileage.replace(/[^\d]/g, '')) : undefined,
+        mileage: km,
+        lastServiceKm: serviced,
       })
     } catch {
       setError('That did not save. Try again in a moment.')
@@ -590,11 +635,19 @@ function CarDialog({
         />
         <TextInput
           label="Mileage"
-          hint="Optional. In kilometres — it is how she times service reminders."
+          hint="Optional. In kilometres."
           value={mileage}
           inputMode="numeric"
           placeholder="148320"
           onChange={(e) => setMileage(e.target.value.replace(/[^\d]/g, ''))}
+        />
+        <TextInput
+          label="Kilometres at last service"
+          hint="Optional. Service reminders are counted from here, not from a date."
+          value={lastService}
+          inputMode="numeric"
+          placeholder="143000"
+          onChange={(e) => setLastService(e.target.value.replace(/[^\d]/g, ''))}
         />
       </div>
       {error ? <p className="acct__formError">{error}</p> : null}

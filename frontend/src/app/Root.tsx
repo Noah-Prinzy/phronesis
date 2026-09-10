@@ -4,6 +4,7 @@ import { AuthProvider } from './auth'
 import { VoiceProvider } from './voice'
 import { CarProvider } from './car'
 import { Surface } from './Surface'
+import { AlertsProvider } from './alerts'
 import { FocusProvider } from './focus'
 import { useRouteAnnounce } from './useRouteAnnounce'
 import '../styles/tokens.css'
@@ -24,6 +25,7 @@ export function Root() {
       <JourneyProvider>
         <VoiceProvider>
           <CarProvider>
+          <AlertsProvider>
           <FocusProvider>
             {/* First tab stop on every page. Keyboard users should not have to
                 walk the whole navigation to reach the content. */}
@@ -32,6 +34,7 @@ export function Root() {
             </a>
             <Outlet />
           </FocusProvider>
+          </AlertsProvider>
           </CarProvider>
         </VoiceProvider>
       </JourneyProvider>

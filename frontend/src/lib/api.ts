@@ -163,6 +163,10 @@ export interface CarProfile {
   model: string
   year: number
   mileage?: number
+  /** The odometer reading at the last service. Service reminders are
+      measured from this, because the setting promises mileage rather than
+      a calendar — and without it there is no interval to measure. */
+  lastServiceKm?: number
   plate?: string
   fuelType?: string
   transmission?: string

@@ -1291,3 +1291,12 @@
     }
   }
 }
+
+/* A row that explains rather than offers — no control, so it reads as a
+   note in the card instead of a setting someone failed to find. */
+.acct__note {
+  background: var(--surface);
+}
+.acct__note .acct__rowmain {
+  gap: 0.15rem;
+}
