@@ -13,6 +13,7 @@
     "@anthropic-ai/sdk": "^0.124.0",
     "@google/genai": "^2.21.0",
     "firebase": "^12.18.0",
+    "leaflet": "^1.9.4",
     "msedge-tts": "^2.0.7",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
@@ -22,6 +23,7 @@
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",
+    "@types/leaflet": "^1.9.22",
     "@types/node": "^22.20.2",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",

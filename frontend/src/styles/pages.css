@@ -1555,3 +1555,317 @@
   color: var(--ink-2);
   font-weight: 600;
 }
+
+/* ========================================================== map
+   Full bleed. A map inside a card is a map you cannot use, so the
+   page loses its padding entirely and everything else floats over
+   it — the list pinned left, the selected place right, so the two
+   can never overlap however long either grows. */
+
+.page--bleed {
+  position: relative;
+  padding: 0;
+  overflow: hidden;
+}
+
+.mv {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: #0e1013;
+}
+.mv--placeholder {
+  background: #0e1013;
+}
+
+/* Leaflet paints its own chrome; these bring it onto the app's ground. */
+/* Leaflet ships `.leaflet-container { background: #ddd }`, and its stylesheet
+   is imported from the component so the bundler orders it AFTER this file —
+   it wins on equal specificity and the map flashes light grey before the
+   tiles arrive. Scoping to the page beats it without !important. */
+.page--bleed .leaflet-container,
+.leaflet-container {
+  background: #0e1013;
+  font-family: var(--ui);
+}
+
+/* Esri's "Dark Gray" canvas is a mid-grey in practice, which against this
+   ground reads as a slab laid on the page rather than part of it. Pulling
+   the TILE PANE down — not the whole map — darkens the basemap while
+   leaving the markers, the labels and the controls at full strength. */
+.leaflet-tile-pane {
+  filter: brightness(0.42) saturate(0.75) contrast(1.15);
+}
+.leaflet-control-attribution {
+  background: rgb(10 10 11 / 0.75) !important;
+  color: var(--ink-3) !important;
+  font-size: 0.62rem !important;
+}
+.leaflet-control-attribution a {
+  color: var(--ink-2) !important;
+}
+.leaflet-bar a {
+  background: rgb(20 20 21 / 0.92) !important;
+  color: var(--ink) !important;
+  border-color: var(--glass-border) !important;
+}
+.leaflet-bar a:hover {
+  background: var(--surface-3) !important;
+}
+
+/* markers */
+.mv__me span {
+  display: block;
+  width: 13px;
+  height: 13px;
+  margin: 2px;
+  border-radius: 50%;
+  background: var(--clear);
+  border: 2px solid var(--ground);
+  box-shadow: 0 0 0 7px rgb(90 209 154 / 0.16);
+}
+.mv__pin i {
+  display: block;
+  width: 11px;
+  height: 11px;
+  margin: 2px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--ground);
+  box-shadow: 0 0 0 1px rgb(111 180 238 / 0.35), var(--lift-2);
+}
+.mv__pin.is-on i {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  background: var(--ink);
+  box-shadow: 0 0 0 6px rgb(111 180 238 / 0.22), var(--lift-3);
+}
+.mv__pin b {
+  position: absolute;
+  left: 50%;
+  top: -30px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: var(--r-pill);
+  color: var(--ink);
+  background: rgb(18 18 19 / 0.94);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--lift-3);
+}
+
+/* ---------------------------------------------------------- the list
+   Starts below the floating nav pill and never under it. Its own
+   scroll, so a long result set cannot push the footer off screen. */
+.mp__panel {
+  position: absolute;
+  left: 1.15rem;
+  top: 4.4rem;
+  bottom: 1.15rem;
+  width: 20.5rem;
+  max-width: calc(100vw - 2.3rem);
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.85rem 0.85rem 0.75rem;
+  border-radius: var(--r-lg);
+  background: rgb(16 16 17 / 0.9);
+  -webkit-backdrop-filter: blur(22px) saturate(1.4);
+  backdrop-filter: blur(22px) saturate(1.4);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--sheen), var(--lift-5);
+}
+
+.mp__why {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex: none;
+  padding: 0.55rem 0.7rem;
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  border: 1px solid var(--hairline);
+}
+.mp__whydot {
+  width: 6px;
+  height: 6px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--high);
+}
+.mp__whytext {
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--ink-2);
+}
+.mp__whytext b {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.mp__count {
+  flex: none;
+}
+
+.mp__list {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  margin-inline: -0.25rem;
+  padding-inline: 0.25rem;
+}
+.mp__msg {
+  margin: 0.5rem 0.25rem;
+  font-size: 0.8rem;
+  color: var(--ink-3);
+  line-height: 1.5;
+}
+
+.mp__shop {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  font-family: var(--ui);
+  color: var(--ink);
+  transition: background var(--t-hover) var(--ease);
+}
+.mp__shop:hover {
+  background: var(--surface-2);
+}
+.mp__shop[data-on] {
+  background: var(--surface-3);
+  border-color: var(--glass-border);
+}
+.mp__shopmain {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.mp__shopname {
+  font-size: 0.85rem;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mp__shopkind {
+  font-size: 0.7rem;
+  color: var(--ink-3);
+}
+.mp__shopdist {
+  flex: none;
+  font-size: 0.72rem;
+  color: var(--ink-3);
+}
+
+.mp__foot {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+.mp__foot .ph-btn {
+  width: 100%;
+}
+.mp__source {
+  font-size: 0.62rem;
+  line-height: 1.5;
+  color: var(--ink-3);
+  text-align: center;
+}
+
+/* ------------------------------------------------------ the chosen one */
+.mp__card {
+  position: absolute;
+  right: 1.15rem;
+  top: 4.4rem;
+  width: 17rem;
+  max-width: calc(100vw - 2.3rem);
+  z-index: 12;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding: 0.85rem 0.95rem 0.95rem;
+  border-radius: var(--r-lg);
+  background: rgb(18 18 19 / 0.94);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--sheen), var(--lift-5);
+}
+.mp__cardname {
+  margin: 0;
+  font-family: var(--display);
+  font-size: 1rem;
+  font-weight: 600;
+  text-wrap: balance;
+}
+.mp__cardrow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.6rem;
+  font-size: 0.78rem;
+}
+.mp__cardrow > span:first-child {
+  color: var(--ink-3);
+}
+.mp__known {
+  margin: 0.15rem 0 0;
+  padding: 0.5rem 0.6rem;
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  font-size: 0.72rem;
+  line-height: 1.5;
+  color: var(--ink-3);
+}
+.mp__go {
+  margin-top: 0.25rem;
+  width: 100%;
+  text-decoration: none;
+  justify-content: center;
+}
+
+.mp__empty {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+/* On a phone the two panels cannot both float. The list becomes a sheet
+   over the bottom half and the selected card sits above it. */
+@media (max-width: 46rem) {
+  .mp__panel {
+    left: 0.6rem;
+    right: 0.6rem;
+    width: auto;
+    top: auto;
+    height: 46%;
+    bottom: calc(var(--tabbar-h) + 0.6rem);
+  }
+  .mp__card {
+    left: 0.6rem;
+    right: 0.6rem;
+    width: auto;
+    top: 4.4rem;
+  }
+}
