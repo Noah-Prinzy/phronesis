@@ -188,13 +188,18 @@
   .page {
     padding: 1.15rem 2rem 1.6rem;
   }
-  /* The title sits beside the pill rather than under it, so the first row
-     of every page is one line rather than two. */
+  /* Only the pill needs clearing now that the title is hidden — the meta
+     line beside it (the car, the date) is what lands here. A head with
+     nothing in it collapses to the pill's height rather than leaving a
+     band of empty rule across the top. */
   .page__head {
     padding-left: 10.5rem;
     min-height: 2.533rem;
     align-items: center;
   }
+  /* The head keeps the pill's height even when it now looks empty. The
+     pill is FIXED, so it does not occupy any space of its own — collapsing
+     this row let the first line of every page slide underneath it. */
   /* Content below the head is centred in the full width — the whole point
      of reclaiming it. */
   .page__body {
@@ -211,12 +216,33 @@
   padding-bottom: 0.7rem;
   border-bottom: 1px solid var(--hairline);
 }
+/* The <h1> stays in the DOM — it is the page's accessible name and the
+   thing a screen reader announces on navigation — but on desktop it is
+   hidden, because the navigation pill already says exactly the same word
+   two inches to its left. Two labels for one page is noise.
+
+   Below 900px there is no pill (the tab bar carries the labels instead),
+   so it becomes visible again. */
 .page__title {
   margin: 0;
   font-family: var(--display);
   font-size: 1.15rem;
   font-weight: 600;
   letter-spacing: -0.01em;
+}
+
+@media (min-width: 900px) {
+  .page__title {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+  }
 }
 .page__body {
   flex: 1;

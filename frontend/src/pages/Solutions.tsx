@@ -63,6 +63,7 @@ export function Solutions() {
 
   const [report, setReport] = useState<StoredDiagnosis | null>(null)
   const [loading, setLoading] = useState(true)
+  const [failed, setFailed] = useState<'denied' | 'slow' | 'error' | null>(null)
   const alive = useRef(true)
 
   useEffect(() => {
@@ -78,16 +79,47 @@ export function Solutions() {
       setLoading(false)
       return
     }
+    /**
+     * Never hang.
+     *
+     * The first version awaited Firestore and swallowed the error, so a read
+     * that never settled left "Looking up what she found…" on screen forever
+     * — which is exactly what happened. Firestore's SDK waits on the server
+     * rather than failing fast, so a blocked or unreachable backend produces
+     * a promise that simply never resolves. A deadline is the only thing that
+     * turns that into something a user can act on.
+     */
+    const DEADLINE_MS = 8000
+    let settled = false
+    const timer = window.setTimeout(() => {
+      if (settled || !alive.current) return
+      settled = true
+      setFailed('slow')
+      setLoading(false)
+    }, DEADLINE_MS)
+
     void loadDiagnoses(user.uid)
       .then((all) => {
+        if (settled || !alive.current) return
+        settled = true
         // The most recent one. Older reports are history, and history belongs
         // on Diagnosis rather than here.
-        if (alive.current) setReport(all[0] ?? null)
+        setReport(all[0] ?? null)
+        setLoading(false)
       })
-      .catch(() => {})
-      .finally(() => {
-        if (alive.current) setLoading(false)
+      .catch((err: unknown) => {
+        if (settled || !alive.current) return
+        settled = true
+        // Naming this one specifically, because it has a specific fix:
+        // firestore.rules lives in the repo and has to be deployed
+        // separately from the app.
+        const code = typeof err === 'object' && err && 'code' in err ? String((err as { code: unknown }).code) : ''
+        setFailed(code.includes('permission-denied') ? 'denied' : 'error')
+        setLoading(false)
       })
+      .finally(() => window.clearTimeout(timer))
+
+    return () => window.clearTimeout(timer)
   }, [status, user])
 
   if (loading) {
@@ -98,6 +130,28 @@ export function Solutions() {
         </header>
         <div className="page__body sol sol--empty">
           <p className="sol__loading">Looking up what she found…</p>
+        </div>
+      </main>
+    )
+  }
+
+  /* --------------------------------------------------- it did not load */
+  if (failed) {
+    return (
+      <main id="main" className="page">
+        <header className="page__head">
+          <h1 className="page__title">Fix</h1>
+        </header>
+        <div className="page__body sol sol--empty">
+          <EmptyState
+            title={failed === 'slow' ? 'That is taking too long' : 'Could not reach your reports'}
+            body={
+              failed === 'denied'
+                ? 'The database is refusing the request. If you have just set this up, the Firestore rules need deploying before saved reports can be read.'
+                : 'Your saved reports could not be loaded. It may be the connection.'
+            }
+            action={<Button onClick={() => window.location.reload()}>Try again</Button>}
+          />
         </div>
       </main>
     )
