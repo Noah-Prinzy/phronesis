@@ -18,11 +18,13 @@ service cloud.firestore {
       allow read, update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
     }
 
-    // Diagnostic reports
-    // Alert switches. Same shape as /cars: the document id IS the uid, so a
-    // user can only ever reach their own. Written by the backend through the
-    // Admin SDK, which bypasses these rules — they exist for the case where
-    // a client reaches Firestore directly, and to make the intent explicit.
+    // Alert switches. Same shape as /users: the document id IS the uid, so a
+    // user can only ever reach their own.
+    //
+    // These rules are the ONLY thing guarding this data — the app writes it
+    // straight from the browser rather than through a server, because a
+    // server in the middle would enforce nothing these do not. They have to
+    // be deployed to take effect: `firebase deploy --only firestore:rules`.
     match /preferences/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
