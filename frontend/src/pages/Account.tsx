@@ -5,14 +5,17 @@ import { useAuth } from '../app/auth'
 import { useCar } from '../app/car'
 import { useJourney } from '../app/journey'
 import { useVoice } from '../app/voice'
+import type { CarProfile, Preferences } from '../lib/api'
 import {
-  deleteAccount,
-  downloadMyData,
-  getPreferences,
-  savePreferences,
-  type CarProfile,
-  type Preferences,
-} from '../lib/api'
+  deleteEverything,
+  downloadJson,
+  exportEverything,
+  loadAvatar,
+  loadPreferences,
+  storeAvatar,
+  storePreferences,
+  toAvatarDataUrl,
+} from '../lib/userdata'
 
 /**
  * Account: who you are, what you drive, and what Phronesis is allowed to do.
@@ -33,7 +36,7 @@ import {
  */
 export function Account() {
   const navigate = useNavigate()
-  const { user, status, signOut, updateName, getToken } = useAuth()
+  const { user, status, signOut, updateName } = useAuth()
   const { speak, setSpeak } = useVoice()
   const { journey, setJourney } = useJourney()
   // Shared with the navigation rail, so saving a car renames it there too
@@ -41,6 +44,8 @@ export function Account() {
   const { car, save: saveCarProfile } = useCar()
 
   const [prefs, setPrefs] = useState<Preferences | null>(null)
+  const [photo, setPhoto] = useState<string | null>(null)
+  const fileRef = useRef<HTMLInputElement | null>(null)
   const [toast, setToast] = useState<string | null>(null)
   const [editingName, setEditingName] = useState(false)
   const [editingCar, setEditingCar] = useState(false)
@@ -68,21 +73,16 @@ export function Account() {
   }, [])
 
   useEffect(() => {
-    if (status !== 'signedIn') return
-    const ac = new AbortController()
+    if (status !== 'signedIn' || !user) return
     void (async () => {
-      const token = await getToken()
-      if (!token || ac.signal.aborted) return
-      try {
-        const p = await getPreferences(token, ac.signal)
-        if (live.current) setPrefs(p)
-      } catch {
-        // The switches stay disabled at their defaults rather than lying
-        // about a state we could not read.
-      }
+      // Settled independently: a missing portrait should not also blank the
+      // alert switches.
+      const [p, a] = await Promise.allSettled([loadPreferences(user.uid), loadAvatar(user.uid)])
+      if (!live.current) return
+      if (p.status === 'fulfilled') setPrefs(p.value)
+      if (a.status === 'fulfilled') setPhoto(a.value)
     })()
-    return () => ac.abort()
-  }, [status, getToken])
+  }, [status, user])
 
   /**
    * Move the switch immediately, then persist. A toggle that waits for a round
@@ -95,9 +95,8 @@ export function Account() {
       const before = prefs
       setPrefs({ ...prefs, ...patch })
       try {
-        const token = await getToken()
-        if (!token) throw new Error('Not signed in.')
-        const saved = await savePreferences(token, patch)
+        if (!user) throw new Error('Not signed in.')
+        const saved = await storePreferences(user.uid, patch)
         if (live.current) setPrefs(saved)
       } catch {
         if (!live.current) return
@@ -105,7 +104,7 @@ export function Account() {
         setToast('That did not save. Check your connection and try again.')
       }
     },
-    [prefs, getToken],
+    [prefs, user],
   )
 
   const onSignOut = useCallback(async () => {
@@ -142,9 +141,45 @@ export function Account() {
           <h2 className="label">You</h2>
           <div className="acct__card">
             <div className="acct__you">
-              <span className="acct__avatar" aria-hidden="true">
-                {initial}
-              </span>
+              <button
+                type="button"
+                className="acct__avatar"
+                onClick={() => fileRef.current?.click()}
+                aria-label={photo ? 'Change your picture' : 'Add a picture'}
+              >
+                {photo ? (
+                  <img src={photo} alt="" className="acct__avatarImg" />
+                ) : (
+                  <span aria-hidden="true">{initial}</span>
+                )}
+                <span className="acct__avatarAdd" aria-hidden="true">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round">
+                    <path d="M12 5v14" />
+                    <path d="M5 12h14" />
+                  </svg>
+                </span>
+              </button>
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*"
+                className="sr-only"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0]
+                  // Reset first, so choosing the same file twice still fires.
+                  e.target.value = ''
+                  if (!file || !user) return
+                  try {
+                    const dataUrl = await toAvatarDataUrl(file)
+                    setPhoto(dataUrl)
+                    await storeAvatar(user.uid, dataUrl)
+                    setToast('That is you.')
+                  } catch (err) {
+                    setPhoto(null)
+                    setToast(err instanceof Error ? err.message : 'Could not use that image.')
+                  }
+                }}
+              />
               <div className="acct__rowmain">
                 <span className="acct__name">{name}</span>
                 <span className="acct__sub">{user?.email}</span>
@@ -275,11 +310,11 @@ export function Account() {
                 size="sm"
                 loading={busy}
                 onClick={async () => {
+                  if (!user) return
                   setBusy(true)
                   try {
-                    const token = await getToken()
-                    if (!token) throw new Error('Not signed in.')
-                    await downloadMyData(token)
+                    const data = await exportEverything(user)
+                    downloadJson(data, `phronesis-${new Date().toISOString().slice(0, 10)}.json`)
                   } catch {
                     setToast('Could not prepare your data. Try again in a moment.')
                   } finally {
@@ -346,21 +381,26 @@ export function Account() {
               variant="danger"
               loading={busy}
               onClick={async () => {
+                if (!user) return
                 setBusy(true)
                 try {
-                  const token = await getToken()
-                  if (!token) throw new Error('Not signed in.')
-                  await deleteAccount(token)
-                  // The auth record is gone server-side; sign out locally so
-                  // the app is not holding a token for a user who no longer
-                  // exists.
-                  await signOut().catch(() => {})
+                  await deleteEverything(user)
                   navigate('/', { replace: true })
-                } catch {
+                } catch (err) {
                   if (!live.current) return
                   setBusy(false)
                   setConfirmDelete(false)
-                  setToast('Could not delete the account. Nothing has been removed.')
+                  // Firebase refuses to delete an account that has not signed
+                  // in recently, and saying so is far more useful than a
+                  // generic failure the user cannot act on.
+                  const stale =
+                    typeof err === 'object' && err && 'code' in err &&
+                    String((err as { code: unknown }).code).includes('requires-recent-login')
+                  setToast(
+                    stale
+                      ? 'For safety, sign out and back in, then delete straight away.'
+                      : 'Could not delete the account. Nothing has been removed.',
+                  )
                 }
               }}
             >

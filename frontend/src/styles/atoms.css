@@ -1437,6 +1437,10 @@
 /* --------------------------------------------------------------- dialog
    Native <dialog>. The platform handles focus trapping, the top layer,
    Escape and page inertness — all things hand-rolled modals get wrong. */
+/* A modal <dialog> is centred by the user-agent's own `margin: auto`, and
+   Tailwind's preflight zeroes margin on everything — so it was landing in
+   the top-left corner. Centring it back explicitly rather than relying on a
+   UA default that a reset can quietly remove. */
 .ph-dialog {
   border: 0;
   padding: 0;
@@ -1444,13 +1448,28 @@
   color: var(--ink);
   max-width: min(400px, calc(100vw - 2rem));
   width: 100%;
+  inset: 0;
+  margin: auto;
 }
 .ph-dialog::backdrop {
-  background: rgb(5 6 8 / 0.72);
+  /* The page behind is blurred as well as dimmed, so the dialog reads as
+     the only thing in focus rather than a card lying on a darker page. */
+  background: rgb(5 6 8 / 0.6);
+  -webkit-backdrop-filter: blur(10px) saturate(0.9);
+  backdrop-filter: blur(10px) saturate(0.9);
+}
+.ph-dialog[open] {
+  animation: ph-dialog-in var(--t-move) var(--ease-out);
+}
+@keyframes ph-dialog-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.97);
+  }
 }
 .ph-dialog__panel {
-  background: var(--surface-2);
-  border: 1px solid var(--hairline);
+  background: linear-gradient(180deg, rgb(30 29 28 / 0.98), rgb(20 20 21 / 0.97));
+  border: 1px solid var(--glass-border);
   border-radius: var(--r-lg);
   padding: 1.15rem 1.25rem 1.05rem;
   display: flex;

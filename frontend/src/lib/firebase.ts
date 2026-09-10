@@ -1,4 +1,4 @@
-import { initializeApp } from 'firebase/app'
+import { initializeApp, type FirebaseApp } from 'firebase/app'
 import { getAuth } from 'firebase/auth'
 import type { Auth } from 'firebase/auth'
 
@@ -23,16 +23,33 @@ const config = {
 /** True when every key needed to talk to Firebase is present. */
 export const firebaseConfigured = Boolean(config.apiKey && config.authDomain && config.projectId)
 
+let app: FirebaseApp | null = null
 let cached: Auth | null = null
 
-export function getFirebaseAuth(): Auth | null {
+/**
+ * The initialised app, or null when Firebase is not configured.
+ *
+ * Exposed because Firestore needs it too: the user's own records are read
+ * straight from the browser under the rules, rather than through a server
+ * that would enforce nothing the rules do not. Initialising twice would
+ * create two apps, so this is the single place it happens.
+ */
+export function getFirebaseApp(): FirebaseApp | null {
   if (!firebaseConfigured) return null
-  if (cached) return cached
+  if (app) return app
   try {
-    cached = getAuth(initializeApp(config))
-    return cached
+    app = initializeApp(config)
+    return app
   } catch (err) {
     console.error('Firebase failed to initialise:', err)
     return null
   }
+}
+
+export function getFirebaseAuth(): Auth | null {
+  if (cached) return cached
+  const a = getFirebaseApp()
+  if (!a) return null
+  cached = getAuth(a)
+  return cached
 }

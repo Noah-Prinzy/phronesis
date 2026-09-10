@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
-import { getCar, saveCar, type CarProfile } from '../lib/api'
+import type { CarProfile } from '../lib/api'
+import { loadCar, storeCar } from '../lib/userdata'
 import { useAuth } from './auth'
 
 /**
@@ -26,7 +27,7 @@ interface CarValue {
 const Ctx = createContext<CarValue | null>(null)
 
 export function CarProvider({ children }: { children: ReactNode }) {
-  const { status, getToken } = useAuth()
+  const { status, user } = useAuth()
   const [car, setCar] = useState<CarProfile | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -41,12 +42,10 @@ export function CarProvider({ children }: { children: ReactNode }) {
     }
 
     let live = true
-    const ac = new AbortController()
     void (async () => {
       try {
-        const token = await getToken()
-        if (!token || ac.signal.aborted) return
-        const loaded = await getCar(token, ac.signal)
+        if (!user) return
+        const loaded = await loadCar(user.uid)
         if (live) setCar(loaded)
       } catch {
         // Not knowing the car is survivable — every screen that uses it has a
@@ -58,18 +57,16 @@ export function CarProvider({ children }: { children: ReactNode }) {
 
     return () => {
       live = false
-      ac.abort()
     }
-  }, [status, getToken])
+  }, [status, user])
 
   const save = useCallback(
     async (next: CarProfile) => {
-      const token = await getToken()
-      if (!token) throw new Error('Not signed in.')
-      await saveCar(token, next)
+      if (!user) throw new Error('Not signed in.')
+      await storeCar(user.uid, next)
       setCar(next)
     },
-    [getToken],
+    [user],
   )
 
   const value = useMemo<CarValue>(() => ({ car, loading, save }), [car, loading, save])

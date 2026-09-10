@@ -736,7 +736,45 @@
   }
   /* Sign out spans both columns and sits under everything, so it never
      lands halfway up a page beside an unrelated card. */
-  .acct__out {
+  /* The button, its picture, and the badge that marks it as one. */
+.acct__avatar {
+  position: relative;
+  overflow: visible;
+  padding: 0;
+  cursor: pointer;
+  transition:
+    transform var(--t-press) var(--ease),
+    border-color var(--t-hover) var(--ease);
+}
+.acct__avatar:hover {
+  border-color: var(--accent-line);
+}
+.acct__avatar:active {
+  transform: scale(0.97);
+}
+.acct__avatarImg {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+}
+.acct__avatarAdd {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: var(--accent-on);
+  background: linear-gradient(180deg, var(--accent-fill-hi), var(--accent-fill));
+  border: 2px solid var(--ground);
+  box-shadow: var(--lift-1);
+}
+
+.acct__out {
     grid-column: 1 / -1;
   }
 }
@@ -808,8 +846,9 @@
   letter-spacing: -0.01em;
 }
 
-/* The avatar borrows the orb's night sky, so the one dark thing on the page
-   is the same dark thing everywhere else. */
+/* A button, not a decoration: tapping it picks a picture. The "+" badge is
+   what says so — an avatar that happens to be clickable, with nothing
+   marking it, is a feature nobody finds. */
 .acct__avatar {
   width: 3.2rem;
   height: 3.2rem;
@@ -836,9 +875,11 @@
   color: var(--ink-2);
 }
 
-/* The signed-out view is two elements in a stretch-by-default column, so the
-   button would otherwise run the full width of the page. */
+/* The signed-out view is two elements, and in the two-column grid they
+   landed in separate columns — the sentence on the left, the button adrift
+   in the middle of the page. One column, packed to the start. */
 .acct--empty {
+  grid-template-columns: 1fr;
   justify-items: start;
   align-content: start;
 }
