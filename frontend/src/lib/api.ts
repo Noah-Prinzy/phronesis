@@ -253,6 +253,13 @@ export interface DiagnosisSolution {
   option: string
   costLow: number
   costHigh: number
+  /** The split, when she gave one. Optional because an older saved report
+      predates it, and a model may omit it — the page shows totals instead
+      rather than inventing a breakdown. */
+  partsLow?: number
+  partsHigh?: number
+  labourLow?: number
+  labourHigh?: number
 }
 
 export interface DiagnosisReport {

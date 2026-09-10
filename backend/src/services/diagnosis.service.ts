@@ -54,6 +54,14 @@ const diagnosisResultSchema = z.object({
         option: z.string().min(1),
         cost_low: z.number().nonnegative(),
         cost_high: z.number().nonnegative(),
+        // Optional on purpose. A model that omits the split still produces a
+        // valid report, and the page falls back to showing the total — which
+        // is worse but not broken. Requiring them would reject an otherwise
+        // good diagnosis over a presentational detail.
+        parts_low: z.number().nonnegative().optional(),
+        parts_high: z.number().nonnegative().optional(),
+        labour_low: z.number().nonnegative().optional(),
+        labour_high: z.number().nonnegative().optional(),
       }),
     )
     .min(1),
@@ -96,6 +104,10 @@ const RESPONSE_JSON_SCHEMA = {
           option: { type: 'string' },
           cost_low: { type: 'number' },
           cost_high: { type: 'number' },
+          parts_low: { type: 'number' },
+          parts_high: { type: 'number' },
+          labour_low: { type: 'number' },
+          labour_high: { type: 'number' },
         },
         required: ['option', 'cost_low', 'cost_high'],
       },
@@ -117,12 +129,12 @@ const RESPONSE_JSON_SCHEMA = {
 // Example the doc itself provides (section 9.4) — used to anchor both the
 // Anthropic prompt (as a literal template) and to keep the shape obvious
 // to a human reading this file.
-const EXAMPLE_JSON = `{"issue":"Engine Knock","root_cause":"Low-quality fuel or carbon buildup","category":"engine","urgency_level":"high","confidence":92,"cost_estimate_low":180000,"cost_estimate_high":600000,"timeline":"Fix within 2 weeks","solutions":[{"option":"Carbon cleaning (labor only)","cost_low":180000,"cost_high":320000},{"option":"Replace knock sensor","cost_low":420000,"cost_high":600000}]}`;
+const EXAMPLE_JSON = `{"issue":"Engine Knock","root_cause":"Low-quality fuel or carbon buildup","category":"engine","urgency_level":"high","confidence":92,"cost_estimate_low":180000,"cost_estimate_high":600000,"timeline":"Fix within 2 weeks","solutions":[{"option":"Carbon cleaning (labor only)","cost_low":180000,"cost_high":320000,"parts_low":0,"parts_high":40000,"labour_low":180000,"labour_high":280000},{"option":"Replace knock sensor","cost_low":420000,"cost_high":600000,"parts_low":260000,"parts_high":380000,"labour_low":160000,"labour_high":220000}]}`;
 
 function buildSystemPrompt(): string {
   return `You are Phronesis' diagnostic engine, generating a structured car diagnosis report for African drivers. Respond with ONLY a single raw JSON object matching this exact shape — no markdown fences, no prose before or after:
 ${EXAMPLE_JSON}
-Field notes: category must be one of engine/electrical/brakes/transmission/general. urgency_level must be one of critical/high/medium/low. confidence is 0-100. All costs are in UGX (Ugandan shillings), the currency this app's users actually pay in — never USD. Use realistic Kampala prices: a common independent-garage repair on a used Toyota runs roughly UGX 80,000 to 900,000, with major work into the millions. Round to the nearest 10,000. Base the diagnosis on the symptoms, car details, and OBD data given. If OBD DTC codes are present, weight them heavily. Be realistic and specific, not generic.`;
+Field notes: category must be one of engine/electrical/brakes/transmission/general. urgency_level must be one of critical/high/medium/low. confidence is 0-100. All costs are in UGX (Ugandan shillings), the currency this app's users actually pay in — never USD. Use realistic Kampala prices: a common independent-garage repair on a used Toyota runs roughly UGX 80,000 to 900,000, with major work into the millions. Round to the nearest 10,000. For every solution also split the cost into parts_low/parts_high and labour_low/labour_high, which must add up to cost_low/cost_high — people need to know which half of a quote is which. Base the diagnosis on the symptoms, car details, and OBD data given. If OBD DTC codes are present, weight them heavily. Be realistic and specific, not generic.`;
 }
 
 function buildUserPrompt(request: DiagnosisRequest): string {
@@ -178,7 +190,15 @@ export function parseDiagnosisResponse(raw: string): DiagnosisReport {
     costEstimateLow: result.cost_estimate_low,
     costEstimateHigh: result.cost_estimate_high,
     timeline: result.timeline,
-    solutions: result.solutions.map((s) => ({ option: s.option, costLow: s.cost_low, costHigh: s.cost_high })),
+    solutions: result.solutions.map((s) => ({
+      option: s.option,
+      costLow: s.cost_low,
+      costHigh: s.cost_high,
+      partsLow: s.parts_low,
+      partsHigh: s.parts_high,
+      labourLow: s.labour_low,
+      labourHigh: s.labour_high,
+    })),
     detectedCodes: [],
   };
 }
