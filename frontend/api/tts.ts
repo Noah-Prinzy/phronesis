@@ -30,17 +30,35 @@ import { MsEdgeTTS, OUTPUT_FORMAT } from 'msedge-tts';
 import { z } from 'zod';
 
 /**
- * Emily, Irish. Picked by ear from an audition of all seven British and Irish
- * voices — the only way this decision ever went well, since every attempt to
- * predict which model would sound human was wrong.
+ * Andrew. Chosen by ear from an audition of eleven candidates reading the same
+ * line, kept in docs/voice-audition/.
  *
- * Alternatives: en-GB-SoniaNeural, LibbyNeural, MaisieNeural; the male voices
- * are RyanNeural, ThomasNeural and en-IE-ConnorNeural.
+ * He is one of Microsoft's *Multilingual* voices, and that is why he wins
+ * rather than the accent: they are a newer generation than the plain Neural
+ * set, and Emily, Sonia and Libby are all the older model. Microsoft tags him
+ * "Warm / Confident / Authentic / Honest", which is close to the job — most of
+ * what Phronesis says is a fault explained to someone worried about the bill.
+ *
+ * MUST match backend/src/services/edge.service.ts. A user who hears the dev
+ * server and the deployed app hears two different people otherwise.
+ *
+ * Runners-up: en-US-AvaMultilingualNeural, en-US-EmmaMultilingualNeural.
+ * en-KE-AsiliaNeural and en-TZ-ImaniNeural are the East African options.
  */
-const VOICE = process.env.EDGE_TTS_VOICE ?? 'en-IE-EmilyNeural';
+const VOICE = process.env.EDGE_TTS_VOICE ?? 'en-US-AndrewMultilingualNeural';
 const RATE = process.env.EDGE_TTS_RATE ?? '0%';
 const PITCH = process.env.EDGE_TTS_PITCH ?? '+0Hz';
-const FORMAT = OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3;
+/**
+ * 96kbps, not 48.
+ *
+ * Speech does need the bandwidth: at 48kbps a neural voice arrives thin and
+ * slightly metallic, and the fault reads as the VOICE being bad rather than
+ * the encoding. Half of "the voice sounds terrible" was this. Doubling it
+ * roughly doubles the file — about 140kB for a long line instead of 70 —
+ * which is a fair trade even on a Ugandan mobile connection, and repeated
+ * lines are cached anyway.
+ */
+const FORMAT = OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3;
 
 const GEMINI_MODEL = 'gemini-3.1-flash-tts-preview';
 const GEMINI_VOICE = 'Sulafat';
@@ -49,15 +67,67 @@ const GEMINI_VOICE = 'Sulafat';
  * Rewrite text so a speech model says it the way a person would.
  *
  * Neural voices spell out anything that does not look like a word: "mic"
- * came out as "em eye see", which is the most jarring thing she can do
- * mid-sentence. This endpoint rejects SSML outright — <say-as> and the rest
- * all fail — so the text itself is the only lever there is.
+ * came out as "em eye see", which is the most jarring thing he can do
+ * mid-sentence. This endpoint rejects SSML outright — <break>, <say-as> and
+ * mstts:express-as were each tried against this voice and every one of them
+ * closes the stream with no audio — so the text itself is the only lever.
  *
  * Applied ONLY to what is spoken. The words on screen keep their real
  * spelling, because "UGX 280,000" is what a price looks like and
  * "280,000 shillings" is what it sounds like.
+ *
+ * KEEP IN STEP with backend/src/services/speech-text.ts, which is the same
+ * pipeline for the dev server. They are separate copies because this file
+ * deploys on its own and cannot reach across into backend/.
  */
+
+/**
+ * Markdown is written to be seen, and his replies arrive as markdown because
+ * that is what the screen wants. Spoken it is wrong, not merely useless:
+ * "## What it costs" was pronounced WITH the hashes, which the word-boundary
+ * metadata shows as two spoken tokens ("#", "#") before the sentence starts.
+ */
+const MARKDOWN: Array<[RegExp, string]> = [
+  [/```[\s\S]*?```/g, ' '],
+  [/`([^`]+)`/g, '$1'],
+  [/^\s{0,3}#{1,6}\s+/gm, ''],
+  [/(\*\*|__)(.*?)\1/g, '$2'],
+  [/(\*|_)(?=\S)(.*?\S)\1/g, '$2'],
+  [/!?\[([^\]]*)\]\([^)]*\)/g, '$1'],
+  [/^\s*(?:[-*_]\s*){3,}$/gm, ''],
+  [/^\s*[-*+]\s+/gm, ''],
+  [/^\s*>\s?/gm, ''],
+];
+
+/** Digits, said one at a time. */
+const DIGIT: Record<string, string> = {
+  '0': 'zero', '1': 'one', '2': 'two', '3': 'three', '4': 'four',
+  '5': 'five', '6': 'six', '7': 'seven', '8': 'eight', '9': 'nine',
+};
+
+/**
+ * Fault codes, spelled out. "P0420" is a letter and four separate digits, and
+ * it is the single most important string this app says — the one place a
+ * wrong reading makes him sound like he does not know the subject.
+ */
+function spellCodes(text: string): string {
+  return text.replace(
+    /\b([PBCU])([0-3])([0-9A-F]{3})\b/g,
+    (_whole, system: string, first: string, rest: string) =>
+      [system, ...`${first}${rest}`].map((c) => DIGIT[c] ?? c).join(' '),
+  );
+}
+
 const SPOKEN: Array<[RegExp, string]> = [
+  /**
+   * His own name, which he could not say. "Phronesis" is Greek and the model
+   * has never met it — read literally it came out as roughly "e na unasis".
+   * No <phoneme> available, so the lever is spelling: "ee" forces the long
+   * stressed middle syllable. Target fro-NEE-sis; the screen keeps the real
+   * spelling. Hyphens are worse — the engine reads them as pauses.
+   */
+  [/\bPhronesis\b/gi, 'Froneesis'],
+
   // The one that started this.
   [/\bmics\b/gi, 'mikes'],
   [/\bmic\b/gi, 'mike'],
@@ -88,10 +158,47 @@ const SPOKEN: Array<[RegExp, string]> = [
 
   // Number plates: "UAX 123B" is otherwise attempted as a word.
   [/\b([A-Z]{3})\s?(\d{3})([A-Z])\b/g, '$1 $2 $3'],
-]
 
-function speakable(text: string): string {
-  return SPOKEN.reduce((out, [pattern, replacement]) => out.replace(pattern, replacement), text)
+  /**
+   * An ellipsis is written for a beat of hesitation and this voice barely
+   * gives it one. Measured on the same sentence: no punctuation 1.68s, a
+   * comma 2.11s, "…" 2.06s — so the character buys LESS pause than a comma,
+   * the opposite of what it is for. Three full stops buy 2.83s.
+   */
+  [/\u2026/g, '...'],
+];
+
+/**
+ * Make the text safe to put inside an XML document.
+ *
+ * NOT a nicety. msedge-tts interpolates this string straight into an SSML
+ * template without escaping it (`_SSMLTemplate`), so one ampersand does not
+ * mispronounce — it makes the document malformed and the service returns NO
+ * AUDIO AT ALL. "Wear & tear on the pads" was measured producing zero bytes,
+ * and the retry on a fresh socket fails identically. Escaped, the same line
+ * speaks normally.
+ */
+function escapeXml(text: string): string {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+/**
+ * What to SAY. Safe for any provider — no transport assumptions.
+ *
+ * Deliberately does not escape. Escaping belongs to the SSML transport alone,
+ * and Gemini below takes plain text: hand it `&amp;` and it pronounces the
+ * entity.
+ */
+function normaliseForSpeech(text: string): string {
+  const stripped = MARKDOWN.reduce(
+    (out, [pattern, replacement]) => out.replace(pattern, replacement),
+    text,
+  );
+  const said = SPOKEN.reduce(
+    (out, [pattern, replacement]) => out.replace(pattern, replacement),
+    spellCodes(stripped),
+  );
+  return said.replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
 }
 
 const requestSchema = z.object({ text: z.string().min(1) });
@@ -99,7 +206,7 @@ const requestSchema = z.object({ text: z.string().min(1) });
 /**
  * Module-level cache and connection, which on a serverless platform means
  * "per warm instance" rather than "per server". That is worth having anyway:
- * she repeats her greeting and her interruption apologies constantly, and a
+ * he repeats his greeting and his interruption apologies constantly, and a
  * warm instance turns those from a network round trip into nothing. A cold
  * start simply pays full price, which is the normal cost of this shape.
  */
@@ -230,13 +337,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return;
   }
 
-  // Spoken form, not written form — see speakable().
-  const text = speakable(parsed.data.text);
+  // Spoken form, not written form — see normaliseForSpeech().
+  const text = normaliseForSpeech(parsed.data.text);
 
   try {
-    const mp3 = await edgeSpeech(text);
+    // Escaped only here. Edge's transport drops this into an SSML document
+    // unescaped, where a bare "&" produces no audio at all; Gemini below
+    // takes plain text and would read the entity out.
+    const mp3 = await edgeSpeech(escapeXml(text));
     res.setHeader('Content-Type', 'audio/mpeg');
-    // Her lines repeat, and an identical request should not cross the network
+    // His lines repeat, and an identical request should not cross the network
     // twice. Immutable because the body is a pure function of the text.
     res.setHeader('Cache-Control', 'public, max-age=86400, immutable');
     res.status(200).send(mp3);

@@ -6,6 +6,7 @@ import { useRem } from '../app/useRootFontSize'
 import { useJourney } from '../app/journey'
 import { authErrorMessage, useAuth } from '../app/auth'
 import { useSpeak } from '../app/useSpeak'
+import { ACCOUNT_BUYER, ACCOUNT_OWNER } from '../app/lines'
 import { ONBOARDING_STEPS } from './Onboarding'
 
 /**
@@ -32,10 +33,8 @@ export function OnboardingAccount() {
   const owner = journey !== 'buyer'
 
   // Ends on the question the first field is asking anyway, so the form reads
-  // as her asking rather than as a form.
-  const ask = owner
-    ? "Last thing, then we're done. Make an account and I'll remember your car and everything we work out together. What should I call you?"
-    : "Last thing, then we're done. Make an account and I'll remember your budget and what you've already ruled out. What should I call you?"
+  // as his asking rather than as a form.
+  const ask = owner ? ACCOUNT_OWNER : ACCOUNT_BUYER
 
   useEffect(() => {
     speak(ask)

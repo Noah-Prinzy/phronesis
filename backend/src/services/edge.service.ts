@@ -2,6 +2,7 @@
 
 import { createHash } from 'node:crypto';
 import { MsEdgeTTS, OUTPUT_FORMAT } from 'msedge-tts';
+import { escapeXml, normaliseForSpeech } from './speech-text';
 
 /**
  * Phronesis' voice: Microsoft's neural speech, the engine behind Edge's
@@ -66,7 +67,7 @@ import { MsEdgeTTS, OUTPUT_FORMAT } from 'msedge-tts';
 const VOICE = process.env.EDGE_TTS_VOICE ?? 'en-US-AndrewMultilingualNeural';
 
 /**
- * Her own pace, unmodified. An earlier voice was slowed 6% on the theory that
+ * His own pace, unmodified. An earlier voice was slowed 6% on the theory that
  * explaining a fault to a worried owner should not be rushed; auditioned
  * against 0%, −12% and −18%, the untouched delivery won. The theory was fine
  * and the ear disagreed.
@@ -87,7 +88,7 @@ const PITCH = process.env.EDGE_TTS_PITCH ?? '+0Hz';
 const FORMAT = OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3;
 
 /**
- * She repeats herself constantly — the greeting, the apologies she uses when
+ * He repeats himself constantly — the greeting, the apologies he uses when
  * interrupted — and a cache turns those from a network round trip into
  * nothing. Bounded, because this is audio on a long-running server.
  */
@@ -106,53 +107,15 @@ function remember(key: string, mp3: Buffer): void {
 const TIMEOUT_MS = 15_000;
 
 /**
- * Rewrite text so a speech model says it the way a person would.
+ * What he actually says, and how it is carried.
  *
- * Neural voices spell out anything that does not look like a word: "mic"
- * came out as "em eye see", which is the most jarring thing she can do
- * mid-sentence. This endpoint rejects SSML outright — <say-as> and the rest
- * all fail — so the text itself is the only lever there is.
- *
- * Applied ONLY to what is spoken. The words on screen keep their real
- * spelling, because "UGX 280,000" is what a price looks like and
- * "280,000 shillings" is what it sounds like.
+ * Both live in `speech-text.ts` because Edge is not the only voice: Gemini
+ * sits behind it in this route's provider chain and used to get none of this,
+ * so a fallback line would read markdown aloud and mispronounce every fault
+ * code. The escaping is applied HERE and only here — it is a property of the
+ * SSML transport, not of speech, and a provider that took plain text would
+ * pronounce the entities.
  */
-const SPOKEN: Array<[RegExp, string]> = [
-  // The one that started this.
-  [/\bmics\b/gi, 'mikes'],
-  [/\bmic\b/gi, 'mike'],
-
-  // Money — the thing people listen hardest to. "UGX" alone reads as three
-  // letters, and the amount has to come first to sound like speech.
-  [/\bUGX\s*([\d,]+(?:\.\d+)?)/gi, '$1 shillings'],
-  [/\bUGX\b/gi, 'shillings'],
-
-  // Units. "km" becomes "kay em" otherwise.
-  [/\bkm\s*\/\s*[lL]\b/g, 'kilometres per litre'],
-  [/\bkm\s*\/\s*h\b/gi, 'kilometres per hour'],
-  [/\bkph\b/gi, 'kilometres per hour'],
-  [/\b([\d,]+)\s*km\b/gi, '$1 kilometres'],
-  [/\bkm\b/gi, 'kilometres'],
-
-  // Car vocabulary that IS spoken as letters, but needs spacing or the model
-  // runs the letters into a non-word.
-  [/\bOBD\b/g, 'O B D'],
-  [/\bDTC\b/g, 'D T C'],
-  [/\bECU\b/g, 'E C U'],
-  [/\bABS\b/g, 'A B S'],
-  [/\bRPM\b/gi, 'R P M'],
-  [/\bSUV\b/g, 'S U V'],
-  [/\bA\/C\b/g, 'air conditioning'],
-  [/\b4WD\b/g, 'four wheel drive'],
-  [/\bAWD\b/g, 'all wheel drive'],
-
-  // Number plates: "UAX 123B" is otherwise attempted as a word.
-  [/\b([A-Z]{3})\s?(\d{3})([A-Z])\b/g, '$1 $2 $3'],
-]
-
-function speakable(text: string): string {
-  return SPOKEN.reduce((out, [pattern, replacement]) => out.replace(pattern, replacement), text)
-}
 
 /**
  * One socket, reused.
@@ -227,7 +190,7 @@ function streamOnce(tts: MsEdgeTTS, text: string): Promise<Buffer> {
 }
 
 export async function getEdgeSpeech(input: string): Promise<Buffer> {
-  const text = speakable(input);
+  const text = escapeXml(normaliseForSpeech(input));
   const key = createHash('sha1').update(`${VOICE}|${RATE}|${PITCH}|${text}`).digest('hex');
   const hit = cache.get(key);
   if (hit) return hit;

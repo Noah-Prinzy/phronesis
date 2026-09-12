@@ -28,7 +28,7 @@ import {
  * alerts, localStorage for speaking aloud.
  *
  * **A setting is saved where it is true.** Speaking aloud is per DEVICE: you
- * might want her silent on the phone in a meeting and audible in the car, so
+ * might want him silent on the phone in a meeting and audible in the car, so
  * it lives in localStorage. The alerts are per ACCOUNT: someone who turns off
  * service reminders means it everywhere, so those go to the server. Getting
  * that backwards is the kind of thing nobody reports as a bug — it just feels
@@ -125,9 +125,9 @@ export function Account() {
   const check = serviceDue(car?.mileage, car?.lastServiceKm)
   const serviceLine =
     check.reason === 'no-mileage'
-      ? 'Add your mileage to your car and she can time these properly.'
+      ? 'Add your mileage to your car and he can time these properly.'
       : check.reason === 'no-last-service'
-        ? 'Add the reading at your last service and she will count from there.'
+        ? 'Add the reading at your last service and he will count from there.'
         : check.due
           ? `Due now — ${(car?.mileage ?? 0).toLocaleString()} km, ${check.overdueKm.toLocaleString()} km over.`
           : `Next at ${(((car?.lastServiceKm ?? 0) + SERVICE_INTERVAL_KM)).toLocaleString()} km.`
@@ -211,7 +211,7 @@ export function Account() {
                     ? [car.plate, car.mileage ? `${car.mileage.toLocaleString()} km` : null]
                         .filter(Boolean)
                         .join(' · ') || 'No plate or mileage yet'
-                    : 'Phronesis guesses far better when she knows what you drive.'}
+                    : 'Phronesis guesses far better when he knows what you drive.'}
                 </span>
               </div>
               <Button variant="secondary" size="sm" onClick={() => setEditingCar(true)}>
@@ -240,8 +240,8 @@ export function Account() {
               <div className="acct__rowmain">
                 <span className="acct__rowtitle">Speak replies aloud</span>
                 <span className="acct__sub">
-                  This one is for this device only. Turn it off and her words still appear
-                  on screen as she writes them.
+                  This one is for this device only. Turn it off and his words still appear
+                  on screen as he writes them.
                 </span>
               </div>
               <Switch checked={speak} onChange={setSpeak} label="Speak replies aloud" />
@@ -386,7 +386,7 @@ export function Account() {
         onSave={async (next) => {
           await updateName(next)
           setEditingName(false)
-          setToast(`She will call you ${next} from now on.`)
+          setToast(`He will call you ${next} from now on.`)
         }}
       />
 
@@ -397,7 +397,7 @@ export function Account() {
         onSave={async (next) => {
           await saveCarProfile(next)
           setEditingCar(false)
-          setToast('Saved. She will factor that in from now on.')
+          setToast('Saved. He will factor that in from now on.')
         }}
       />
 
@@ -484,7 +484,7 @@ function NameDialog({
   const submit = async () => {
     const next = value.trim()
     if (!next) {
-      setError('She needs something to call you.')
+      setError('He needs something to call you.')
       return
     }
     setBusy(true)
@@ -501,7 +501,7 @@ function NameDialog({
     <Dialog
       open={open}
       onClose={onClose}
-      title="What should she call you?"
+      title="What should he call you?"
       actions={
         <>
           <Button variant="secondary" onClick={onClose}>
@@ -565,7 +565,7 @@ function CarDialog({
   const submit = async () => {
     const y = Number(year)
     if (!make.trim() || !model.trim()) {
-      setError('The make and model are the two she really needs.')
+      setError('The make and model are the two he really needs.')
       return
     }
     // A plausible year, not merely a number: 1980 to next year covers every

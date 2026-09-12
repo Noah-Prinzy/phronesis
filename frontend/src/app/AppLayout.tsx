@@ -59,7 +59,7 @@ export function AppLayout() {
   const current = (items.find((i) => i.value === pathname)?.value ?? '/home') as NavKey
 
   const vehicle = owner
-    ? (carName(car) ?? 'Tell her what you drive')
+    ? (carName(car) ?? 'Tell him what you drive')
     : 'Looking to buy'
 
   return (

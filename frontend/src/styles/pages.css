@@ -373,7 +373,7 @@
   color: var(--ink-3);
 }
 
-/* Her question, written as she asks it. Carries the weight a page title
+/* His question, written as he asks it. Carries the weight a page title
    would, because on this screen it *is* the title. */
 .onboarding__ask {
   margin: 0;
@@ -385,7 +385,7 @@
   letter-spacing: -0.015em;
 }
 
-/* the small avatar + her line, used above a form */
+/* the small avatar + his line, used above a form */
 .onboarding__greet {
   display: flex;
   align-items: center;
@@ -547,7 +547,7 @@
   min-height: 2.7em;
 }
 
-/* Her opening line, written as she says it. Deliberately subordinate to the
+/* His opening line, written as he says it. Deliberately subordinate to the
    orb — the orb is the thing you look at, this is the thing you read. */
 .home__opener {
   margin: 0;
@@ -1357,7 +1357,7 @@
   color: var(--ink-3);
 }
 
-/* what she found, carried across */
+/* what he found, carried across */
 .sol__carry {
   display: flex;
   align-items: center;

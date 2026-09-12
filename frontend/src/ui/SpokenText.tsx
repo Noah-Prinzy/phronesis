@@ -23,9 +23,9 @@ export interface SpokenTextProps {
 /**
  * Text that arrives as Phronesis says it.
  *
- * The point is not decoration. A paragraph already sitting on screen makes her
- * sound like she is reading it out; the same words materialising in time with
- * her voice read as a transcript of someone talking. Same sentence, opposite
+ * The point is not decoration. A paragraph already sitting on screen makes him
+ * sound like he is reading it out; the same words materialising in time with
+ * his voice read as a transcript of someone talking. Same sentence, opposite
  * impression.
  *
  * Two deliberate details:

@@ -1,13 +1,13 @@
 /**
  * Phronesis' voice of last resort: the browser's own speech synthesiser.
  *
- * Piper already gives her a voice that cannot run out of credit, but it runs
+ * Piper already gives him a voice that cannot run out of credit, but it runs
  * on the server, and a server can be unreachable, asleep or not yet deployed.
  * `speechSynthesis` ships with the browser: no key, no quota, no network, no
  * backend at all. It is the only tier that keeps working when nothing else
  * is reachable.
  *
- * What it costs is consistency. The voice is whatever the device has, so she
+ * What it costs is consistency. The voice is whatever the device has, so he
  * sounds different on a Windows laptop and an Android phone. That is the
  * trade: a recognisable voice that sometimes stops, or an unrecognisable one
  * that never does. This is the floor beneath the other two, not a replacement.
@@ -100,7 +100,7 @@ export interface BrowserSpeechOptions {
 /**
  * Chrome stops speaking after roughly fifteen seconds unless the queue is
  * nudged. Pausing and resuming on a timer is the long-standing workaround;
- * without it her longer replies stop mid-sentence for no visible reason.
+ * without it his longer replies stop mid-sentence for no visible reason.
  */
 const KEEPALIVE_MS = 9000
 
@@ -171,7 +171,7 @@ export function speakInBrowser(text: string, opts: BrowserSpeechOptions): Browse
       // Safari does not fire `boundary` at all, and some Android voices only
       // fire it for sentences. Run a time-based estimate from the start and
       // let real boundaries override it the moment one arrives — otherwise
-      // the text would sit frozen at zero while she is clearly talking.
+      // the text would sit frozen at zero while he is clearly talking.
       const started = Date.now()
       const estimatedMs = (total / WORDS_PER_SECOND) * 1000
       estimator = window.setInterval(() => {

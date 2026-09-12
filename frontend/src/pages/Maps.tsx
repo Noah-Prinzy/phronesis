@@ -54,7 +54,7 @@ export function Maps() {
   const [showing, setShowing] = useState<SearchKind | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  /** What she last found, so the page can say what the search is FOR. */
+  /** What he last found, so the page can say what the search is FOR. */
   const [because, setBecause] = useState<string | null>(null)
 
   const alive = useRef(true)
@@ -92,7 +92,7 @@ export function Maps() {
   }, [])
 
   /* On arrival: find out where you are, and mark nothing else.
-     A search runs only if Phronesis asked for one — she routes here as
+     A search runs only if Phronesis asked for one — he routes here as
      `/maps?find=garage` when the conversation has reached "who can fix it".
 
      Guarded by a ref rather than by the dependency array, because StrictMode
@@ -115,7 +115,7 @@ export function Maps() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  /* Why they are here, if she has found something. */
+  /* Why they are here, if he has found something. */
   useEffect(() => {
     if (status !== 'signedIn' || !user) return
     void loadDiagnoses(user.uid)
