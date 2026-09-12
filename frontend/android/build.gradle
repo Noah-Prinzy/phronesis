@@ -27,3 +27,20 @@ allprojects {
 task clean(type: Delete) {
     delete rootProject.buildDir
 }
+
+// Capacitor 8 compiles against Java 21. A machine whose default JDK is 17
+// fails with "invalid source release: 21" — and not only in :app, because
+// :capacitor-android is compiled separately and needs the same compiler.
+//
+// Resolved by *version*, never by path. An absolute JDK location in a
+// committed file is correct on exactly one computer and breaks the build on
+// every other one, CI included. Gradle finds a matching JDK itself.
+subprojects {
+    plugins.withId('java-base') {
+        java {
+            toolchain {
+                languageVersion = JavaLanguageVersion.of(21)
+            }
+        }
+    }
+}
