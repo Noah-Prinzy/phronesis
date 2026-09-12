@@ -35,21 +35,35 @@ import { MsEdgeTTS, OUTPUT_FORMAT } from 'msedge-tts';
  */
 
 /**
- * Emily, Irish. Picked by ear from an audition of all seven British and Irish
- * voices speaking the same two lines — the only way this decision has ever
- * gone well, since every attempt to predict which model would sound human was
- * wrong.
+ * Andrew. Chosen by ear from an audition of eleven candidates reading the same
+ * line — which is the only way this decision has ever gone well, because every
+ * attempt to predict which model would sound human has been wrong.
  *
- * Her first measurement was 6.06s against Sonia's 0.46s, which nearly ruled
- * her out. It was a cold connection: re-measured over four runs she lands at
- * 0.44 / 0.49 / 0.58s against Sonia's 0.43 / 0.38 / 0.43. Effectively the same
- * voice cost. Worth recording, because the number that almost lost her the job
- * was an artefact of measuring once.
+ * He is one of Microsoft's *Multilingual* voices, and that is the reason he
+ * wins rather than the accent. Those are a newer generation than the plain
+ * Neural set: Emily, Sonia and Libby are all the older model, and no amount of
+ * choosing between them closes the gap to this one. Microsoft tags him
+ * "Warm / Confident / Authentic / Honest", which is close to the job — most of
+ * what Phronesis says is a fault explained to someone worried about the bill.
  *
- * Alternatives: en-GB-SoniaNeural, LibbyNeural, MaisieNeural; the male voices
- * are RyanNeural, ThomasNeural and en-IE-ConnorNeural.
+ * Two things were wrong before, and only one of them was the voice: the output
+ * was also encoded at 48kbps (see FORMAT below), which made every candidate
+ * sound thin. Both were changed together.
+ *
+ * The audition is kept in docs/voice-audition/ so the comparison can be heard
+ * again rather than argued about.
+ *
+ * A note on speed, since the older comment above quotes 0.45s: on the day
+ * Andrew was chosen, five configurations measured 3.3-5.2s per uncached line
+ * and the *slowest* of them was the previous setup, Emily at 48kbps. Voice and
+ * bitrate did not separate at all. Whatever governs this is the service or the
+ * link, not the choice — so do not pick a voice for speed on one afternoon's
+ * numbers, and re-measure before believing any figure here. Runners-up: en-US-AvaMultilingualNeural and
+ * en-US-EmmaMultilingualNeural; en-KE-AsiliaNeural and en-TZ-ImaniNeural are
+ * the East African options, worth revisiting if a local accent turns out to
+ * matter more to Ugandan users than polish does.
  */
-const VOICE = process.env.EDGE_TTS_VOICE ?? 'en-IE-EmilyNeural';
+const VOICE = process.env.EDGE_TTS_VOICE ?? 'en-US-AndrewMultilingualNeural';
 
 /**
  * Her own pace, unmodified. An earlier voice was slowed 6% on the theory that
@@ -60,8 +74,17 @@ const VOICE = process.env.EDGE_TTS_VOICE ?? 'en-IE-EmilyNeural';
 const RATE = process.env.EDGE_TTS_RATE ?? '0%';
 const PITCH = process.env.EDGE_TTS_PITCH ?? '+0Hz';
 
-/** 24kHz mono MP3: small enough to send quickly, good enough for speech. */
-const FORMAT = OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3;
+/**
+ * 96kbps, not 48.
+ *
+ * The first version shipped at 48kbps on the reasoning that speech does not
+ * need bandwidth. It does: at 48kbps a neural voice arrives thin and slightly
+ * metallic, and the fault reads as the *voice* being bad rather than the
+ * encoding. Doubling it roughly doubles the file — around 140kB for a long
+ * line instead of 70 — which is a fair trade even on a Ugandan mobile
+ * connection, and every repeated line is cached anyway.
+ */
+const FORMAT = OUTPUT_FORMAT.AUDIO_24KHZ_96KBITRATE_MONO_MP3;
 
 /**
  * She repeats herself constantly — the greeting, the apologies she uses when

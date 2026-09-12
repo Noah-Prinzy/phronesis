@@ -273,7 +273,7 @@ export function Solutions() {
         ) : null}
 
         <div className="sol__actions">
-          <Button onClick={() => navigate('/maps')}>Find someone to do it</Button>
+          <Button onClick={() => navigate('/maps?find=garage')}>Find someone to do it</Button>
           <Button variant="secondary" onClick={() => navigate('/home')}>
             Ask her which one
           </Button>

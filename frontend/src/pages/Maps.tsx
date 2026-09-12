@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Button, EmptyState } from '../ui'
 import { MapView } from '../maps/MapView'
 import { useAuth } from '../app/auth'
@@ -11,6 +12,7 @@ import {
   OverpassBusyError,
   type Located,
   type Place,
+  type SearchKind,
 } from '../lib/places'
 
 /**
@@ -25,14 +27,32 @@ import {
  *
  * Saying what is missing is the honest version of a directory this thin, and
  * it is more useful than a star rating nobody wrote.
+ *
+ * **The map starts empty but for you.** It used to search on arrival and drop
+ * 120 pins on the city, which is not a map of anywhere — it is a directory
+ * with a background. Now nothing is marked until something is actually being
+ * looked for, either because you searched or because Phronesis sent you here
+ * for a reason (`/maps?find=garage`). What is marked is what was asked for.
  */
+
+/** What the search offers. Each is one OSM tag, asked for on its own. */
+const KINDS: Array<{ key: SearchKind; label: string; verb: string }> = [
+  { key: 'garage', label: 'Mechanics', verb: 'Mechanics near you' },
+  { key: 'tyres', label: 'Tyres', verb: 'Tyre places near you' },
+  { key: 'parts', label: 'Parts', verb: 'Parts shops near you' },
+]
 export function Maps() {
   const { status, user } = useAuth()
+
+  const [params, setParams] = useSearchParams()
+  const asked = params.get('find') as SearchKind | null
 
   const [where, setWhere] = useState<Located | null>(null)
   const [places, setPlaces] = useState<Place[]>([])
   const [selected, setSelected] = useState<string | null>(null)
-  const [busy, setBusy] = useState(true)
+  /** Which search produced what is on the map. Null means nothing is marked. */
+  const [showing, setShowing] = useState<SearchKind | null>(null)
+  const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   /** What she last found, so the page can say what the search is FOR. */
   const [because, setBecause] = useState<string | null>(null)
@@ -45,15 +65,17 @@ export function Maps() {
     }
   }, [])
 
-  const search = useCallback(async (at: Located) => {
+  const search = useCallback(async (at: Located, kind: SearchKind) => {
     setBusy(true)
     setError(null)
+    setShowing(kind)
     try {
-      const found = await findPlaces(at.lat, at.lon)
+      const found = await findPlaces(at.lat, at.lon, [kind])
       if (!alive.current) return
+      setError(null)
       setPlaces(found)
       setSelected(found[0]?.id ?? null)
-      if (found.length === 0) setError('Nothing mapped around here yet.')
+      if (found.length === 0) setError('Nothing of that kind is mapped around here yet.')
     } catch (err) {
       if (!alive.current) return
       setPlaces([])
@@ -69,15 +91,29 @@ export function Maps() {
     }
   }, [])
 
-  /* Find them once, on arrival. */
+  /* On arrival: find out where you are, and mark nothing else.
+     A search runs only if Phronesis asked for one — she routes here as
+     `/maps?find=garage` when the conversation has reached "who can fix it".
+
+     Guarded by a ref rather than by the dependency array, because StrictMode
+     mounts every component twice and the second mount fired a second Overpass
+     query about a second after the first. Overpass is a free shared service
+     that rate-limits exactly that: the first query returned 54 garages, the
+     second came back busy, and the busy one landed last — so the page showed
+     "could not reach the map data" over a map full of pins. */
+  const arrived = useRef(false)
   useEffect(() => {
+    if (arrived.current) return
+    arrived.current = true
     void (async () => {
       const at = await locate()
       if (!alive.current) return
       setWhere(at)
-      await search(at)
+      if (asked && KINDS.some((k) => k.key === asked)) await search(at, asked)
     })()
-  }, [search])
+    // Runs once. A later `?find=` change is handled by the click that caused it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   /* Why they are here, if she has found something. */
   useEffect(() => {
@@ -91,7 +127,24 @@ export function Maps() {
       })
   }, [status, user])
 
+  function run(kind: SearchKind) {
+    if (!where) return
+    // The URL carries the search, so the page is linkable and the back button
+    // means something — and so Phronesis can send someone straight to it.
+    setParams({ find: kind }, { replace: true })
+    void search(where, kind)
+  }
+
+  function clear() {
+    setPlaces([])
+    setSelected(null)
+    setShowing(null)
+    setError(null)
+    setParams({}, { replace: true })
+  }
+
   const chosen = places.find((p) => p.id === selected) ?? null
+  const active = KINDS.find((k) => k.key === showing) ?? null
 
   return (
     <main id="main" className="page page--bleed">
@@ -115,22 +168,44 @@ export function Maps() {
         <div className="mp__why">
           <span className="mp__whydot" />
           <span className="mp__whytext">
-            {because ? (
-              <>
-                Garages near you for <b>{because.toLowerCase()}</b>
-              </>
+            {active ? (
+              because ? (
+                <>
+                  {active.label} near you for <b>{because.toLowerCase()}</b>
+                </>
+              ) : (
+                <>{active.verb}</>
+              )
             ) : (
-              <>Car repair near you</>
+              <>What are you looking for?</>
             )}
           </span>
+        </div>
+
+        {/* The search. Nothing is on the map until one of these is pressed. */}
+        <div className="mp__kinds">
+          {KINDS.map((k) => (
+            <button
+              key={k.key}
+              type="button"
+              className="mp__kind"
+              data-on={showing === k.key || undefined}
+              disabled={!where || busy}
+              onClick={() => run(k.key)}
+            >
+              {k.label}
+            </button>
+          ))}
         </div>
 
         <h2 className="label mp__count">
           {busy
             ? 'Looking…'
-            : places.length === 0
-              ? 'None found'
-              : `${places.length} within 6 km`}
+            : !showing
+              ? 'Nothing marked yet'
+              : places.length === 0
+                ? 'None found'
+                : `${places.length} within 6 km`}
         </h2>
 
         <div className="mp__list">
@@ -138,6 +213,11 @@ export function Maps() {
             <p className="mp__msg">Finding what is around you…</p>
           ) : error ? (
             <p className="mp__msg">{error}</p>
+          ) : !showing ? (
+            <p className="mp__msg">
+              Pick one above and I will mark them on the map. Until then the map shows only where
+              you are.
+            </p>
           ) : (
             places.map((p) => (
               <button
@@ -162,13 +242,20 @@ export function Maps() {
         <div className="mp__foot">
           <Button
             variant="secondary"
+            disabled={!where}
             onClick={() => {
-              if (where) void search(where)
+              if (!where) return
+              if (showing) void search(where, showing)
             }}
             loading={busy}
           >
-            Search again
+            {showing ? 'Search again' : 'Search'}
           </Button>
+          {showing ? (
+            <Button variant="ghost" onClick={clear}>
+              Clear
+            </Button>
+          ) : null}
           <span className="mp__source num">
             {where?.exact
               ? 'Places from OpenStreetMap · distances straight-line'
@@ -224,7 +311,7 @@ export function Maps() {
         </aside>
       ) : null}
 
-      {!busy && places.length === 0 && !error ? (
+      {!busy && showing && places.length === 0 && !error ? (
         <div className="mp__empty">
           <EmptyState title="Nothing mapped nearby" body="Try searching again from somewhere else." />
         </div>

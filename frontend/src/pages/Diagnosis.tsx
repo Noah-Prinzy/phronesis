@@ -228,7 +228,7 @@ export function Diagnosis() {
         </aside>
 
         <div className="dg__actions">
-          <Button onClick={() => navigate('/maps')}>Find a mechanic</Button>
+          <Button onClick={() => navigate('/maps?find=garage')}>Find a mechanic</Button>
           <Button variant="secondary" onClick={() => navigate('/home')}>
             Ask her about this
           </Button>
