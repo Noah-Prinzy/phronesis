@@ -223,6 +223,32 @@ async function connection(): Promise<MsEdgeTTS> {
   return tts;
 }
 
+/**
+ * One socket carries one stream at a time, so requests through it are
+ * SERIALISED.
+ *
+ * Two concurrent `toStream` calls on the same connection interleave their
+ * audio: not an error, just two replies spliced into each other, which would
+ * be a miserable bug to track down. This used to be close to theoretical here
+ * because one reply meant one request. It is not any more — the client now
+ * speaks a reply sentence by sentence and fires the whole set off at once to
+ * prefetch them, so a single answer arrives as several overlapping requests,
+ * and on a warm instance they meet on this socket.
+ *
+ * Matches `serialise` in backend/src/services/edge.service.ts.
+ */
+let queue: Promise<unknown> = Promise.resolve();
+
+function serialise<T>(job: () => Promise<T>): Promise<T> {
+  const run = queue.then(job, job);
+  // Swallow rejections on the CHAIN only — the caller still sees its own.
+  queue = run.then(
+    () => undefined,
+    () => undefined,
+  );
+  return run;
+}
+
 const TIMEOUT_MS = 15_000;
 
 function streamOnce(tts: MsEdgeTTS, text: string): Promise<Buffer> {
@@ -262,16 +288,17 @@ async function edgeSpeech(text: string): Promise<Buffer> {
   const hit = cache.get(key);
   if (hit) return hit;
 
-  let mp3: Buffer;
-  try {
-    mp3 = await streamOnce(await connection(), text);
-  } catch {
-    // A socket idle long enough gets closed at the far end and the failure
-    // looks like any other. Drop it and try once on a fresh one — a reconnect
-    // is far cheaper than a line of silence.
-    shared = null;
-    mp3 = await streamOnce(await connection(), text);
-  }
+  const mp3 = await serialise(async () => {
+    try {
+      return await streamOnce(await connection(), text);
+    } catch {
+      // A socket idle long enough gets closed at the far end and the failure
+      // looks like any other. Drop it and try once on a fresh one — a
+      // reconnect is far cheaper than a line of silence.
+      shared = null;
+      return streamOnce(await connection(), text);
+    }
+  });
 
   cache.set(key, mp3);
   if (cache.size > CACHE_LIMIT) {
