@@ -1869,3 +1869,11 @@
     top: 4.4rem;
   }
 }
+
+/* A warning that is not an error: the reader works, the car is not answering. */
+.onboarding__warn {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  color: var(--warning);
+}

@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Button, CardButton, SectionHead, Spinner, SpokenText, Steps } from '../ui'
+import { Button, CardButton, SectionHead, SpokenText, Steps } from '../ui'
 import { Halo } from '../avatar/Halo'
 import { IconPlug } from '../icons'
 import { useRem } from '../app/useRootFontSize'
 import { useJourney } from '../app/journey'
 import { useSpeak } from '../app/useSpeak'
+import { RECOMMENDED_HARDWARE, detectTransport, pairReader, unavailableReason } from '../lib/obd'
+import type { ObdTransportKind, PairedReader } from '../lib/obd'
 
 export { OnboardingAccount } from './onboarding-account'
 
@@ -67,88 +69,134 @@ export function OnboardingJourney() {
   )
 }
 
-/* ============================================================= pairing · OBD
-   No longer part of onboarding. It is entirely optional, it is skippable, and
-   putting it in the required flow bought a step that most people skipped —
-   so it lives in Account now and is reached deliberately. */
+/* ================================================================ step 3 · OBD
+   Optional, and reachable later from Account. */
 
-interface Reader {
-  name: string
-  mac: string
-  strong: boolean
-}
-
-const FOUND: Reader[] = [
-  { name: 'ELM327 v1.5', mac: '00:1D:A5:68:98:8B', strong: true },
-  { name: 'OBDII', mac: '00:0D:18:3A:67:12', strong: false },
-]
-
+/**
+ * Pair a reader.
+ *
+ * **There is no device list here on purpose.** Every platform that can reach
+ * Bluetooth insists on showing its *own* chooser, from a user gesture, and
+ * will not hand a web page a list of what is nearby — that is the privacy
+ * model, not a limitation to work around. So this screen has one button, and
+ * the list you see after tapping it belongs to the operating system.
+ *
+ * What the app can say usefully is everything either side of that: whether
+ * this platform can pair at all, what to buy if it cannot, and whether the
+ * adapter that answered is actually talking to a car.
+ */
 export function OnboardingPair() {
   const navigate = useNavigate()
-  const [scanning, setScanning] = useState(true)
-  const [picked, setPicked] = useState<string | null>(null)
+  const avatarSize = useRem(3.6)
+  const { talking, speak, progress } = useSpeak()
+
+  const [transport] = useState<ObdTransportKind>(() => detectTransport())
+  const [phase, setPhase] = useState<'idle' | 'pairing' | 'paired'>('idle')
+  const [reader, setReader] = useState<PairedReader | null>(null)
+  const [error, setError] = useState<string | null>(null)
+
+  const supported = transport !== 'none'
+
+  const ask = supported
+    ? "If you have an OBD reader, plug it in under the dash and I'll connect to it. If you haven't, that's fine — you can just tell me what the car is doing."
+    : "This device can't talk to a Bluetooth reader, so just tell me what the car is doing and I'll work from that."
 
   useEffect(() => {
-    const t = window.setTimeout(() => setScanning(false), 2600)
-    return () => window.clearTimeout(t)
+    speak(ask)
+    // Once per visit.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // A half-open connection keeps the adapter claimed, so nothing else can see
+  // it — including this app on the next attempt.
+  useEffect(() => {
+    return () => {
+      reader?.connection.disconnect().catch(() => {})
+    }
+  }, [reader])
+
+  async function pair() {
+    setError(null)
+    setPhase('pairing')
+    try {
+      const paired = await pairReader()
+      setReader(paired)
+      setPhase('paired')
+    } catch (err) {
+      // A cancelled chooser is not a failure; it is a person changing their
+      // mind, and saying "something went wrong" to that is a small lie.
+      const cancelled = err instanceof Error && /cancel|User cancelled|NotFoundError/i.test(err.message)
+      setError(cancelled ? null : err instanceof Error ? err.message : 'Could not pair that reader.')
+      setPhase('idle')
+    }
+  }
 
   return (
     <main id="main" className="screen onboarding">
+      <Steps total={ONBOARDING_STEPS} current={2} className="onboarding__steps" />
+
       <div className="onboarding__body">
-        <div>
-          <h1 className="onboarding__title">Pair a reader</h1>
-          <p className="onboarding__sub">
-            An OBD reader plugs in under your dash and lets me read the engine directly. Phronesis
-            works without one — you would describe symptoms instead, and I would reason from those.
-          </p>
+        <div className="onboarding__greet">
+          <Halo size={avatarSize} state={phase === 'pairing' ? 'thinking' : talking ? 'responding' : 'idle'} />
+          <SpokenText text={ask} progress={progress} className="greet__line" />
         </div>
 
-        <div className="scan">
-          <SectionHead>
-            {scanning ? 'Looking for readers' : `${FOUND.length} readers found`}
-          </SectionHead>
-
-          {scanning && (
-            <span className="scan__status">
-              <Spinner size={12} /> Scanning…
-            </span>
-          )}
-
-          {!scanning &&
-            FOUND.map((r) => (
-              <CardButton
-                key={r.mac}
-                selected={picked === r.mac}
-                onClick={() => setPicked(r.mac)}
-                className="reader"
-              >
-                <span className="reader__icon" aria-hidden="true">
-                  <IconPlug size={16} />
-                </span>
-                <span className="reader__text">
-                  <span className="reader__name">{r.name}</span>
-                  <span className="reader__mac">
-                    {r.mac} · {r.strong ? 'strong signal' : 'weak signal'}
+        {supported ? (
+          <div className="scan">
+            {phase === 'paired' && reader ? (
+              <>
+                <SectionHead>Connected</SectionHead>
+                <div className="reader">
+                  <span className="reader__icon" aria-hidden="true">
+                    <IconPlug size={16} />
                   </span>
-                </span>
-              </CardButton>
-            ))}
-        </div>
+                  <span className="reader__text">
+                    <span className="reader__name">{reader.device.name}</span>
+                    <span className="reader__mac">{reader.session.adapter}</span>
+                  </span>
+                </div>
+                <p className={reader.session.vehicleResponding ? 'onboarding__fine' : 'onboarding__warn'}>
+                  {reader.session.vehicleResponding
+                    ? 'The car is answering. I can read its codes whenever you want.'
+                    : 'The reader is connected but the car is not answering. Turn the ignition to on — the engine does not need to be running.'}
+                </p>
+              </>
+            ) : (
+              <p className="onboarding__fine">{RECOMMENDED_HARDWARE}</p>
+            )}
+
+            {error && (
+              <p className="onboarding__warn" role="alert">
+                {error}
+              </p>
+            )}
+          </div>
+        ) : (
+          <p className="onboarding__fine" role="status">
+            {unavailableReason()}
+          </p>
+        )}
       </div>
 
       <div className="onboarding__actions">
+        {supported && phase !== 'paired' && (
+          <Button
+            variant="primary"
+            size="lg"
+            wide
+            loading={phase === 'pairing'}
+            onClick={pair}
+          >
+            {phase === 'pairing' ? 'Looking…' : 'Find my reader'}
+          </Button>
+        )}
         <Button
-          variant="primary"
-          size="lg"
+          variant={phase === 'paired' || !supported ? 'primary' : 'ghost'}
+          size={phase === 'paired' || !supported ? 'lg' : 'md'}
           wide
-          disabled={!picked}
-          onClick={() => navigate('/account')}
+          onClick={() => navigate('/home')}
         >
-          {picked ? 'Pair reader' : 'Select a reader'}
-        </Button>
-        <Button variant="ghost" wide onClick={() => navigate(-1)}>
-          Not now
+          {phase === 'paired' ? 'Done' : supported ? 'Not now' : 'Continue'}
         </Button>
       </div>
     </main>
