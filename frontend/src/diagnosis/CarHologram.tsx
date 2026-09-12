@@ -1,4 +1,5 @@
 import { cx } from '../ui/cx'
+import type { CarPart } from '../data/findings'
 
 /**
  * The car, floating on the surface with the fault marked on it.
@@ -19,7 +20,12 @@ import { cx } from '../ui/cx'
  * orb finally lost its disc too.
  */
 
-export type CarPart = 'front-brakes' | 'rear-brakes' | 'engine' | 'cabin' | 'battery'
+/**
+ * Re-exported, not redeclared. This list was written out twice — here and in
+ * `data/findings.ts` — which is two things that must agree and nothing making
+ * them. Callers can keep importing it from either place.
+ */
+export type { CarPart } from '../data/findings'
 
 /** Where each part lives, as a fraction of the drawing. Survives a redraw. */
 const ANCHOR: Record<CarPart, { x: number; y: number }> = {

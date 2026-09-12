@@ -4,11 +4,13 @@ A rebuild of the Phronesis frontend, from the bottom up. It replaced the
 original `frontend/` wholesale in one migration; the previous version is in
 git history at `d3421f8` and earlier.
 
-Step 4 is under way. **Auth and chat are wired to the Express server in
-`backend/`**; Diagnosis, Solutions, Maps and the vehicle record still run on
-mocks. The Vercel functions in `api/` are carried over from the previous
-frontend and are *not* used — `backend/` is the chosen server, and the two
-overlap on every endpoint.
+Step 4 is nearly done. Chat, voice, diagnosis, the vehicle record, preferences
+and account management all run against the Express server in `backend/`; the
+Map draws real OpenStreetMap data. **No screen runs on mock data any more.**
+
+The Vercel functions in `api/` are carried over from the previous frontend and
+are *not* used — `backend/` is the chosen server, and the two overlap on every
+endpoint.
 
 ## The order of work
 
@@ -75,89 +77,64 @@ that constraint is lifted, and the ground is genuinely an open question.
 ```
 frontend/
 ├─ design/          the spec. Not code, and it came first.
-│  ├─ 00-element-inventory.md
-│  ├─ 01-page-element-map.md
-│  ├─ 02-tokens.md          canonical token values
-│  ├─ 03-breakpoints.md     two breakpoints, and the app flow
-│  ├─ 04-precar.md          the second journey, and what it costs
-│  └─ page-01..09*.html     approved mockups
-├─ api/            Vercel serverless functions — carried over, not yet called
-│  ├─ chat.ts
-│  ├─ diagnosis.ts
-│  ├─ health.ts
-│  └─ tts.ts · tts-local.ts
-├─ public/         favicon, icons, and the Phronesis word marks
-├─ src/
+├─ api/             Vercel serverless functions — superseded by backend/
+├─ public/          favicon, icons, and the Phronesis word marks
+└─ src/
    ├─ styles/
    │  ├─ tokens.css   the ONLY place a colour is written down
    │  ├─ atoms.css    one class per atom, one atom per class
    │  ├─ pages.css    where atoms sit; it never restyles one
    │  └─ gallery.css  the style guide's own chrome, not the product
-   ├─ app/
-   │  ├─ routes.tsx      the entry flow and the hub
-   │  ├─ Root.tsx        press-is-light + the journey provider
-   │  ├─ AppLayout.tsx   the hub shell: tab bar or rail
-   │  ├─ journey.tsx     owner vs buyer — the branch the flow turns on
-   │  └─ useMediaQuery.ts
+   ├─ app/            providers, routing, and the cross-cutting hooks
+   │  ├─ routes.tsx · Root.tsx · AppLayout.tsx · Surface.tsx
+   │  ├─ auth.tsx · car.tsx · journey.tsx · voice.tsx · alerts.tsx · focus.tsx
+   │  └─ useSpeak · useDictation · useMediaQuery · useRootFontSize
+   │                 · useRouteAnnounce · browserSpeech
+   ├─ ui/             the component library — one barrel export
+   │  ├─ Button · Form · Display · Nav · Status · Dialog · SpokenText
+   │  └─ index.ts     everything a page is allowed to use
    ├─ avatar/
-   │  ├─ renderer.ts     pure canvas 2D. No React, nothing to mock
-   │  ├─ Halo.tsx        the loop, the sizing, the state blending
+   │  ├─ Halo.tsx     the loop, the sizing, the state blending
+   │  ├─ orbSpec.ts · OrbVideo.tsx
    │  └─ useMicLevel.ts  amplitude via a ref, never via state
-   ├─ maps/
-   │  └─ MapCanvas.tsx    stand-in map. One file to swap for an SDK
    ├─ diagnosis/
-   │  ├─ carModel.ts      the low-poly car + where each fault pins to it
-   │  ├─ Hologram.tsx     three.js: scene, orbit, markers, sizing
-   │  └─ HologramLazy.tsx the code-split boundary
-   ├─ components/
-   │  ├─ FindingCard.tsx
-   │  ├─ MechanicCard.tsx
-   │  ├─ RepairOptionCard.tsx
-   │  └─ CostBreakdown.tsx  parts vs labour, always split
+   │  └─ CarHologram.tsx  an SVG placeholder, swappable for a real model
+   ├─ maps/
+   │  └─ MapView.tsx      real OpenStreetMap / ArcGIS tiles
+   ├─ components/     composites: FindingCard, MechanicCard,
+   │                  RepairOptionCard, CostBreakdown
    ├─ lib/
-   │  └─ money.ts         currency in one place, since it is still open
-   ├─ data/
-   │  ├─ findings.ts      MOCK. Deleted outright in step 4
-   │  └─ solutions.ts     MOCK. Deleted with it
-   ├─ pages/
-   │  ├─ Loading.tsx      the intro — the avatar as the letter O
-   │  ├─ Welcome.tsx
-   │  ├─ Onboarding.tsx   journey · account · OBD
-   │  ├─ Home.tsx         the hub. Avatar centred, then docked
-   │  ├─ Diagnosis.tsx    the hologram and the findings
-   │  ├─ Solutions.tsx    what to have done, then who does it
-   │  ├─ Account.tsx      you, your car, alerts, voice, your data
-   │  ├─ Maps.tsx         mechanics, or dealers and sellers
-   │  └─ Placeholder.tsx  named stand-ins so the nav is honestly clickable
-   ├─ ui/             the component library
-   │  ├─ index.ts     the barrel — one import site for the app
-   │  ├─ Button.tsx   Button, IconButton
-   │  ├─ Form.tsx     inputs, select, switch, checkbox, radio,
-   │  │               segmented, slider, search
-   │  ├─ Display.tsx  chip, severity, stars, card, row, spec,
-   │  │               sheet, divider, bubble
-   │  ├─ Nav.tsx      tabs, tab bar, rail, app bar
-   │  ├─ Dialog.tsx   native <dialog>, for destructive confirms
-   │  ├─ Status.tsx   meter, split, steps, spinner, skeleton,
-   │  │               empty state, toast
-   │  └─ usePressLight.ts
-   ├─ icons.tsx
-   └─ App.tsx         the living style guide: every atom, every state
+   │  ├─ api.ts       the only module that knows the backend's shape
+   │  ├─ userdata.ts · alerts.ts · places.ts
+   │  ├─ firebase.ts  tolerant of missing configuration on purpose
+   │  └─ money.ts     currency in one place, since it is still open
+   ├─ data/           TYPES ONLY. The mock fixtures are gone; what is left
+   │  ├─ findings.ts  is CarPart and Finding
+   │  └─ solutions.ts and RepairOption and Mechanic
+   ├─ pages/          one file per screen
+   └─ styleguide/     the atom gallery, and Principles — which measures itself
 ```
-
-`npm run dev` opens the app at `/`. `/styleguide` is the atom gallery. It is the element sheet from `design/`
-as running code — which means it cannot drift from the components, because
-it *is* the components.
 
 ## Status
 
 - [x] **1. Design the atoms** — `design/`
-- [x] **2. Build the atoms** — `src/ui/`, 24 components
+- [x] **2. Build the atoms** — `src/ui/`
 - [x] **3. Compose the pages** — every screen in the flow is built
-- [ ] **4. Wire the backend** — auth and chat done; diagnosis, history,
-      solutions, maps and the vehicle record remain
-- [ ] **4. Wire the backend** — auth and chat done; diagnosis, history,
-      solutions, maps and the vehicle record remain
+- [ ] **4. Wire the backend** — mostly done; see the table below
+
+| Surface | Source |
+| --- | --- |
+| Chat | `POST /api/chat` — SSE, streaming |
+| Voice | `POST /api/tts` — Microsoft neural, via msedge-tts |
+| Diagnosis | `POST /api/diagnosis` — a real report, with a parts/labour split |
+| Solutions | derived from the saved diagnosis, not from a price table |
+| Account · car · preferences | `/api/car-profile`, `/api/preferences`, `/api/account` |
+| Auth | Firebase on the client, `Bearer` ID token to the server |
+| Map | OpenStreetMap and ArcGIS tiles, direct — no backend hop |
+
+**Not wired:** `/api/history` exists on the server and nothing calls it. Chat
+sessions are auto-saved server-side when a token is present, but the frontend
+never reads them back, so there is no "your past conversations" anywhere.
 
 `tsc -b && vite build` and `oxlint` are clean at every commit.
 
@@ -165,18 +142,18 @@ it *is* the components.
 
 | Route | Screen |
 | --- | --- |
-| `/` | Loading — holds 2.2s, then replaces itself with `/welcome` |
+| `/` | Loading — holds 1.4s, then goes to `/home` if signed in, else `/welcome` |
 | `/welcome` | Welcome |
 | `/start` | Onboarding 1 · journey. **The branch.** |
-| `/join` | Onboarding 2 · account. The only required step |
+| `/join` | Onboarding 2 · account. Name, email and password in one form |
 | `/pair` | Onboarding 3 · OBD. Owner-only; a buyer is redirected to `/home` |
 | `/home` | **Home** — the hub. Avatar centred until you speak, then docked |
-| `/diagnosis` | **Diagnosis** — the orbitable car and the findings |
-| `/solutions` | **Solutions** — `?finding=f1` selects what is being priced |
+| `/diagnosis` | **Diagnosis** — a real report, with the fault marked on the car |
+| `/solutions` | **Solutions** — priced from the saved diagnosis |
 | `/account` | **Account** — the journey switch here really re-writes the nav |
-| `/maps` | **Maps** — real chrome and interaction over a stand-in renderer |
-| `/discover` `/compare` | Buyer hub pages — Phase 3 |
-| `/styleguide` | Every atom, every state |
+| `/maps` | **Maps** — Leaflet, real OSM garages on Esri dark tiles |
+| `/discover` `/compare` | Buyer hub pages — Phase 3, still placeholders |
+| `/styleguide` | Every atom, every state — and Principles, which self-checks |
 
 The buyer flow is genuinely two steps, not a two-segment progress bar over a
 three-step flow: `steps` comes from the journey context, and `/pair` redirects
@@ -234,35 +211,34 @@ demonstrated is *drift at the call site*, and a utility-first control is
 authored at the call site by definition. `<Button variant="primary">` is the
 only way to get a button, and the only place its padding is decided.
 
-## The hologram
+## The car
 
-`diagnosis/carModel.ts` builds the car; `Hologram.tsx` owns the scene, the
-orbit and the sizing. It follows the same two rules as the avatar — a concrete
-pixel size, and a synchronous first paint — plus three of its own:
+`diagnosis/CarHologram.tsx` draws a generic side profile in SVG and marks the
+faulted part on it. It is a placeholder, deliberately: the props are the
+contract, and the marker anchors are **fractions of the viewBox rather than
+pixels**, so a real model — Blender, Sketchfab, or generated from a photo —
+drops in without moving a single fault off the part it belongs to.
 
-- **three.js is code-split.** It is ~530kB, more than the rest of the app put
-  together, and it is fetched only when a hologram actually renders. Someone
-  who only opens Home never downloads it. The findings list paints first
-  either way; the car arrives underneath it.
-- **Severity colours are read from the CSS tokens**, not hard-coded as hex in
-  the scene. Otherwise the 3D view quietly becomes a second source of truth for
-  the palette.
-- **The camera fits the box it is given.** A tall stage has a narrower
-  *horizontal* field of view, so one fixed distance that frames the car on a
-  desktop panel crops it on a phone.
+There was a three.js version: a low-poly wireframe you could orbit, with the
+camera fitted to its container and severity colours read from the CSS tokens.
+It was replaced by the SVG and then sat unimported for several commits before
+being deleted, along with `three` and `@types/three`. Rollup had been
+tree-shaking it out, so nobody was downloading it — which is exactly why it
+survived so long unnoticed. Two lessons from it are worth keeping even though
+the code is gone:
 
-The car is the treatment, not the asset. In production it becomes a compressed
-glTF, and five generic bodies — sedan, hatch, SUV, pickup, minibus — cover
-almost every car in Uganda without licensing a model per vehicle.
-
-### Two layout rules this page proved the hard way
-
-- An **`@container` rule cannot style its own container**. The stacked layout
-  silently did nothing until the flex row moved one level down, inside the
-  container, into `.diag__cols`.
-- **Measure the canvas, not its host.** The host carries a 1px border, so its
-  border-box is 2px wider than the content box the canvas fills — enough to
+- **Hand a canvas a concrete pixel size.** Left to size itself from a
+  ResizeObserver, a renderer can sit with a live context, correct layout and a
+  parked loop, painting nothing at all — silently.
+- **Measure the canvas, not its host.** The host carried a 1px border, so its
+  border-box was 2px wider than the content box the canvas filled — enough to
   leave every frame permanently, subtly stretched.
+
+And one that cost a day and applies to any container query:
+
+- **An `@container` rule cannot style its own container.** A stacked layout did
+  nothing at all until the flex row moved one level down, *inside* the element
+  carrying `container-type`.
 
 ## Solutions
 
@@ -270,8 +246,9 @@ Two decisions in order: **what to have done**, then **who does it**. On a phone
 those are two steps; above 768px they are two columns, and the estimate breaks
 down on the right instead of inside the card.
 
-Which finding is being priced lives in the URL — `/solutions?finding=f1` — so
-the page is linkable and the back button behaves.
+It prices the most recent saved diagnosis rather than taking a finding in the
+URL — the report already knows what is wrong, and asking the URL to carry it
+too was a second source of truth for the same fact.
 
 ### Why every price is split
 
@@ -342,17 +319,25 @@ search row → filters → ETA → flexible spacer → sheet → tab bar
 
 The spacer is what lets the map show through. It is the whole trick.
 
-### The renderer is a stand-in, on purpose
+### The renderer
 
-`maps/MapCanvas.tsx` draws the same *shapes* a tiled map will — streets, a
-route, pins, your position — because the SDK choice (Google versus MapLibre)
-turns on billing and Ugandan routing quality, and nothing on this page needs it
-settled first.
+`maps/MapView.tsx` is Leaflet on Esri's World Dark Gray tiles, and the places
+are real garages from OpenStreetMap (`lib/places.ts`). The stand-in canvas that
+used to live here is gone.
 
-Everything around it is real and does not change when the tiles do: the glass
-chrome, the filters, the sheet, list/​pin selection, the route redrawing, the
-fallback when a filter hides the selected place. **The swap replaces one file
-and turns `x`/`y` into `lat`/`lng`.**
+Three things that decision cost, recorded because each was found the hard way:
+
+- **MapLibre lost to Leaflet** on setup, not on quality. MapLibre is the better
+  engine but wants a vector tile provider — a second account before anything
+  renders at all.
+- **CARTO's dark basemap had to be abandoned on sight.** It still serves tiles;
+  they just come back stamped "API KEY REQUIRED" across the image. A keyless
+  tile service can start demanding a key *without the request failing*, and only
+  looking at the map catches it.
+- **OSM has names and positions and almost nothing else.** Measured, not
+  assumed: of 60 garages in central Kampala, one had a phone number, one had
+  opening hours, three had a street. No ratings exist in OSM at all. The UI
+  shows what is there and says what is missing rather than inventing stars.
 
 ## A bug worth remembering
 
