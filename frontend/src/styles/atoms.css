@@ -1648,3 +1648,165 @@ main:focus {
     opacity: 0;
   }
 }
+
+/* ============================================================
+   PRE-CAR ATOMS
+   Four new ones. Everything else these pages use — spec rows,
+   the slider, chips, cards, tabs — already existed, which was
+   the point of writing design/04-precar.md before building the
+   component library rather than after.
+
+   No severity colour appears anywhere below. This journey has
+   none: red and amber mean safety in Phronesis, and a car being
+   expensive is not a safety matter.
+   ============================================================ */
+
+/* ------------------------------------------------------------ pro / con */
+
+.ph-procon {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.ph-procon__col {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ph-procon__item {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  font-size: 0.8125rem;
+  color: var(--ink-2);
+  line-height: 1.5;
+}
+
+/* Brightness, not hue: a filled dot is for, a hollow one against. Survives
+   greyscale, colour blindness, and the no-colour rule all at once. */
+.ph-procon__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: none;
+  margin-top: 0.44em;
+}
+.ph-procon__dot[data-kind='pro'] {
+  background: var(--ink);
+}
+.ph-procon__dot[data-kind='con'] {
+  background: transparent;
+  border: 1px solid var(--ink-3);
+}
+
+@media (max-width: 380px) {
+  .ph-procon {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ----------------------------------------------------------- price band */
+
+.ph-band {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* The range as the monochrome ramp. A price is a position on this, never a
+   colour — "good deal" in green would be a judgement the data cannot carry. */
+.ph-band__track {
+  position: relative;
+  height: 34px;
+  border-radius: var(--r-sm);
+  background: linear-gradient(90deg, var(--surface), var(--surface-3));
+}
+
+.ph-band__avg {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  width: 1px;
+  background: var(--edge);
+}
+
+.ph-band__mark {
+  position: absolute;
+  top: 50%;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--accent);
+  box-shadow: 0 0 0 4px var(--accent-wash);
+}
+
+.ph-band__ends,
+.ph-band__key {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.75rem;
+  color: var(--ink-3);
+}
+.ph-band__ends {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+.ph-band__key {
+  justify-content: flex-start;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.ph-band__key span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.ph-band__keydot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.ph-band__keyline {
+  width: 11px;
+  height: 1px;
+  background: var(--edge);
+}
+
+/* Provenance is not a footnote. These numbers age and the screen says so. */
+.ph-band__source {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--ink-3);
+  line-height: 1.5;
+}
+
+/* ------------------------------------------------------- trend sparkline */
+
+.ph-spark {
+  display: block;
+  width: 100%;
+  height: 62px;
+}
+.ph-spark__area {
+  fill: var(--accent-wash);
+  stroke: none;
+}
+.ph-spark__line {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 1.6;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  /* preserveAspectRatio="none" stretches the stroke; this keeps it even. */
+  vector-effect: non-scaling-stroke;
+}
+.ph-spark__now {
+  fill: var(--accent);
+}

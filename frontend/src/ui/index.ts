@@ -23,6 +23,8 @@ export {
   Chip,
   Divider,
   Group,
+  PriceBand,
+  ProConList,
   Row,
   SectionHead,
   SeverityBadge,
@@ -30,15 +32,18 @@ export {
   Spec,
   SpecList,
   StarRating,
+  TrendSparkline,
 } from './Display'
 export type {
   BubbleProps,
   CardButtonProps,
   CardProps,
   ChipProps,
+  PriceBandProps,
   RowProps,
   Severity,
   StarRatingProps,
+  TrendSparklineProps,
 } from './Display'
 
 export {

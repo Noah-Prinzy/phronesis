@@ -260,3 +260,174 @@ export function Bubble({ from, streaming, children, className }: BubbleProps) {
     </div>
   )
 }
+
+/* --------------------------------------------------------------- pro / con */
+
+/**
+ * Reasons for and against, told by brightness rather than hue.
+ *
+ * The pre-car journey has no colour: nothing here is critical and nothing is a
+ * warning, so green-for-good and red-for-bad would be the first crack in a
+ * rule the rest of the system keeps — red and amber exist in Phronesis only
+ * where safety is at stake. A filled dot is a point for, a hollow one a point
+ * against, and the distinction survives greyscale and colour blindness both.
+ */
+export function ProConList({
+  pros,
+  cons,
+  className,
+}: {
+  pros: string[]
+  cons: string[]
+  className?: string
+}) {
+  return (
+    <div className={cx('ph-procon', className)}>
+      <ul className="ph-procon__col" aria-label="In its favour">
+        {pros.map((p) => (
+          <li key={p} className="ph-procon__item">
+            <span className="ph-procon__dot" data-kind="pro" aria-hidden="true" />
+            <span>{p}</span>
+          </li>
+        ))}
+      </ul>
+      <ul className="ph-procon__col" aria-label="Against it">
+        {cons.map((c) => (
+          <li key={c} className="ph-procon__item">
+            <span className="ph-procon__dot" data-kind="con" aria-hidden="true" />
+            <span>{c}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
+/* -------------------------------------------------------------- price band */
+
+/** Keeps a marker inside its track when a figure sits outside the band. */
+function clamp(n: number): number {
+  return Math.min(100, Math.max(0, n))
+}
+
+export interface PriceBandProps {
+  low: number
+  high: number
+  average: number
+  /** Where this particular car sits. Omit and only the band is drawn. */
+  mark?: number
+  /** Rendered under the band. A band with no stated source is not shippable. */
+  source: string
+  /** Formats an amount for the end labels. */
+  format: (amount: number) => string
+  className?: string
+}
+
+/**
+ * What a model costs, as a position rather than a verdict.
+ *
+ * A good price is a place on a range, not a colour — so the range is the
+ * monochrome ramp the rest of the system already uses, the average is a
+ * hairline, and the only lit thing is where this car falls. Saying "good deal"
+ * in green would be the app making a judgement it cannot support from listing
+ * spread alone.
+ *
+ * `source` is not optional, and it is not decoration. These numbers age, and a
+ * price band with no provenance is worse than no band at all.
+ */
+export function PriceBand({
+  low,
+  high,
+  average,
+  mark,
+  source,
+  format,
+  className,
+}: PriceBandProps) {
+  const span = high - low
+  const at = (value: number) => (span <= 0 ? 50 : ((value - low) / span) * 100)
+
+  const summary =
+    mark === undefined
+      ? `Market runs from ${format(low)} to ${format(high)}, averaging ${format(average)}.`
+      : `This one is ${format(mark)}, against an average of ${format(average)} in a range from ${format(low)} to ${format(high)}.`
+
+  return (
+    <div className={cx('ph-band', className)}>
+      <div className="ph-band__track" role="img" aria-label={summary}>
+        <span className="ph-band__avg" style={{ left: `${clamp(at(average))}%` }} />
+        {mark !== undefined && (
+          <span className="ph-band__mark" style={{ left: `${clamp(at(mark))}%` }} />
+        )}
+      </div>
+      <div className="ph-band__ends">
+        <span>{format(low)}</span>
+        <span>{format(high)}</span>
+      </div>
+      <div className="ph-band__key">
+        {mark !== undefined && (
+          <span>
+            <span className="ph-band__keydot" aria-hidden="true" /> This one · {format(mark)}
+          </span>
+        )}
+        <span>
+          <span className="ph-band__keyline" aria-hidden="true" /> Average · {format(average)}
+        </span>
+      </div>
+      <p className="ph-band__source">{source}</p>
+    </div>
+  )
+}
+
+/* ----------------------------------------------------------- trend sparkline */
+
+export interface TrendSparklineProps {
+  /** Oldest first. Fewer than two points draws nothing. */
+  values: number[]
+  /** Describes the shape for anyone who cannot see it. */
+  label: string
+  className?: string
+}
+
+/**
+ * A year of prices, one stroke, no axes.
+ *
+ * Deliberately unlabelled: the figures either side of it carry the numbers,
+ * and a sparkline that tries to be a chart stops being readable at this size.
+ * The last point is marked because "where it is now" is the only value on the
+ * line anyone reads precisely.
+ */
+export function TrendSparkline({ values, label, className }: TrendSparklineProps) {
+  if (values.length < 2) return null
+
+  const W = 300
+  const H = 62
+  const PAD = 4
+  const lo = Math.min(...values)
+  const hi = Math.max(...values)
+  const span = hi - lo || 1
+
+  const points = values.map((v, i) => {
+    const x = PAD + (i / (values.length - 1)) * (W - PAD * 2)
+    const y = PAD + (1 - (v - lo) / span) * (H - PAD * 2)
+    return [x, y] as const
+  })
+
+  const line = points.map(([x, y], i) => `${i === 0 ? 'M' : 'L'}${x.toFixed(1)} ${y.toFixed(1)}`).join(' ')
+  const area = `${line} L${points[points.length - 1][0].toFixed(1)} ${H} L${points[0][0].toFixed(1)} ${H} Z`
+  const [lastX, lastY] = points[points.length - 1]
+
+  return (
+    <svg
+      className={cx('ph-spark', className)}
+      viewBox={`0 0 ${W} ${H}`}
+      preserveAspectRatio="none"
+      role="img"
+      aria-label={label}
+    >
+      <path className="ph-spark__area" d={area} />
+      <path className="ph-spark__line" d={line} />
+      <circle className="ph-spark__now" cx={lastX} cy={lastY} r="3" />
+    </svg>
+  )
+}

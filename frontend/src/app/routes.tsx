@@ -9,7 +9,8 @@ import { Diagnosis } from '../pages/Diagnosis'
 import { Solutions } from '../pages/Solutions'
 import { Account } from '../pages/Account'
 import { Maps } from '../pages/Maps'
-import { Placeholder } from '../pages/Placeholder'
+import { Discover } from '../pages/Discover'
+import { Compare } from '../pages/Compare'
 import { StyleGuide } from '../styleguide/StyleGuide'
 
 /**
@@ -44,14 +45,8 @@ export const router = createBrowserRouter([
           { path: 'solutions', element: <Solutions /> },
           { path: 'maps', element: <Maps /> },
           { path: 'account', element: <Account /> },
-          {
-            path: 'discover',
-            element: <Placeholder title="Discover" body="Browse and ask. Phase 3 — see design/04-precar.md." />,
-          },
-          {
-            path: 'compare',
-            element: <Placeholder title="Compare" body="Three cars side by side, with Market as a tab. Phase 3." />,
-          },
+          { path: 'discover', element: <Discover /> },
+          { path: 'compare', element: <Compare /> },
         ],
       },
 

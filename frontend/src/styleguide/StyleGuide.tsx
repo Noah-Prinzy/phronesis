@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { moneyShort } from '../lib/money'
 import {
   AppBar,
   Bubble,
@@ -23,9 +24,12 @@ import {
   SeverityBadge,
   Sheet,
   Skeleton,
+  PriceBand,
+  ProConList,
   Slider,
   Spec,
   SpecList,
+  TrendSparkline,
   Spinner,
   SplitBar,
   StarRating,
@@ -348,6 +352,35 @@ export function StyleGuide() {
               <Spec label="Fuel consumption" value="14.2 km/L" />
               <Spec label="Country" value="Japan" />
             </SpecList>
+          </Case>
+          {/* The pre-car four. They live here for the same reason everything
+              else does: the gallery is the one place the atoms can be seen
+              side by side, and an atom that is not in it drifts. */}
+          <Case label="pro / con">
+            <ProConList
+              pros={['Roomiest boot in its class', 'Parts on every corner']}
+              cons={['Thirstier than an Axio', 'CVT rebuilds are costly']}
+            />
+          </Case>
+          <Case label="price band">
+            <div style={{ width: 300 }}>
+              <PriceBand
+                low={36_000_000}
+                high={58_000_000}
+                average={46_200_000}
+                mark={42_500_000}
+                source="Illustrative figures — not yet sourced."
+                format={moneyShort}
+              />
+            </div>
+          </Case>
+          <Case label="trend">
+            <div style={{ width: 300 }}>
+              <TrendSparkline
+                values={[49.4, 49, 49.6, 48.5, 48, 48.2, 47.3, 47.5, 46.6, 46.8, 46.3, 46.2]}
+                label="Average price drifting down over twelve months."
+              />
+            </div>
           </Case>
           <Case label="bubbles">
             <div className="thread">
