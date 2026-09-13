@@ -13,7 +13,7 @@ import { useSpeak } from '../app/useSpeak'
 import { OPENER_BUYER, OPENER_OWNER, RESUME_LINES } from '../app/lines'
 import { takeSentences } from '../app/sentences'
 import { useFocus } from '../app/focus'
-import { ApiError, streamChat } from '../lib/api'
+import { ApiError, fetchChats, streamChat } from '../lib/api'
 import type { ChatMessage } from '../lib/api'
 import type { CarPart } from '../data/findings'
 
@@ -47,6 +47,16 @@ import type { CarPart } from '../data/findings'
     and the loop never restarts mid-conversation. */
 const ORB_HERO = 19
 const ORB_DOCKED = 6
+
+/**
+ * How many past messages travel with a new question.
+ *
+ * Twenty is ten exchanges, which is far more than his persona needs — he asks
+ * one question at a time and the thread rarely refers back further than a
+ * couple of turns. The cap exists because conversations now survive a reload,
+ * so "the whole thing" is no longer a bounded amount of text.
+ */
+const RECENT_TURNS = 20
 
 interface Msg {
   id: number
@@ -118,6 +128,21 @@ export function Home() {
   const [heard, setHeard] = useState('')
   /** The reply currently being spoken, revealed in time with the voice. */
   const [speakingId, setSpeakingId] = useState<number | null>(null)
+  /** Numbers messages. Up here because the restore effect below needs it. */
+  const idRef = useRef(1)
+  /**
+   * The conversation on the server, so each turn appends to it instead of
+   * starting a new one. Null until the first reply comes back, or until an
+   * earlier conversation is restored below.
+   */
+  const [chatId, setChatId] = useState<string | null>(null)
+  /**
+   * Null while we are still finding out whether there is a conversation to
+   * restore. The greeting waits on this: opening with "so what's your car
+   * been doing?" above a thread you were halfway through is worse than a
+   * moment's silence.
+   */
+  const [restored, setRestored] = useState<boolean | null>(null)
 
   const { getToken, user, status: authStatus } = useAuth()
   const firstName = firstNameOf(user)
@@ -143,8 +168,63 @@ export function Home() {
   const greeting = firstName ? `Hey ${firstName}. ` : ''
   const opener = `${greeting}${owner ? OPENER_OWNER : OPENER_BUYER}`
 
-  // Greet on arrival, once auth has settled — speaking any earlier would
-  // deliver the line before the name loads and greet a stranger.
+  // Nothing happens until auth settles: greeting any earlier delivers the
+  // line before the name loads and greets a stranger, and asking for history
+  // any earlier asks without a token.
+  const authSettled = authStatus !== 'loading'
+
+  /**
+   * Pick the conversation back up.
+   *
+   * The backend has been saving every turn since chat first shipped and
+   * nothing ever read them back, so a reload silently threw the conversation
+   * away — which the plan asks against twice, in §2.4 and §7.2.
+   *
+   * Signed out, there is nothing to restore and nothing to wait for.
+   */
+  useEffect(() => {
+    if (!authSettled) return
+
+    const controller = new AbortController()
+
+    void (async () => {
+      const token = authStatus === 'signedIn' ? await getToken() : null
+      if (controller.signal.aborted) return
+
+      if (!token) {
+        setRestored(false)
+        return
+      }
+
+      const sessions = await fetchChats(token, controller.signal)
+      if (controller.signal.aborted) return
+
+      const latest = sessions[0]
+      if (!latest || latest.messages.length === 0) {
+        setRestored(false)
+        return
+      }
+
+      setMsgs(
+        latest.messages.map((m) => ({
+          id: idRef.current++,
+          from: m.role,
+          text: m.content,
+        })),
+      )
+      setChatId(latest.id)
+      // Nothing is spoken on restore. These are words he already said; saying
+      // them again would be the one thing the persona forbids outright.
+      setRestored(true)
+    })()
+
+    return () => controller.abort()
+    // Once auth settles. `getToken` is stable enough and re-running on every
+    // token refresh would re-restore over a live conversation.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authSettled, authStatus])
+
+  // Greet on arrival, but only into an empty room.
   //
   // Deliberately not guarded by a ref. StrictMode mounts, tears down and
   // remounts every effect in development, and `useSpeak`'s own teardown
@@ -152,14 +232,13 @@ export function Home() {
   // it would block the second, real attempt and leave the line stuck at zero
   // progress forever — one word on screen and silence. Re-running on a genuine
   // remount is the correct behaviour anyway: coming back to Home should greet.
-  const authSettled = authStatus !== 'loading'
   useEffect(() => {
-    if (!authSettled) return
+    if (restored !== false) return
     speakLine(opener)
-    // Only when auth settles. `opener` and `speakLine` would re-greet on every
-    // identity change.
+    // Only when the restore check lands. `opener` and `speakLine` would
+    // re-greet on every identity change.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authSettled])
+  }, [restored])
 
   /* ---------------------------------------------------------- speech in
      `send` is a hoisted function declaration and the hook re-reads these
@@ -253,7 +332,6 @@ export function Home() {
     // the thread has to keep following it down.
   }, [msgs, offer, heard, progress])
 
-  const idRef = useRef(1)
   const abortRef = useRef<AbortController | null>(null)
   useEffect(() => () => abortRef.current?.abort(), [])
 
@@ -279,8 +357,14 @@ export function Home() {
     // Build the wire history from what is on screen *plus* this turn, rather
     // than reading state back after setMsgs — that read would be one render
     // behind and would silently drop the newest message.
+    //
+    // Only the recent tail goes over the wire. A conversation used to be
+    // bounded by how long the tab stayed open; now that it survives a reload
+    // it can run for weeks, and sending all of it would grow the cost and the
+    // latency of every single turn until it hit the model's context limit.
+    // The whole thread stays on screen and in Firestore either way.
     const history: ChatMessage[] = [
-      ...msgs.map((m) => ({ role: m.from, content: m.text })),
+      ...msgs.slice(-RECENT_TURNS).map((m) => ({ role: m.from, content: m.text })),
       { role: 'user' as const, content: body },
     ]
     setMsgs((m) => [...m, mine])
@@ -331,6 +415,10 @@ export function Home() {
         messages: history,
         journey,
         token,
+        // Absent on the first turn; the server mints one and hands it back,
+        // and every turn after this appends to that same conversation.
+        chatId,
+        onChatId: setChatId,
         signal: controller.signal,
         onDelta: (delta) => {
           full += delta

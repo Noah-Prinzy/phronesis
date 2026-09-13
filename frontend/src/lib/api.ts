@@ -45,6 +45,13 @@ export interface StreamChatOptions {
   token?: string | null
   /** Called for each delta as it arrives. */
   onDelta: (delta: string) => void
+  /**
+   * The conversation this turn belongs to. Pass back what `onChatId` last
+   * gave you; omit it to start a new one.
+   */
+  chatId?: string | null
+  /** The session id, once the server has written the turn. */
+  onChatId?: (chatId: string) => void
   signal?: AbortSignal
 }
 
@@ -62,6 +69,8 @@ export async function streamChat({
   journey,
   token,
   onDelta,
+  chatId,
+  onChatId,
   signal,
 }: StreamChatOptions): Promise<void> {
   const res = await fetch(`${BASE}/api/chat`, {
@@ -70,7 +79,7 @@ export async function streamChat({
       'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
-    body: JSON.stringify({ messages, journey: toApiJourney(journey) }),
+    body: JSON.stringify({ messages, journey: toApiJourney(journey), ...(chatId ? { chatId } : {}) }),
     signal,
   })
 
@@ -108,11 +117,12 @@ export async function streamChat({
       if (payload === '[DONE]') return
 
       try {
-        const parsed = JSON.parse(payload) as { delta?: string; error?: string }
+        const parsed = JSON.parse(payload) as { delta?: string; error?: string; chatId?: string }
         // An error can arrive *mid-stream*, after a 200 and after some deltas
         // have already been rendered.
         if (parsed.error) throw new ApiError(parsed.error)
         if (parsed.delta) onDelta(parsed.delta)
+        if (parsed.chatId) onChatId?.(parsed.chatId)
       } catch (err) {
         if (err instanceof ApiError) throw err
         // A malformed frame is not worth killing a live reply over.
@@ -306,4 +316,68 @@ export async function runDiagnosis(
   if (!res.ok) throw new Error(`Diagnosis failed (${res.status})`)
   const body = (await res.json()) as { report: DiagnosisReport }
   return body.report
+}
+
+/* ---------------------------------------------------------------- history */
+
+export interface ChatSession {
+  id: string
+  journey?: 'pre-car' | 'post-car'
+  messages: ChatMessage[]
+  updatedAt: string
+}
+
+/**
+ * The conversations this user has had, most recent first.
+ *
+ * Home restores the top one on arrival, which is the whole of "conversation
+ * continuity" from the plan: the backend has been writing these since the
+ * first chat shipped and nothing ever read them back, so every reload quietly
+ * threw the conversation away.
+ *
+ * Returns an empty list rather than throwing when there is nothing to show or
+ * the call fails. A history that cannot be fetched should cost you the
+ * history, not the page — Home still works perfectly well starting fresh.
+ */
+export async function fetchChats(token: string, signal?: AbortSignal): Promise<ChatSession[]> {
+  try {
+    const res = await fetch(`${BASE}/api/chats`, {
+      headers: { Authorization: `Bearer ${token}` },
+      signal,
+    })
+    if (!res.ok) return []
+
+    const body = (await res.json()) as { chats?: unknown }
+    if (!Array.isArray(body.chats)) return []
+
+    return body.chats.flatMap((raw): ChatSession[] => {
+      const c = raw as Partial<ChatSession> & { messages?: unknown }
+      if (typeof c.id !== 'string' || !Array.isArray(c.messages)) return []
+
+      // Firestore documents are not typed, and one malformed turn should not
+      // take the whole conversation down with it.
+      const messages = c.messages.filter(
+        (m): m is ChatMessage =>
+          typeof m === 'object' &&
+          m !== null &&
+          (('role' in m && (m as ChatMessage).role === 'user') ||
+            (m as ChatMessage).role === 'assistant') &&
+          typeof (m as ChatMessage).content === 'string' &&
+          (m as ChatMessage).content.trim() !== '',
+      )
+      if (messages.length === 0) return []
+
+      return [
+        {
+          id: c.id,
+          journey: c.journey,
+          messages,
+          updatedAt: typeof c.updatedAt === 'string' ? c.updatedAt : '',
+        },
+      ]
+    })
+  } catch {
+    // Aborted, offline, or the endpoint is down. Start fresh.
+    return []
+  }
 }

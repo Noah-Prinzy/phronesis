@@ -85,8 +85,22 @@ export function takeSentences(
     pending += head
     rest = rest.slice(cut)
 
-    // Only cut here if there is real whitespace after it, or nothing left —
-    // otherwise this full stop is inside something, not after it.
+    /**
+     * Nothing after the mark, and more text still coming: STOP.
+     *
+     * At the end of a burst there is no way to tell `Really?` from the
+     * `Really?!` whose bang has not arrived yet, or `Well.` from `Well...`.
+     * Cutting here splits the punctuation across two chunks and the voice
+     * says the first half with the wrong intonation and the second as its
+     * own tiny utterance.
+     *
+     * Everything held in `pending` goes back onto `rest` below, so the next
+     * burst re-examines it with the extra characters attached.
+     */
+    if (!rest && !done) break
+
+    // Only cut here if there is real whitespace after it — otherwise this
+    // full stop is inside something, not after it.
     if (rest && !/^\s/.test(rest)) continue
 
     if (pending.trim().length >= (isFirst ? 1 : MIN_CHARS)) {

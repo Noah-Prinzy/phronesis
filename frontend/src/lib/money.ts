@@ -19,13 +19,21 @@ export function money(amount: number): string {
  * exact shilling is noise and the magnitude is the point.
  */
 export function moneyShort(amount: number): string {
-  if (amount >= 1_000_000) {
-    const m = amount / 1_000_000
-    return `${m % 1 === 0 ? m : m.toFixed(1)}M`
-  }
-  if (amount >= 1_000) {
-    const k = amount / 1_000
-    return `${k % 1 === 0 ? k : k.toFixed(1)}k`
-  }
+  if (amount >= 1_000_000) return `${oneDecimal(amount / 1_000_000)}M`
+  if (amount >= 1_000) return `${oneDecimal(amount / 1_000)}k`
   return String(amount)
+}
+
+/**
+ * One decimal place, and none at all when it would be a zero.
+ *
+ * The rounding has to happen BEFORE the is-it-whole test, which is the bug
+ * this replaces: the old version asked `m % 1 === 0` of the raw quotient, so
+ * anything that merely rounded to a whole number kept its decimal. UGX
+ * 41,960,000 came out as "42.0M" rather than "42M" — a realistic price, and
+ * the trailing zero is exactly what the check existed to prevent.
+ */
+function oneDecimal(value: number): string {
+  const rounded = Math.round(value * 10) / 10
+  return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1)
 }

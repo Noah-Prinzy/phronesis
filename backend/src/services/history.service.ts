@@ -48,8 +48,26 @@ export interface SaveDiagnosisInput {
 export interface SaveChatMessageInput {
   userId: string;
   journey?: 'pre-car' | 'post-car';
-  messages: Array<{ role: 'user' | 'assistant'; content: string }>;
+  /**
+   * The new turn only — the question and the answer — NOT the whole
+   * conversation. The stored thread is whatever is already in the document
+   * plus this.
+   */
+  append: Array<{ role: 'user' | 'assistant'; content: string }>;
+  /** The session to append to. Absent starts a new one. Ownership is checked. */
+  chatId?: string;
 }
+
+/**
+ * How much of a conversation is kept.
+ *
+ * A Firestore document is capped at 1MB, and a thread that now survives
+ * reloads has no natural end. Hitting that ceiling would make every
+ * subsequent save fail — the history would silently stop growing with no
+ * error anyone sees. Four hundred messages is far beyond any real
+ * conversation and comfortably inside the limit.
+ */
+const MAX_STORED_MESSAGES = 400;
 
 export async function syncUserProfile(data: UserProfileData): Promise<void> {
   const userRef = db.collection('users').doc(data.uid);
@@ -112,16 +130,64 @@ export async function getUserDiagnoses(userId: string): Promise<Array<Record<str
   }));
 }
 
+/**
+ * Write a conversation, as ONE document that grows.
+ *
+ * It used to call `.doc()` with no id on every turn, which mints a new
+ * document each time — and since the client posts the whole conversation with
+ * each request, every one of those documents held the entire history up to
+ * that point. A twenty-turn chat left twenty documents totalling four hundred
+ * messages, `getUserChats` returned twenty copies of the same conversation
+ * under twenty different ids, and the growth was quadratic in a collection
+ * that is billed by the read.
+ *
+ * So the caller passes back the id it was given and the session is updated in
+ * place. A missing id means a genuinely new conversation.
+ *
+ * **The id is checked before it is trusted.** It arrives from the client, and
+ * writing to whatever document id someone sends would let one account
+ * overwrite another's chat. An id that does not exist or belongs to somebody
+ * else silently starts a new session rather than erroring: the reply has
+ * already been streamed by this point, and failing the save is not worth
+ * losing it over.
+ */
 export async function saveChatSession(input: SaveChatMessageInput): Promise<string> {
-  const docRef = db.collection('chats').doc();
-  await docRef.set({
-    chatId: docRef.id,
-    userId: input.userId,
-    journey: input.journey || 'post-car',
-    messages: input.messages,
-    createdAt: FieldValue.serverTimestamp(),
-    updatedAt: FieldValue.serverTimestamp(),
-  });
+  const existing = input.chatId
+    ? await db.collection('chats').doc(input.chatId).get()
+    : null;
+
+  const mine = existing?.exists && existing.data()?.userId === input.userId;
+  const docRef = mine
+    ? db.collection('chats').doc(input.chatId!)
+    : db.collection('chats').doc();
+
+  /**
+   * The thread grows HERE, from what is already stored.
+   *
+   * The client only sends the recent tail of the conversation with each
+   * question — it has to, or the prompt grows without limit — so writing
+   * whatever it sent would quietly truncate the stored history down to that
+   * same tail. The server owns the full record; the client owns the context
+   * window. Those are different lengths and conflating them loses the older
+   * half of every long conversation.
+   */
+  const previous: SaveChatMessageInput['append'] = mine
+    ? (existing?.data()?.messages ?? [])
+    : [];
+  const messages = [...previous, ...input.append].slice(-MAX_STORED_MESSAGES);
+
+  await docRef.set(
+    {
+      chatId: docRef.id,
+      userId: input.userId,
+      journey: input.journey || 'post-car',
+      messages,
+      // Only on creation, or every update would reset when the chat began.
+      ...(mine ? {} : { createdAt: FieldValue.serverTimestamp() }),
+      updatedAt: FieldValue.serverTimestamp(),
+    },
+    { merge: true },
+  );
   return docRef.id;
 }
 
