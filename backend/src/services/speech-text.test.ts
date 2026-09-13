@@ -102,6 +102,35 @@ describe('normaliseForSpeech', () => {
       expect(normaliseForSpeech('the A/C is weak')).toBe('the air conditioning is weak');
     });
 
+    it('says the units on a spec sheet', () => {
+      // Both arrived with the pre-car pages: "em em" and "sixty el".
+      expect(normaliseForSpeech('4,595 mm')).toBe('4,595 millimetres');
+      expect(normaliseForSpeech('a 60 L tank')).toBe('a 60 litres tank');
+    });
+
+    it('does not mistake km/L for a stray litre', () => {
+      // The compound rule has to win, or this becomes "kilometres per litres".
+      expect(normaliseForSpeech('13.8 km/L')).toBe('13.8 kilometres per litre');
+    });
+
+    it('spells out the drivetrain acronyms, all four of them', () => {
+      // FWD and RWD were missing while AWD and 4WD were handled.
+      expect(normaliseForSpeech('FWD')).toBe('front wheel drive');
+      expect(normaliseForSpeech('RWD')).toBe('rear wheel drive');
+      expect(normaliseForSpeech('AWD')).toBe('all wheel drive');
+      expect(normaliseForSpeech('4WD')).toBe('four wheel drive');
+    });
+
+    it('spells out a gearbox rather than saying "cvt"', () => {
+      expect(normaliseForSpeech('a CVT gearbox')).toBe('a C V T gearbox');
+    });
+
+    it('spells out an engine code', () => {
+      // On every Discover spec sheet. Attempted as a word otherwise.
+      expect(normaliseForSpeech('2ZR-FE')).toBe('two Z R, F E');
+      expect(normaliseForSpeech('3ZR-FAE')).toBe('three Z R, F A E');
+    });
+
     it('rescues "mic", which came out as "em eye see"', () => {
       expect(normaliseForSpeech('tap the mic')).toBe('tap the mike');
     });

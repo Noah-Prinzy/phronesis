@@ -144,6 +144,13 @@ const SPOKEN: Array<[RegExp, string]> = [
   [/\b([\d,]+)\s*km\b/gi, '$1 kilometres'],
   [/\bkm\b/gi, 'kilometres'],
 
+  // Millimetres and litres, both from the pre-car spec sheet: "4,595 mm" was
+  // being read as "em em" and "60 L" as "sixty el". The digits are required
+  // so a stray capital L in prose is left alone, and km/L above has already
+  // been consumed by the time these run.
+  [/\b([\d,.]+)\s*mm\b/g, '$1 millimetres'],
+  [/\b([\d,.]+)\s*L\b/g, '$1 litres'],
+
   // Car vocabulary that IS spoken as letters, but needs spacing or the model
   // runs the letters into a non-word.
   [/\bOBD\b/g, 'O B D'],
@@ -152,9 +159,14 @@ const SPOKEN: Array<[RegExp, string]> = [
   [/\bABS\b/g, 'A B S'],
   [/\bRPM\b/gi, 'R P M'],
   [/\bSUV\b/g, 'S U V'],
+  [/\bCVT\b/g, 'C V T'],
   [/\bA\/C\b/g, 'air conditioning'],
   [/\b4WD\b/g, 'four wheel drive'],
   [/\bAWD\b/g, 'all wheel drive'],
+  // FWD and RWD were missing while AWD and 4WD were handled — the kind of
+  // gap nobody notices until a spec sheet reads itself aloud.
+  [/\bFWD\b/g, 'front wheel drive'],
+  [/\bRWD\b/g, 'rear wheel drive'],
 
   // Number plates: "UAX 123B" is otherwise attempted as a word.
   [/\b([A-Z]{3})\s?(\d{3})([A-Z])\b/g, '$1 $2 $3'],
@@ -189,6 +201,21 @@ function escapeXml(text: string): string {
  * and Gemini below takes plain text: hand it `&amp;` and it pronounces the
  * entity.
  */
+/**
+ * Engine codes, spelled out. "2ZR-FE", "3ZR-FAE", "1KR-FE".
+ *
+ * Every Discover spec sheet carries one and the model attempts them as words
+ * otherwise. Said the way a mechanic says them: the digit, then the letters
+ * one at a time, with the hyphen as a short pause.
+ */
+function spellEngineCodes(text: string): string {
+  return text.replace(
+    /\b(\d)([A-Z]{2,3})-([A-Z]{2,4})\b/g,
+    (_whole, digit: string, block: string, suffix: string) =>
+      `${DIGIT[digit] ?? digit} ${[...block].join(' ')}, ${[...suffix].join(' ')}`,
+  );
+}
+
 function normaliseForSpeech(text: string): string {
   const stripped = MARKDOWN.reduce(
     (out, [pattern, replacement]) => out.replace(pattern, replacement),
@@ -196,7 +223,7 @@ function normaliseForSpeech(text: string): string {
   );
   const said = SPOKEN.reduce(
     (out, [pattern, replacement]) => out.replace(pattern, replacement),
-    spellCodes(stripped),
+    spellEngineCodes(spellCodes(stripped)),
   );
   return said.replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
 }

@@ -41,9 +41,20 @@ export function SpokenText({ text, progress = 0, live = false, className }: Spok
 
   // Count real words, not the whitespace tokens kept for spacing.
   const total = useMemo(() => words.filter((w) => w.trim()).length, [words])
-  // A word of look-ahead: text landing a beat before the voice reads as
-  // keeping up, whereas text a beat behind reads as lag.
-  const shown = live ? total : Math.ceil(Math.min(1, Math.max(0, progress)) * total) + 1
+  /**
+   * Word `k` appears as `k` is spoken, not before it.
+   *
+   * There used to be a word of look-ahead here on the theory that text
+   * landing a beat early reads as keeping up while text a beat late reads as
+   * lag. In practice it did something worse: at zero progress it put the
+   * first word on screen straight away, so a line appeared, sat there through
+   * the second or so it takes the audio to arrive, and only then started
+   * revealing. The effect was of text materialising twice.
+   *
+   * With `ceil` and no offset, word `k` lights at the instant its own share
+   * of the audio begins, and nothing at all shows before he starts.
+   */
+  const shown = live ? total : Math.ceil(Math.min(1, Math.max(0, progress)) * total)
 
   let seen = 0
   return (

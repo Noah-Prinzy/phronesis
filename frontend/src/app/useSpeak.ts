@@ -223,10 +223,32 @@ export function useSpeak(): UseSpeakResult {
     }
 
     const queue: Queued[] = []
+    /** Words in sentences he has finished saying. */
     let spokenWords = 0
+    /** How far into the sentence he is saying now, in words. */
+    let intoCurrent = 0
+    /** Words in everything pushed so far — the denominator, and it grows. */
     let totalWords = 0
     let ended = false
     let draining = false
+
+    /**
+     * Publish the reveal position. Every change to any of the three numbers
+     * above goes through here.
+     *
+     * **This exists because the three used to be reported separately, and the
+     * denominator could grow while the numerator stood still.** When a
+     * sentence finished, progress was set to `spokenWords / totalWords` — 1,
+     * if nothing else had been queued yet. The next sentence then arrived,
+     * `totalWords` grew, and for one render `progress` was still 1 against a
+     * longer text: every word of the new sentence lit up at once, then
+     * snapped back to nothing on the next audio tick and re-appeared as he
+     * actually said it. The text materialised twice.
+     */
+    const report = () => {
+      if (totalWords === 0) return
+      setProgress(Math.min(1, (spokenWords + intoCurrent) / totalWords))
+    }
 
     const playOne = (src: string, temporary: boolean, words: number) =>
       new Promise<void>((resolve) => {
@@ -243,12 +265,33 @@ export function useSpeak(): UseSpeakResult {
 
         audio.addEventListener('ended', done)
         audio.addEventListener('error', done)
-        audio.addEventListener('timeupdate', () => {
+
+        /**
+         * Follow the playhead on every frame, not on `timeupdate`.
+         *
+         * That event fires about four times a second, which at speaking pace
+         * is roughly one word — so words arrived in visible clumps of two and
+         * three rather than one at a time. A frame loop costs nothing here
+         * (one division) and puts each word on screen as it is said.
+         *
+         * It is still an even division of the sentence rather than real word
+         * timing. Edge does emit WordBoundary offsets and using them would be
+         * exact, but they are thrown away at the server today.
+         */
+        let frame = 0
+        const follow = () => {
+          if (settled) return
           const d = audio.duration
-          if (!Number.isFinite(d) || d <= 0 || totalWords === 0) return
-          const within = Math.min(1, audio.currentTime / d) * words
-          setProgress(Math.min(1, (spokenWords + within) / totalWords))
-        })
+          if (Number.isFinite(d) && d > 0) {
+            intoCurrent = Math.min(1, audio.currentTime / d) * words
+            report()
+          }
+          frame = requestAnimationFrame(follow)
+        }
+        frame = requestAnimationFrame(follow)
+        const stopFollowing = () => cancelAnimationFrame(frame)
+        audio.addEventListener('ended', stopFollowing)
+        audio.addEventListener('error', stopFollowing)
 
         audio.play().catch(() => {
           // A reply is always the answer to something the user just did, so
@@ -280,8 +323,9 @@ export function useSpeak(): UseSpeakResult {
           console.warn('Could not speak part of the reply:', err)
         }
         spokenWords += next.words
+        intoCurrent = 0
         queue.shift()
-        if (totalWords > 0) setProgress(Math.min(1, spokenWords / totalWords))
+        report()
       }
 
       draining = false
@@ -295,6 +339,10 @@ export function useSpeak(): UseSpeakResult {
         const text = sentence.trim()
         if (!text || controller.signal.aborted) return
         totalWords += wordsIn(text)
+        // Straight away, in the same tick the text grows. Leaving it until
+        // the next audio frame is what let the new sentence flash on screen
+        // fully lit before he had said a word of it.
+        report()
         setLine((prev) => (prev ? `${prev} ${text}` : text))
         queue.push({
           text,
