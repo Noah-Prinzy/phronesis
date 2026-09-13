@@ -1,7 +1,7 @@
 // backend/src/services/history.service.ts
 
 import { FieldValue, QueryDocumentSnapshot } from 'firebase-admin/firestore';
-import { db } from '../config/firebase';
+import { db } from '../config/firebase.js';
 
 export interface UserProfileData {
   uid: string;

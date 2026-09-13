@@ -2,7 +2,7 @@
 
 import Anthropic from '@anthropic-ai/sdk';
 import { GoogleGenAI } from '@google/genai';
-import { env } from '../config/env';
+import { env } from '../config/env.js';
 
 // Sonnet is the right balance of quality/cost/latency for a conversational
 // assistant like this — no need for Opus-level reasoning power here.

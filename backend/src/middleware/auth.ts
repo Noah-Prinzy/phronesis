@@ -1,7 +1,7 @@
 // backend/src/middleware/auth.ts
 
 import { NextFunction, Request, Response } from 'express';
-import { auth } from '../config/firebase';
+import { auth } from '../config/firebase.js';
 
 export interface AuthenticatedUser {
   uid: string;

@@ -2,9 +2,9 @@
 
 import { Router } from 'express';
 import { z } from 'zod';
-import { env } from '../config/env';
-import { getEdgeSpeech } from '../services/edge.service';
-import { getGeminiSpeech } from '../services/tts.service';
+import { env } from '../config/env.js';
+import { getEdgeSpeech } from '../services/edge.service.js';
+import { getGeminiSpeech } from '../services/tts.service.js';
 
 export const ttsRouter = Router();
 

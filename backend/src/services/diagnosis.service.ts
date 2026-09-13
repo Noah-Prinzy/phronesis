@@ -3,7 +3,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { GoogleGenAI } from '@google/genai';
 import { z } from 'zod';
-import { env } from '../config/env';
+import { env } from '../config/env.js';
 
 // Separate from chat's MAX_TOKENS (1536) — a structured report with a
 // solutions array runs longer than a conversational reply.

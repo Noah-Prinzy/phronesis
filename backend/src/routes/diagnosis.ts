@@ -2,9 +2,9 @@
 
 import { Router } from 'express';
 import { z } from 'zod';
-import { optionalAuth } from '../middleware/auth';
-import { DiagnosisParseError, hasDiagnosisProviderConfigured, runDiagnosis } from '../services/diagnosis.service';
-import { saveDiagnosisReport } from '../services/history.service';
+import { optionalAuth } from '../middleware/auth.js';
+import { DiagnosisParseError, hasDiagnosisProviderConfigured, runDiagnosis } from '../services/diagnosis.service.js';
+import { saveDiagnosisReport } from '../services/history.service.js';
 
 export const diagnosisRouter = Router();
 

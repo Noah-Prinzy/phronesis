@@ -2,9 +2,9 @@
 
 import { Router } from 'express';
 import { z } from 'zod';
-import { optionalAuth } from '../middleware/auth';
-import { getChatReplyStream, hasChatProviderConfigured } from '../services/ai.service';
-import { saveChatSession } from '../services/history.service';
+import { optionalAuth } from '../middleware/auth.js';
+import { getChatReplyStream, hasChatProviderConfigured } from '../services/ai.service.js';
+import { saveChatSession } from '../services/history.service.js';
 
 export const chatRouter = Router();
 

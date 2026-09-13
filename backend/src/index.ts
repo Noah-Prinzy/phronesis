@@ -2,13 +2,13 @@
 
 import cors from 'cors';
 import express from 'express';
-import { env } from './config/env';
-import { chatRouter } from './routes/chat';
-import { diagnosisRouter } from './routes/diagnosis';
-import { healthRouter } from './routes/health';
-import { historyRouter } from './routes/history';
-import { ttsRouter } from './routes/tts';
-import { ttsLocalRouter } from './routes/tts-local';
+import { env } from './config/env.js';
+import { chatRouter } from './routes/chat.js';
+import { diagnosisRouter } from './routes/diagnosis.js';
+import { healthRouter } from './routes/health.js';
+import { historyRouter } from './routes/history.js';
+import { ttsRouter } from './routes/tts.js';
+import { ttsLocalRouter } from './routes/tts-local.js';
 
 const app = express();
 

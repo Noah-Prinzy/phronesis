@@ -2,7 +2,7 @@
 
 import { createHash } from 'node:crypto';
 import { MsEdgeTTS, OUTPUT_FORMAT } from 'msedge-tts';
-import { escapeXml, normaliseForSpeech } from './speech-text.service';
+import { escapeXml, normaliseForSpeech } from './speech-text.service.js';
 
 /**
  * Phronesis' voice: Microsoft's neural speech, the engine behind Edge's

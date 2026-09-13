@@ -2,8 +2,8 @@
 
 import { Router } from 'express';
 import { z } from 'zod';
-import { requireAuth } from '../middleware/auth';
-import { auth } from '../config/firebase';
+import { requireAuth } from '../middleware/auth.js';
+import { auth } from '../config/firebase.js';
 import {
   deleteUserData,
   exportUserData,
@@ -14,7 +14,7 @@ import {
   saveCarProfile,
   savePreferences,
   syncUserProfile,
-} from '../services/history.service';
+} from '../services/history.service.js';
 
 export const historyRouter = Router();
 

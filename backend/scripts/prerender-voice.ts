@@ -26,8 +26,8 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { MsEdgeTTS, OUTPUT_FORMAT } from 'msedge-tts'
 
-import { escapeXml, normaliseForSpeech } from '../src/services/speech-text.service'
-import { ALL_FIXED_LINES } from '../../frontend/src/voice/lines'
+import { escapeXml, normaliseForSpeech } from '../src/services/speech-text.service.js'
+import { ALL_FIXED_LINES } from '../../frontend/src/voice/lines.js'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 const AUDIO_DIR = path.resolve(here, '../../frontend/public/voice')

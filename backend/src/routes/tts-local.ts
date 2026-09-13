@@ -5,8 +5,8 @@
 
 import { Router } from 'express';
 import { z } from 'zod';
-import { env } from '../config/env';
-import { getSunbirdSpeech, SUNBIRD_SPEAKER_IDS } from '../services/sunbird.service';
+import { env } from '../config/env.js';
+import { getSunbirdSpeech, SUNBIRD_SPEAKER_IDS } from '../services/sunbird.service.js';
 
 export const ttsLocalRouter = Router();
 

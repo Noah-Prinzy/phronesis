@@ -6,7 +6,7 @@
 // when local-language support becomes a real feature. Get a key at
 // https://sunbird.ai.
 
-import { env } from '../config/env';
+import { env } from '../config/env.js';
 
 const SUNBIRD_TTS_URL = 'https://api.sunbird.ai/tasks/tts';
 
