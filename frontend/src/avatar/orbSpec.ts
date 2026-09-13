@@ -5,14 +5,15 @@
  * That is what makes the transitions free: the renderer interpolates between
  * two rows and every intermediate frame is already a valid orb.
  *
- * Both renderers read this table, so the video and the generative orb can
- * never drift into describing the same state differently. The video can only
- * honour a subset (`rate`, `peak`, `scale`, `glow`); the Three.js orb honours
- * all of it.
+ * The renderer in `orbScene.ts` reads this table and honours every row of it.
+ * The video it replaced could only manage brightness, size and glow — band
+ * width and plate lift were baked into the recording — so `thinking` could not
+ * actually narrow and `responding` could not actually open. A `rate` field
+ * existed purely to set that video's playback speed and went with it.
  *
  * The states are separated on several axes on purpose. Brightness alone left
- * `listening` and `responding` nearly identical — both at playback rate 1.0
- * with the same glow — which is the one distinction a voice interface cannot
+ * `listening` and `responding` nearly identical — the same speed and the same
+ * glow — which is the one distinction a voice interface cannot
  * afford to blur.
  */
 
@@ -33,13 +34,11 @@ export interface OrbSpec {
   react: number
   /** The CSS glow behind the orb, 0–1. */
   glow: number
-  /** Video playback rate. Video renderer only. */
-  rate: number
 }
 
 export const ORB: Record<OrbState, OrbSpec> = {
   /* Awake, asking for nothing. Slow, dim, and never quite repeating. */
-  idle: { sweep: 0.55, band: 0.22, peak: 0.8, lift: 1.0, scale: 1.0, react: 0, glow: 0.3, rate: 0.7 },
+  idle: { sweep: 0.55, band: 0.22, peak: 0.8, lift: 1.0, scale: 1.0, react: 0, glow: 0.3 },
 
   /* Attending. Leans in slightly — a fraction smaller and tighter, not
      bigger — and everything about it is driven by the user's voice. */
@@ -51,7 +50,6 @@ export const ORB: Record<OrbState, OrbSpec> = {
     scale: 0.98,
     react: 1,
     glow: 0.72,
-    rate: 1.0,
   },
 
   /* Searching. Fast, narrow and *dimmer* — thinking is internal, so the orb
@@ -65,7 +63,6 @@ export const ORB: Record<OrbState, OrbSpec> = {
     scale: 0.94,
     react: 0,
     glow: 0.4,
-    rate: 1.9,
   },
 
   /* Speaking. Open, bright, and pulsing on his own syllables. */
@@ -77,7 +74,6 @@ export const ORB: Record<OrbState, OrbSpec> = {
     scale: 1.03,
     react: 1,
     glow: 0.85,
-    rate: 1.0,
   },
 }
 
@@ -97,7 +93,6 @@ export function blendOrb(from: OrbSpec, to: OrbSpec, t: number): OrbSpec {
     scale: lerp(from.scale, to.scale, t),
     react: lerp(from.react, to.react, t),
     glow: lerp(from.glow, to.glow, t),
-    rate: lerp(from.rate, to.rate, t),
   }
 }
 

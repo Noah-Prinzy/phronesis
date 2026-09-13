@@ -73,7 +73,6 @@
    `mix-blend-mode: screen` is additive and resolves to white on paper — the
    asset was always drawn for a night sky, and now it has one. */
 
-.orb__video,
 .orb__canvas {
   position: relative;
   z-index: 1;
@@ -84,45 +83,8 @@
   transform: scale(var(--orb-scale, 1));
 }
 
-.orb__video {
-  object-fit: cover;
-  /* Additive: the asset is a glow on pure black with no alpha channel, and
-     its dark plates are part of the artwork. Screen drops the background and
-     keeps them; keying the black out would eat them. Without this the orb
-     renders as an opaque black square. */
-  mix-blend-mode: screen;
-  filter: brightness(var(--orb-bright, 1));
-}
-
-/* The four pre-rendered loops. Two can be mounted at once during a state
-   change, stacked, so they are absolutely positioned and crossfaded. */
-.orb__loop {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  width: 100%;
-  height: 100%;
-  display: block;
-  object-fit: contain;
-  border-radius: 50%;
-  /* Additive: the black background drops out and the dark plates survive,
-     which keying would have eaten. See design/avatar-v2/README.md. */
-  mix-blend-mode: screen;
-  transform: scale(var(--orb-scale, 1));
-  filter: brightness(var(--orb-bright, 1));
-  opacity: 0;
-  transition: opacity 420ms var(--ease);
-  pointer-events: none;
-}
-.orb__loop[data-on='true'] {
-  opacity: 1;
-}
-
-/* The generative orb draws onto a transparent canvas, so there is no black
-   to drop out and no blend mode to apply. */
-.orb__canvas {
-  background: none;
-}
+/* Drawn onto a transparent canvas, so unlike the video it replaced there is
+   no black background to drop out and no blend mode to apply. */
 
 /* A faint ground-glow so the orb sits in the page rather than on it.
    Painted before the renderer, so it needs no z-index of its own. */

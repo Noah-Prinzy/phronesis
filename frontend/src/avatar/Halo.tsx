@@ -1,7 +1,7 @@
 import { useRef } from 'react'
 import type { CSSProperties } from 'react'
 import { cx } from '../ui/cx'
-import { OrbVideo } from './OrbVideo'
+import { OrbLazy } from './OrbLazy'
 import type { OrbState } from './orbSpec'
 
 /**
@@ -53,7 +53,7 @@ export function Halo({
   const hostRef = useRef<HTMLElement | null>(null)
 
   const orb = (
-    <OrbVideo state={state} size={size} level={level} levelRef={levelRef} hostRef={hostRef} />
+    <OrbLazy state={state} size={size} level={level} levelRef={levelRef} hostRef={hostRef} />
   )
 
   const wrap = {
