@@ -2,7 +2,7 @@
 
 import { createHash } from 'node:crypto';
 import { MsEdgeTTS, OUTPUT_FORMAT } from 'msedge-tts';
-import { escapeXml, normaliseForSpeech } from './speech-text';
+import { escapeXml, normaliseForSpeech } from './speech-text.service';
 
 /**
  * Phronesis' voice: Microsoft's neural speech, the engine behind Edge's
@@ -51,8 +51,10 @@ import { escapeXml, normaliseForSpeech } from './speech-text';
  * was also encoded at 48kbps (see FORMAT below), which made every candidate
  * sound thin. Both were changed together.
  *
- * The audition is kept in docs/voice-audition/ so the comparison can be heard
- * again rather than argued about.
+ * The audition recordings themselves have been deleted — they were several
+ * megabytes of history and the decision is made. Re-run
+ * `backend/scripts/prerender-voice.ts` against a candidate list to hear any
+ * comparison again.
  *
  * A note on speed, since the older comment above quotes 0.45s: on the day
  * Andrew was chosen, five configurations measured 3.3-5.2s per uncached line

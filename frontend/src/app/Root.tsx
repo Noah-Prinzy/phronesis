@@ -1,7 +1,7 @@
 import { Outlet } from 'react-router-dom'
 import { JourneyProvider } from './journey'
 import { AuthProvider } from './auth'
-import { VoiceProvider } from './voice'
+import { VoiceProvider } from '../voice/settings'
 import { CarProvider } from './car'
 import { Surface } from './Surface'
 import { AlertsProvider } from './alerts'

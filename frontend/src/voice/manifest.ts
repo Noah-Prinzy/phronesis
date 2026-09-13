@@ -1,6 +1,6 @@
 // GENERATED FILE — do not edit by hand.
 // Written by backend/scripts/prerender-voice.ts. Run `npm run voice:prerender`
-// in backend/ after changing anything in app/lines.ts.
+// in backend/ after changing anything in voice/lines.ts.
 
 /**
  * Fixed lines that already exist as audio, keyed by the exact text.

@@ -10,7 +10,7 @@ import {
   IconHome,
   IconMap,
   IconSearch,
-} from '../icons'
+} from '../ui/icons'
 import { useJourney } from './journey'
 import { carName, useCar } from './car'
 import { useMediaQuery } from './useMediaQuery'

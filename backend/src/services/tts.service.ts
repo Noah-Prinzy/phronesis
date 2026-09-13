@@ -2,7 +2,7 @@
 
 import { GoogleGenAI } from '@google/genai';
 import { env } from '../config/env';
-import { normaliseForSpeech } from './speech-text';
+import { normaliseForSpeech } from './speech-text.service';
 
 const TTS_MODEL = 'gemini-3.1-flash-tts-preview';
 

@@ -26,12 +26,12 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { MsEdgeTTS, OUTPUT_FORMAT } from 'msedge-tts'
 
-import { escapeXml, normaliseForSpeech } from '../src/services/speech-text'
-import { ALL_FIXED_LINES } from '../../frontend/src/app/lines'
+import { escapeXml, normaliseForSpeech } from '../src/services/speech-text.service'
+import { ALL_FIXED_LINES } from '../../frontend/src/voice/lines'
 
 const here = path.dirname(fileURLToPath(import.meta.url))
 const AUDIO_DIR = path.resolve(here, '../../frontend/public/voice')
-const MANIFEST = path.resolve(here, '../../frontend/src/app/voiceManifest.ts')
+const MANIFEST = path.resolve(here, '../../frontend/src/voice/manifest.ts')
 
 /**
  * Must match `edge.service.ts`. If these drift, a pre-rendered line will sound
@@ -104,7 +104,7 @@ async function main(): Promise<void> {
     MANIFEST,
     `// GENERATED FILE — do not edit by hand.
 // Written by backend/scripts/prerender-voice.ts. Run \`npm run voice:prerender\`
-// in backend/ after changing anything in app/lines.ts.
+// in backend/ after changing anything in voice/lines.ts.
 
 /**
  * Fixed lines that already exist as audio, keyed by the exact text.

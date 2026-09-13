@@ -42,7 +42,7 @@ import {
   Toast,
 } from '../ui'
 import type { NavItem, Severity } from '../ui'
-import { IconAccount, IconCompare, IconDiagnose, IconFix, IconHome, IconMap, IconSearch } from '../icons'
+import { IconAccount, IconCompare, IconDiagnose, IconFix, IconHome, IconMap, IconSearch } from '../ui/icons'
 import { Halo } from '../avatar/Halo'
 import type { HaloState } from '../avatar/Halo'
 import { Principles } from './Principles'

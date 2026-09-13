@@ -112,7 +112,10 @@ export function specAt(from: OrbState, to: OrbState, elapsedMs: number): OrbSpec
 /**
  * The orb's sampled palette, darkest plate to hottest specular.
  *
- * Median-sampled from the original render — see design/avatar-v2/README.md.
+ * Median-sampled from the render this avatar was originally traced from, kept
+ * here because this table is now the only surviving record of it — the source
+ * and its extraction notes went with the unlicensed video.
+ *
  * Roughly 60% of the orb sits below `plate mid`: the thing is mostly dark and
  * the band is what carries it, so the floor stays where it is.
  */

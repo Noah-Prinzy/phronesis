@@ -31,7 +31,7 @@ import { z } from 'zod';
 
 /**
  * Andrew. Chosen by ear from an audition of eleven candidates reading the same
- * line, kept in docs/voice-audition/.
+ * line. The recordings are not kept; the decision is.
  *
  * He is one of Microsoft's *Multilingual* voices, and that is why he wins
  * rather than the accent: they are a newer generation than the plain Neural

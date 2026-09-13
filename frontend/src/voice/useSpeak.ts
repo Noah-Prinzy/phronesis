@@ -2,8 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { textToSpeech } from '../lib/api'
 import { browserSpeechAvailable, speakInBrowser, type BrowserSpeechHandle } from './browserSpeech'
 import { stripMarkdownForSpeech } from './speechText'
-import { VOICE_MANIFEST } from './voiceManifest'
-import { useVoice } from './voice'
+import { VOICE_MANIFEST } from './manifest'
+import { useVoice } from './settings'
 
 /**
  * One reply, spoken while it is still being written.

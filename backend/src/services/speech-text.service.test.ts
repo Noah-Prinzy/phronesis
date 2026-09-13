@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { escapeXml, normaliseForSpeech } from './speech-text';
+import { escapeXml, normaliseForSpeech } from './speech-text.service';
 
 /**
  * What Phronesis says, as opposed to what is on screen.

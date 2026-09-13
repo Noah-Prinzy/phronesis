@@ -2,15 +2,15 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button, CardButton, SectionHead, SpokenText, Steps } from '../ui'
 import { Halo } from '../avatar/Halo'
-import { IconPlug } from '../icons'
+import { IconPlug } from '../ui/icons'
 import { useRem } from '../app/useRootFontSize'
 import { useJourney } from '../app/journey'
-import { useSpeak } from '../app/useSpeak'
-import { JOURNEY_ASK, READER_SUPPORTED, READER_UNSUPPORTED } from '../app/lines'
+import { useSpeak } from '../voice/useSpeak'
+import { JOURNEY_ASK, READER_SUPPORTED, READER_UNSUPPORTED } from '../voice/lines'
 import { RECOMMENDED_HARDWARE, detectTransport, pairReader, unavailableReason } from '../lib/obd'
 import type { ObdTransportKind, PairedReader } from '../lib/obd'
 
-export { OnboardingAccount } from './onboarding-account'
+export { OnboardingAccount } from './OnboardingAccount'
 
 /** Two screens: the branch, then the account. Nothing else is required. */
 export const ONBOARDING_STEPS = 2

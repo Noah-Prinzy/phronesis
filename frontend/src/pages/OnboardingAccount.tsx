@@ -5,8 +5,8 @@ import { Halo } from '../avatar/Halo'
 import { useRem } from '../app/useRootFontSize'
 import { useJourney } from '../app/journey'
 import { authErrorMessage, useAuth } from '../app/auth'
-import { useSpeak } from '../app/useSpeak'
-import { ACCOUNT_BUYER, ACCOUNT_OWNER } from '../app/lines'
+import { useSpeak } from '../voice/useSpeak'
+import { ACCOUNT_BUYER, ACCOUNT_OWNER } from '../voice/lines'
 import { ONBOARDING_STEPS } from './Onboarding'
 
 /**

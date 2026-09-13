@@ -4,8 +4,8 @@ import { Button, SpokenText } from '../ui'
 import { Halo } from '../avatar/Halo'
 import { useRem } from '../app/useRootFontSize'
 import { useMediaQuery } from '../app/useMediaQuery'
-import { useSpeak } from '../app/useSpeak'
-import { WELCOME } from '../app/lines'
+import { useSpeak } from '../voice/useSpeak'
+import { WELCOME } from '../voice/lines'
 
 /**
  * What he says — and, a word at a time, what appears.

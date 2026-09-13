@@ -5,7 +5,7 @@ import { useAuth } from '../app/auth'
 import { useAlerts } from '../app/alerts'
 import { useCar } from '../app/car'
 import { useJourney } from '../app/journey'
-import { useVoice } from '../app/voice'
+import { useVoice } from '../voice/settings'
 import type { CarProfile, Preferences } from '../lib/api'
 import { SERVICE_INTERVAL_KM, serviceDue } from '../lib/alerts'
 import {
