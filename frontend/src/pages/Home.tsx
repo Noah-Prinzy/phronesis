@@ -10,7 +10,8 @@ import { useJourney } from '../app/journey'
 import { useRem } from '../app/useRootFontSize'
 import { firstNameOf, useAuth } from '../app/auth'
 import { useSpeak } from '../app/useSpeak'
-import { OPENER_BUYER, OPENER_OWNER, RESUME_LINES } from '../app/lines'
+import { RESUME_LINES } from '../app/lines'
+import { nextOpener } from '../app/greeting'
 import { takeSentences } from '../app/sentences'
 import { useFocus } from '../app/focus'
 import { ApiError, fetchChats, streamChat } from '../lib/api'
@@ -150,23 +151,24 @@ export function Home() {
   const { setPart } = useFocus()
 
   /**
-   * How he opens.
+   * How he opens, once it has been chosen. See `app/greeting.ts`.
    *
-   * Spoken, and written as he says it — the name included, so the one thing
-   * the account step exists to collect is actually used out loud rather than
-   * just printed in a heading.
+   * State rather than a value computed each render, because choosing is not
+   * free of consequence: it picks at random and writes to localStorage, so
+   * re-running it on every render would swap the line mid-sentence while he
+   * was still saying it and burn through the no-repeat memory in a few
+   * frames.
    *
-   * The line **ends** on the question mark, with the examples folded into the
-   * question rather than trailing after it. Text-to-speech takes its
-   * intonation from where the sentence lands: a question followed by a
-   * declarative fragment gets read with a falling, statement-like tone, which
-   * made him sound like he was announcing something rather than asking.
+   * Null until the restore check lands — nothing is chosen at all when there
+   * is a conversation to pick back up, and choosing before auth settles would
+   * greet a stranger by using no name.
+   *
+   * Whichever line comes back **ends on its question mark**. Text-to-speech
+   * takes its intonation from where a sentence lands, and a question followed
+   * by a declarative fragment gets read with a falling tone — which made him
+   * sound like he was announcing something rather than asking.
    */
-  // The greeting is prepended rather than baked in, so the unnamed branch is
-  // character-for-character the line that was pre-rendered — "Hey Noah" is one
-  // recording per user and can only ever come from the live endpoint.
-  const greeting = firstName ? `Hey ${firstName}. ` : ''
-  const opener = `${greeting}${owner ? OPENER_OWNER : OPENER_BUYER}`
+  const [opener, setOpener] = useState<string | null>(null)
 
   // Nothing happens until auth settles: greeting any earlier delivers the
   // line before the name loads and greets a stranger, and asking for history
@@ -234,9 +236,14 @@ export function Home() {
   // remount is the correct behaviour anyway: coming back to Home should greet.
   useEffect(() => {
     if (restored !== false) return
-    speakLine(opener)
-    // Only when the restore check lands. `opener` and `speakLine` would
-    // re-greet on every identity change.
+    // Picked here, inside the effect that speaks it, so the choice and the
+    // saying of it cannot come apart — and so nothing is chosen at all when
+    // there is a conversation to pick back up instead.
+    const line = nextOpener(owner, firstName)
+    setOpener(line)
+    speakLine(line)
+    // Only when the restore check lands. `owner`, `firstName` and `speakLine`
+    // would re-greet on every identity change.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [restored])
 
@@ -476,7 +483,7 @@ export function Home() {
           <SpokenText text={heard || '…'} live className="home__heard" />
         )}
 
-        {mode === 'fresh' && (
+        {mode === 'fresh' && opener !== null && (
           <SpokenText text={opener} progress={progress} className="home__opener" />
         )}
       </div>

@@ -58,17 +58,42 @@ export const ACCOUNT_BUYER =
   "Last thing, then we're done. Make an account and I'll remember your budget and what you've already ruled out. What should I call you?"
 
 /**
- * Home's greeting, for someone he has no name for yet.
+ * The first thing he says on Home, ever.
  *
- * The named version is built in the component and cannot be pre-rendered —
- * "Hey Noah" is one recording per user. This is the branch that can be, and
- * it is also the branch a brand new account lands on.
+ * This is the ONLY line that explains the interface, and that is the whole
+ * point of separating it: "tap my orb or the mic" earns its place once and
+ * grates every time after. See `app/greeting.ts` for the choosing.
  */
-export const OPENER_OWNER =
+export const OPENER_OWNER_FIRST =
   "Tap my orb or the mic whenever you want to talk. So, what's your car been doing — a noise, a warning light, something that just feels off?"
 
-export const OPENER_BUYER =
+export const OPENER_BUYER_FIRST =
   'Tap my orb or the mic whenever you want to talk. So, what are you looking for — a budget, a make you like, something for work?'
+
+/**
+ * Every visit after the first. No instructions, and never the same one twice
+ * running.
+ *
+ * Short on purpose. A returning user is here because something is happening
+ * with their car, and a paragraph between them and saying so is friction
+ * wearing a friendly hat. Each is one question, which is also what the
+ * persona asks for everywhere else.
+ */
+export const OPENER_OWNER_AGAIN = [
+  'How has the car been?',
+  'What is it doing today?',
+  'Anything playing up?',
+  'What can I look at for you?',
+  'How are things with the car?',
+]
+
+export const OPENER_BUYER_AGAIN = [
+  'How is the search going?',
+  'Found anything you like?',
+  'What are we looking at today?',
+  'Seen anything worth a second look?',
+  'Where did we get to?',
+]
 
 /**
  * What he says when the user talks over him.
@@ -92,7 +117,27 @@ export const ALL_FIXED_LINES: readonly string[] = [
   READER_UNSUPPORTED,
   ACCOUNT_OWNER,
   ACCOUNT_BUYER,
-  OPENER_OWNER,
-  OPENER_BUYER,
+  OPENER_OWNER_FIRST,
+  OPENER_BUYER_FIRST,
   ...RESUME_LINES,
+
+  /**
+   * The returning openers, bare and with each time of day in front.
+   *
+   * Four renders per question rather than one, because the greeting is part
+   * of the sentence the voice says and "Morning. How has the car been?" is
+   * not the same audio as the question alone. Ten questions across the two
+   * journeys comes to forty short files — a few hundred kilobytes for the
+   * line a returning user hears every single time, which is the one most
+   * worth having instant.
+   *
+   * Only the nameless forms. "Morning, Noah" is one recording per user and
+   * can only ever come from the live endpoint.
+   */
+  ...[...OPENER_OWNER_AGAIN, ...OPENER_BUYER_AGAIN].flatMap((q) => [
+    q,
+    `Morning. ${q}`,
+    `Afternoon. ${q}`,
+    `Evening. ${q}`,
+  ]),
 ]
