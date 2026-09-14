@@ -1,18 +1,40 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { textToSpeech } from '../lib/api'
 import { browserSpeechAvailable, speakInBrowser, type BrowserSpeechHandle } from './browserSpeech'
+import { stripMarkdownForSpeech } from './speechText'
+import { VOICE_MANIFEST } from './voiceManifest'
 import { useVoice } from './voice'
+
+/**
+ * One reply, spoken while it is still being written.
+ *
+ * Push whole sentences as the model produces them; they are synthesised and
+ * played in order, and nothing barges in on anything else. Call `end` when
+ * the model stops.
+ */
+export interface SpeechStream {
+  /** Queue one finished sentence. */
+  push: (sentence: string) => void
+  /** No more sentences are coming. */
+  end: () => void
+}
 
 export interface UseSpeakResult {
   /** True while a line is actually playing — drive an avatar's "responding" state off this. */
   talking: boolean
   /** Speaks one line, cutting off whatever was still playing. A no-op if the "speak" setting is off. */
   speak: (text: string) => void
+  /**
+   * Begin a reply that is still being generated, cutting off whatever was
+   * playing. Sentences pushed into it are spoken in order as they arrive, so
+   * he starts talking while the model is still writing.
+   */
+  stream: () => SpeechStream
   /** Cuts off whatever is currently playing or in flight. */
   stop: () => void
   /**
    * How far through the current line the voice is, 0–1. Drives the on-screen
-   * reveal in `<SpokenText>` so the words arrive as she says them.
+   * reveal in `<SpokenText>` so the words arrive as he says them.
    *
    * It reaches 1 whenever the line is finished *or* could not be spoken at
    * all — voice switched off, TTS down, autoplay refused for good. A reveal
@@ -30,6 +52,14 @@ export interface UseSpeakResult {
  * reads as broken.
  */
 const UNLOCK_GRACE_MS = 3500
+
+/**
+ * Count words the way `<SpokenText>` does, because progress is fed straight
+ * into it. If these two disagree the reveal drifts from the voice.
+ */
+function wordsIn(text: string): number {
+  return text.trim().split(/\s+/).filter(Boolean).length
+}
 
 /** Did the browser refuse to play because nothing has been interacted with? */
 function isAutoplayBlocked(err: unknown): boolean {
@@ -56,7 +86,7 @@ function isAutoplayBlocked(err: unknown): boolean {
  *    browser instead was tried and abandoned: it needed WebGPU, a 350MB
  *    download, and still read text rather than saying it.
  * 2. **The browser's own synthesiser**, when the server cannot be reached at
- *    all. It sounds least like her, which is a far smaller loss than silence.
+ *    all. It sounds least like him, which is a far smaller loss than silence.
  *
  * Each tier is tried and moved past on FAILURE rather than skipped on a
  * guess about availability — the same rule the backend chain follows, and
@@ -64,7 +94,7 @@ function isAutoplayBlocked(err: unknown): boolean {
  *
  * **Autoplay.** A browser will not play audio until the user has interacted
  * with the page, and a returning user goes straight from the splash to Home
- * without ever clicking — so her greeting was being refused and silently
+ * without ever clicking — so his greeting was being refused and silently
  * swallowed. A refusal is now held rather than discarded: the first touch or
  * keypress replays the line *from the beginning*, so the words and the voice
  * still arrive together. If nobody touches anything, the text appears on its
@@ -117,7 +147,9 @@ export function useSpeak(): UseSpeakResult {
   const speakLocally = useCallback((body: string, controller: AbortController): boolean => {
     if (!browserSpeechAvailable()) return false
 
-    browserRef.current = speakInBrowser(body, {
+    // The server normally prepares his text; this tier is the one that runs
+    // when the server cannot be reached, so it has to strip its own markdown.
+    browserRef.current = speakInBrowser(stripMarkdownForSpeech(body), {
       onStart: () => {
         if (controller.signal.aborted) return
         setTalking(true)
@@ -135,6 +167,152 @@ export function useSpeak(): UseSpeakResult {
     })
     return true
   }, [])
+
+  /**
+   * Fetch audio for one chunk: the pre-rendered file if there is one, the
+   * endpoint otherwise. Kicked off the moment a sentence is pushed, so the
+   * next one is usually already in hand by the time the current finishes.
+   */
+  const sourceFor = useCallback(async (text: string, signal: AbortSignal) => {
+    const fixed = VOICE_MANIFEST[text]
+    if (fixed) return { src: fixed, temporary: false }
+    const blob = await textToSpeech(text, signal)
+    return { src: URL.createObjectURL(blob), temporary: true }
+  }, [])
+
+  /**
+   * Speak a reply while it is still being written.
+   *
+   * **Why this exists.** Every stage used to wait for the previous one to
+   * finish completely: two seconds to decide the user had stopped talking,
+   * then the whole model reply, then the whole synthesis, then playback.
+   * Measured on a 303-character reply, synthesis alone finished 6.4s after
+   * the request while its FIRST audio arrived at 2.0s — so 4.4s of that wait
+   * bought nothing, and the longer he talks the worse it gets.
+   *
+   * Here the sentences overlap instead. The first one is spoken while the
+   * model writes the second, and its audio is already fetched by the time the
+   * first finishes.
+   *
+   * **Progress stays honest as the total grows.** It is reported as a
+   * fraction of everything pushed SO FAR, and the caller shows exactly that
+   * same text. When a new sentence arrives both the numerator's denominator
+   * and the displayed text grow together, so the number dips while the lit
+   * word count does not move — nothing already revealed is ever un-revealed.
+   */
+  const stream = useCallback((): SpeechStream => {
+    stop()
+    setLine('')
+    setProgress(0)
+
+    const controller = new AbortController()
+    abortRef.current = controller
+
+    if (!enabled) {
+      // Voice off: the words still have to appear, all of them, immediately.
+      return {
+        push: (sentence) => setLine((prev) => (prev ? `${prev} ${sentence}` : sentence)),
+        end: () => setProgress(1),
+      }
+    }
+
+    interface Queued {
+      text: string
+      words: number
+      audio: Promise<{ src: string; temporary: boolean }>
+    }
+
+    const queue: Queued[] = []
+    let spokenWords = 0
+    let totalWords = 0
+    let ended = false
+    let draining = false
+
+    const playOne = (src: string, temporary: boolean, words: number) =>
+      new Promise<void>((resolve) => {
+        const audio = new Audio(src)
+        audioRef.current = audio
+        let settled = false
+
+        const done = () => {
+          if (settled) return
+          settled = true
+          if (temporary) URL.revokeObjectURL(src)
+          resolve()
+        }
+
+        audio.addEventListener('ended', done)
+        audio.addEventListener('error', done)
+        audio.addEventListener('timeupdate', () => {
+          const d = audio.duration
+          if (!Number.isFinite(d) || d <= 0 || totalWords === 0) return
+          const within = Math.min(1, audio.currentTime / d) * words
+          setProgress(Math.min(1, (spokenWords + within) / totalWords))
+        })
+
+        audio.play().catch(() => {
+          // A reply is always the answer to something the user just did, so
+          // autoplay is not in question here the way it is for a greeting.
+          // Anything else that stops it playing should not stall the queue.
+          done()
+        })
+      })
+
+    const drain = async () => {
+      if (draining) return
+      draining = true
+      setTalking(true)
+
+      while (queue.length > 0) {
+        if (controller.signal.aborted) break
+        const next = queue[0]
+        try {
+          const { src, temporary } = await next.audio
+          if (controller.signal.aborted) {
+            if (temporary) URL.revokeObjectURL(src)
+            break
+          }
+          await playOne(src, temporary, next.words)
+        } catch (err) {
+          if (controller.signal.aborted) break
+          // One sentence could not be spoken. Reveal it and keep going —
+          // dropping the rest of the reply would be far worse.
+          console.warn('Could not speak part of the reply:', err)
+        }
+        spokenWords += next.words
+        queue.shift()
+        if (totalWords > 0) setProgress(Math.min(1, spokenWords / totalWords))
+      }
+
+      draining = false
+      if (controller.signal.aborted) return
+      setTalking(false)
+      if (ended) setProgress(1)
+    }
+
+    return {
+      push: (sentence: string) => {
+        const text = sentence.trim()
+        if (!text || controller.signal.aborted) return
+        totalWords += wordsIn(text)
+        setLine((prev) => (prev ? `${prev} ${text}` : text))
+        queue.push({
+          text,
+          words: wordsIn(text),
+          // Started now, not when its turn comes — this is the prefetch.
+          audio: sourceFor(text, controller.signal),
+        })
+        void drain()
+      },
+      end: () => {
+        ended = true
+        if (controller.signal.aborted) return
+        // Nothing queued and nothing playing: the reply was empty or every
+        // chunk already finished. Either way the text must not stay hidden.
+        if (!draining && queue.length === 0) setProgress(1)
+      },
+    }
+  }, [enabled, stop, sourceFor])
 
   const speak = useCallback(
     (text: string) => {
@@ -172,8 +350,8 @@ export function useSpeak(): UseSpeakResult {
           cleanup()
           if (controller.signal.aborted) return
           // From the top, so the reveal and the voice start together — the
-          // line is still hidden, and replaying mid-way would show her
-          // finishing a sentence she never began.
+          // line is still hidden, and replaying mid-way would show him
+          // finishing a sentence he never began.
           audio.currentTime = 0
           setProgress(0)
           setTalking(true)
@@ -197,21 +375,40 @@ export function useSpeak(): UseSpeakResult {
         disarmRef.current = cleanup
       }
 
-      void (async () => {
-        try {
-          const blob = await textToSpeech(body, controller.signal)
-          if (controller.signal.aborted) return
-          const url = URL.createObjectURL(blob)
-          const audio = new Audio(url)
+      /**
+       * Play a URL, and resolve once it is playing or has been parked waiting
+       * for a gesture. Rejects if the audio itself will not load, which is the
+       * signal to try a different source.
+       */
+      const play = (src: string, temporary: boolean) =>
+        new Promise<void>((resolve, reject) => {
+          const audio = new Audio(src)
           audioRef.current = audio
+          let settled = false
 
+          const release = () => {
+            if (temporary) URL.revokeObjectURL(src)
+          }
           const finish = () => {
-            URL.revokeObjectURL(url)
+            release()
             setProgress(1)
             setTalking(false)
           }
+
           audio.addEventListener('ended', finish)
-          audio.addEventListener('error', finish)
+          audio.addEventListener('error', () => {
+            // A source that will not load at all. If it never started, the
+            // caller can still try somewhere else, so this is a rejection
+            // rather than the end of the line.
+            release()
+            if (settled) {
+              setProgress(1)
+              setTalking(false)
+              return
+            }
+            settled = true
+            reject(new Error(`Could not load ${src}`))
+          })
           audio.addEventListener('timeupdate', () => {
             const d = audio.duration
             // Duration is NaN until metadata lands and Infinity for a stream.
@@ -220,15 +417,64 @@ export function useSpeak(): UseSpeakResult {
           })
 
           setTalking(true)
-          try {
-            await audio.play()
-          } catch (err) {
-            if (controller.signal.aborted) return
-            if (!isAutoplayBlocked(err)) throw err
-            // Not a failure — just too early. Wait for a gesture.
-            setTalking(false)
-            armUnlock(audio)
+          audio.play().then(
+            () => {
+              if (settled) return
+              settled = true
+              resolve()
+            },
+            (err: unknown) => {
+              if (settled) return
+              if (controller.signal.aborted) {
+                settled = true
+                resolve()
+                return
+              }
+              if (!isAutoplayBlocked(err)) {
+                settled = true
+                release()
+                reject(err instanceof Error ? err : new Error(String(err)))
+                return
+              }
+              // Not a failure — just too early. Wait for a gesture.
+              settled = true
+              setTalking(false)
+              armUnlock(audio)
+              resolve()
+            },
+          )
+        })
+
+      void (async () => {
+        try {
+          /**
+           * A line that was rendered at build time plays straight from disk.
+           *
+           * This is every fixed thing he says — the greeting, all of
+           * onboarding, the interruption apologies. Measured against the live
+           * endpoint those cost about 1.3s before the first byte, almost all
+           * of it the service waking rather than synthesis, so a short line
+           * is no faster than a long one. Here they are instant, and they
+           * keep working with the backend down.
+           *
+           * If the file is missing — a stale manifest, a deploy that dropped
+           * public/voice — it falls through to the endpoint below rather than
+           * going quiet.
+           */
+          const fixed = VOICE_MANIFEST[body]
+          if (fixed) {
+            try {
+              await play(fixed, false)
+              return
+            } catch (err) {
+              if (controller.signal.aborted) return
+              console.warn('Pre-rendered line would not play, asking the server instead:', err)
+            }
           }
+
+          const blob = await textToSpeech(body, controller.signal)
+          if (controller.signal.aborted) return
+          await play(URL.createObjectURL(blob), true)
         } catch (err) {
           if (controller.signal.aborted) return
           console.warn('Hosted TTS failed, falling back to the browser voice:', err)
@@ -244,5 +490,5 @@ export function useSpeak(): UseSpeakResult {
     [enabled, stop, disarm, speakLocally],
   )
 
-  return { talking, speak, stop, progress, line }
+  return { talking, speak, stream, stop, progress, line }
 }

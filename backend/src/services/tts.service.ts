@@ -2,6 +2,7 @@
 
 import { GoogleGenAI } from '@google/genai';
 import { env } from '../config/env';
+import { normaliseForSpeech } from './speech-text';
 
 const TTS_MODEL = 'gemini-3.1-flash-tts-preview';
 
@@ -71,9 +72,12 @@ export async function getGeminiSpeech(text: string): Promise<Buffer> {
   const response = await ai.models.generateContent({
     model: TTS_MODEL,
     // The direction and the line, which is the shape Gemini's TTS expects.
+    // Normalised exactly as Edge's is. This is a fallback, and one that reads
+    // markdown aloud sounds broken at precisely the wrong moment. No XML
+    // escaping though: this takes plain text, so entities would be spoken.
     contents: `${STYLE}
 
-${text}`,
+${normaliseForSpeech(text)}`,
     config: {
       responseModalities: ['AUDIO'],
       speechConfig: {

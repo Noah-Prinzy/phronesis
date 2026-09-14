@@ -10,6 +10,8 @@ import { useJourney } from '../app/journey'
 import { useRem } from '../app/useRootFontSize'
 import { firstNameOf, useAuth } from '../app/auth'
 import { useSpeak } from '../app/useSpeak'
+import { OPENER_BUYER, OPENER_OWNER, RESUME_LINES } from '../app/lines'
+import { takeSentences } from '../app/sentences'
 import { useFocus } from '../app/focus'
 import { ApiError, streamChat } from '../lib/api'
 import type { ChatMessage } from '../lib/api'
@@ -21,17 +23,23 @@ import type { CarPart } from '../data/findings'
  * Three states, and there is no chrome in any of them — no wordmark, no page
  * title, no vehicle label. The orb is the only branding the hub carries:
  *
- *   fresh     — nothing said yet. A large orb and the line she is saying.
+ *   fresh     — nothing said yet. A large orb and the line he is saying.
  *   speaking  — the user is talking. Their words appear under the orb as the
  *               recogniser hears them.
  *   thread    — there is a conversation. The orb sits above the messages and
  *               stays put while they scroll beneath it.
  *
- * Phronesis' replies are deliberately NOT painted as they stream in. The
- * text is held back until she actually starts speaking, and then arrives in
- * time with her voice — otherwise the answer is finished on screen while she
- * is still saying the first sentence, which reads as her narrating something
- * already written. The short replies her persona produces make the wait small.
+ * Phronesis' replies are never painted ahead of his voice. The raw token
+ * stream is not shown: text appears one SENTENCE at a time, and only once
+ * that sentence has been handed to the voice, so the words and the speech
+ * arrive together. An answer finished on screen while he is still saying its
+ * first line reads as him narrating something already written.
+ *
+ * What changed is that this no longer costs a wait. The reply used to be
+ * collected in full and only then spoken, so the model and the synthesis ran
+ * end to end — measured on a 303-character reply, synthesis finished 6.4s in
+ * while its first audio was ready at 2.0s. Now the stages overlap and he
+ * starts talking a sentence into the answer.
  */
 
 /** The orb's two sizes, in rem. It is the same mounted element either way — the
@@ -71,12 +79,13 @@ function offerFor(owner: boolean): RouteOffer {
 }
 
 /**
- * What she says when you take the turn back off her.
+ * What he says when you take the turn back off him.
  *
  * Several of them, chosen at random: a single canned apology is charming the
  * first time and grating the fourth.
  */
-const RESUME_LINES = ['Sorry — go on.', 'Sorry, you were saying?', "Go on, I'm listening."]
+/* The lines themselves are in `app/lines.ts`, pre-rendered to audio: an
+   apology for interrupting has to land immediately or it is worse than none. */
 
 /**
  * Which car part a reply was about, guessed from its own words.
@@ -112,13 +121,13 @@ export function Home() {
 
   const { getToken, user, status: authStatus } = useAuth()
   const firstName = firstNameOf(user)
-  const { talking, speak: speakLine, stop: stopSpeaking, progress } = useSpeak()
+  const { talking, speak: speakLine, stream, stop: stopSpeaking, progress } = useSpeak()
   const { setPart } = useFocus()
 
   /**
-   * How she opens.
+   * How he opens.
    *
-   * Spoken, and written as she says it — the name included, so the one thing
+   * Spoken, and written as he says it — the name included, so the one thing
    * the account step exists to collect is actually used out loud rather than
    * just printed in a heading.
    *
@@ -126,11 +135,13 @@ export function Home() {
    * question rather than trailing after it. Text-to-speech takes its
    * intonation from where the sentence lands: a question followed by a
    * declarative fragment gets read with a falling, statement-like tone, which
-   * made her sound like she was announcing something rather than asking.
+   * made him sound like he was announcing something rather than asking.
    */
-  const opener = owner
-    ? `${firstName ? `Hey ${firstName}. ` : ''}Tap my orb or the mic whenever you want to talk. So, what's your car been doing — a noise, a warning light, something that just feels off?`
-    : `${firstName ? `Hey ${firstName}. ` : ''}Tap my orb or the mic whenever you want to talk. So, what are you looking for — a budget, a make you like, something for work?`
+  // The greeting is prepended rather than baked in, so the unnamed branch is
+  // character-for-character the line that was pre-rendered — "Hey Noah" is one
+  // recording per user and can only ever come from the live endpoint.
+  const greeting = firstName ? `Hey ${firstName}. ` : ''
+  const opener = `${greeting}${owner ? OPENER_OWNER : OPENER_BUYER}`
 
   // Greet on arrival, once auth has settled — speaking any earlier would
   // deliver the line before the name loads and greet a stranger.
@@ -168,8 +179,8 @@ export function Home() {
   const { levelRef } = useMicLevel(listening)
 
   /* ------------------------------------------------------------ barge-in
-     Reaching for the mic while she is mid-sentence means she got ahead of
-     you. She stops, says so, and hands the turn back. */
+     Reaching for the mic while he is mid-sentence means he got ahead of
+     you. He stops, says so, and hands the turn back. */
 
   const resumeAfterApology = useRef(false)
   const wasTalking = useRef(false)
@@ -182,9 +193,9 @@ export function Home() {
     listen()
   }
 
-  // Open the mic on the *falling edge* of her voice, not the moment the
+  // Open the mic on the *falling edge* of his voice, not the moment the
   // apology is queued — at that instant `talking` is still false and the mic
-  // would open over the top of her own apology.
+  // would open over the top of his own apology.
   useEffect(() => {
     if (wasTalking.current && !talking && resumeAfterApology.current) beginListening()
     wasTalking.current = talking
@@ -221,7 +232,7 @@ export function Home() {
   const docked = mode === 'thread'
   const orbSize = useRem(docked ? ORB_DOCKED : ORB_HERO)
 
-  /** True while her reply is still arriving on screen with her voice. */
+  /** True while his reply is still arriving on screen with his voice. */
   const revealing = speakingId !== null && progress < 1
 
   const state: HaloState = thinking
@@ -238,7 +249,7 @@ export function Home() {
   useEffect(() => {
     const t = threadRef.current
     if (t) t.scrollTop = t.scrollHeight
-    // progress is in here on purpose: the reply grows as she speaks it, so
+    // progress is in here on purpose: the reply grows as he speaks it, so
     // the thread has to keep following it down.
   }, [msgs, offer, heard, progress])
 
@@ -260,7 +271,7 @@ export function Home() {
     setOffer(null)
     setError(null)
     // Release the previous reply to full opacity before the next one starts,
-    // or it would sit frozen at however far her voice had got.
+    // or it would sit frozen at however far his voice had got.
     setSpeakingId(null)
     stopSpeaking()
 
@@ -282,7 +293,40 @@ export function Home() {
 
     try {
       const token = await getToken()
-      // Collected, not painted. The reply appears when she says it.
+
+      /**
+       * Spoken as it is written, a sentence at a time.
+       *
+       * It used to be collected first and only then spoken, which meant the
+       * user waited out the model AND the synthesis end to end. Now the two
+       * overlap: the first sentence is being said while the rest is still
+       * arriving.
+       *
+       * The message text grows with what has been handed to the voice —
+       * never with the raw token stream. So the words on screen are always
+       * words he is about to say, `progress` is measured against exactly
+       * that text, and the reveal still lands with the voice.
+       */
+      const voice = stream()
+      let waiting = ''
+      let opened = false
+
+      const flush = (done: boolean) => {
+        const { chunks, rest } = takeSentences(waiting, !opened, done)
+        waiting = rest
+        for (const chunk of chunks) {
+          if (!opened) {
+            opened = true
+            setThinking(false)
+            setMsgs((m) => [...m, { id: replyId, from: 'assistant', text: chunk }])
+            setSpeakingId(replyId)
+          } else {
+            setMsgs((m) => m.map((x) => (x.id === replyId ? { ...x, text: `${x.text} ${chunk}` } : x)))
+          }
+          voice.push(chunk)
+        }
+      }
+
       await streamChat({
         messages: history,
         journey,
@@ -290,16 +334,18 @@ export function Home() {
         signal: controller.signal,
         onDelta: (delta) => {
           full += delta
+          waiting += delta
+          flush(false)
         },
       })
+
+      flush(true)
+      voice.end()
 
       const reply = full.trim()
       if (!reply) return
 
-      setMsgs((m) => [...m, { id: replyId, from: 'assistant', text: reply }])
-      setSpeakingId(replyId)
       setOffer(offerFor(owner))
-      speakLine(reply)
       // Only owners have a Diagnosis page for this to point at.
       if (owner) {
         const part = partFromText(reply)
@@ -377,8 +423,8 @@ export function Home() {
             </p>
           )}
 
-          {/* Held back until she has finished saying it — buttons appearing
-              mid-sentence would talk over her. */}
+          {/* Held back until he has finished saying it — buttons appearing
+              mid-sentence would talk over him. */}
           {offer && !revealing && (
             <div className="offer">
               <span className="offer__icon" aria-hidden="true">

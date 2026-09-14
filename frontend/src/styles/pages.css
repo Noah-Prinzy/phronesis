@@ -373,7 +373,7 @@
   color: var(--ink-3);
 }
 
-/* Her question, written as she asks it. Carries the weight a page title
+/* His question, written as he asks it. Carries the weight a page title
    would, because on this screen it *is* the title. */
 .onboarding__ask {
   margin: 0;
@@ -385,7 +385,7 @@
   letter-spacing: -0.015em;
 }
 
-/* the small avatar + her line, used above a form */
+/* the small avatar + his line, used above a form */
 .onboarding__greet {
   display: flex;
   align-items: center;
@@ -547,7 +547,7 @@
   min-height: 2.7em;
 }
 
-/* Her opening line, written as she says it. Deliberately subordinate to the
+/* His opening line, written as he says it. Deliberately subordinate to the
    orb — the orb is the thing you look at, this is the thing you read. */
 .home__opener {
   margin: 0;
@@ -1357,7 +1357,7 @@
   color: var(--ink-3);
 }
 
-/* what she found, carried across */
+/* what he found, carried across */
 .sol__carry {
   display: flex;
   align-items: center;
@@ -1641,12 +1641,37 @@
   background: var(--ink);
   box-shadow: 0 0 0 6px rgb(111 180 238 / 0.22), var(--lift-3);
 }
+/* Names are on every pin, so the label has two weights.
+   Unselected: quiet, beside the dot, clipped — twenty of these have to
+   coexist without turning the map into a wall of text. Selected: the
+   prominent pill above, which is the one you are reading. */
 .mv__pin b {
   position: absolute;
+  left: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  max-width: 8.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  padding: 1px 5px;
+  border-radius: 4px;
+  color: var(--ink-2);
+  background: rgb(16 16 19 / 0.82);
+  /* The label must never swallow a click meant for the pin beside it. */
+  pointer-events: none;
+}
+.mv__pin.is-on {
+  /* Above its neighbours, so the chosen name is never half-covered. */
+  z-index: 500 !important;
+}
+.mv__pin.is-on b {
   left: 50%;
   top: -30px;
+  max-width: 15rem;
   transform: translateX(-50%);
-  white-space: nowrap;
   font-size: 0.72rem;
   font-weight: 600;
   padding: 3px 9px;
@@ -1876,4 +1901,43 @@
   font-size: 0.8rem;
   line-height: 1.5;
   color: var(--warning);
+}
+
+/* The search. Three kinds, asked for one at a time — the map stays empty
+   until one is pressed, so what is marked is always what was asked for. */
+.mp__kinds {
+  display: flex;
+  gap: 0.3rem;
+  flex: none;
+  margin-bottom: 0.55rem;
+}
+.mp__kind {
+  flex: 1;
+  min-height: 2.1rem;
+  padding: 0.3rem 0.2rem;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--glass-border);
+  background: var(--glass);
+  color: var(--ink-2);
+  font-family: var(--ui);
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background var(--t-hover) var(--ease),
+    color var(--t-hover) var(--ease),
+    border-color var(--t-hover) var(--ease);
+}
+.mp__kind:hover:not(:disabled) {
+  color: var(--ink);
+  border-color: var(--glass-border-hi, var(--glass-border));
+}
+.mp__kind[data-on] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #0d1014;
+}
+.mp__kind:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }

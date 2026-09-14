@@ -5,16 +5,20 @@ import { Halo } from '../avatar/Halo'
 import { useRem } from '../app/useRootFontSize'
 import { useMediaQuery } from '../app/useMediaQuery'
 import { useSpeak } from '../app/useSpeak'
+import { WELCOME } from '../app/lines'
 
 /**
- * What she says — and, a word at a time, what appears.
+ * What he says — and, a word at a time, what appears.
  *
- * The paragraph is not printed and then narrated. It arrives as she speaks
+ * The paragraph is not printed and then narrated. It arrives as he speaks
  * it, which is the difference between someone talking to you and someone
  * reading you a page that was already there.
+ *
+ * The words themselves live in `app/lines.ts` so the build can render them
+ * to audio ahead of time — this is the first thing anyone hears, and it now
+ * plays instantly instead of after a round trip.
  */
-const SPOKEN =
-  "Hi — I'm Phronesis. Think of me as the friend who actually knows cars, the one you'd call before you call a mechanic. Shall we get you set up?"
+const SPOKEN = WELCOME
 
 export function Welcome() {
   const navigate = useNavigate()

@@ -142,7 +142,7 @@ export interface StoredDiagnosis extends DiagnosisReport {
 }
 
 /**
- * Every report she produces, kept.
+ * Every report he produces, kept.
  *
  * Nothing saved them before — not the Express route in production, because
  * production does not run it, and not the page. So there was no history, and

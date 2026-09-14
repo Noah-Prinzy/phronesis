@@ -253,7 +253,7 @@ export interface DiagnosisSolution {
   option: string
   costLow: number
   costHigh: number
-  /** The split, when she gave one. Optional because an older saved report
+  /** The split, when he gave one. Optional because an older saved report
       predates it, and a model may omit it — the page shows totals instead
       rather than inventing a breakdown. */
   partsLow?: number
@@ -276,7 +276,7 @@ export interface DiagnosisReport {
 }
 
 /**
- * Ask her to work out what is wrong.
+ * Ask him to work out what is wrong.
  *
  * The token is optional and deliberately so: someone who has not signed in
  * still gets a diagnosis, it simply is not written to their history. Gating

@@ -6,6 +6,7 @@ import { IconPlug } from '../icons'
 import { useRem } from '../app/useRootFontSize'
 import { useJourney } from '../app/journey'
 import { useSpeak } from '../app/useSpeak'
+import { JOURNEY_ASK, READER_SUPPORTED, READER_UNSUPPORTED } from '../app/lines'
 import { RECOMMENDED_HARDWARE, detectTransport, pairReader, unavailableReason } from '../lib/obd'
 import type { ObdTransportKind, PairedReader } from '../lib/obd'
 
@@ -18,9 +19,8 @@ export const ONBOARDING_STEPS = 2
    No login yet. The answer here is the branch: it decides which pages fill
    nav slots 2 and 3 for the rest of the app. See design/04-precar.md. */
 
-/** Asked aloud, and written as it is asked. */
-const JOURNEY_ASK =
-  "So before anything else — have you already got a car, or are you still shopping for one?"
+/* Asked aloud, and written as it is asked. The words live in `app/lines.ts`
+   so the build can render them to audio ahead of time. */
 
 export function OnboardingJourney() {
   const heroSize = useRem(7.2)
@@ -97,9 +97,7 @@ export function OnboardingPair() {
 
   const supported = transport !== 'none'
 
-  const ask = supported
-    ? "If you have an OBD reader, plug it in under the dash and I'll connect to it. If you haven't, that's fine — you can just tell me what the car is doing."
-    : "This device can't talk to a Bluetooth reader, so just tell me what the car is doing and I'll work from that."
+  const ask = supported ? READER_SUPPORTED : READER_UNSUPPORTED
 
   useEffect(() => {
     speak(ask)

@@ -85,17 +85,32 @@ export function distanceKm(aLat: number, aLon: number, bLat: number, bLon: numbe
  * exactly why it deserves care: one query per search, never per keystroke,
  * and a timeout so a slow response cannot hold the page.
  */
+/** The OSM tag behind each kind, so a search can ask for one thing. */
+const OSM_SHOP: Record<Exclude<PlaceKind, 'fuel'>, string> = {
+  garage: 'car_repair',
+  tyres: 'tyres',
+  parts: 'car_parts',
+}
+
+export type SearchKind = Exclude<PlaceKind, 'fuel'>
+
 export async function findPlaces(
   lat: number,
   lon: number,
+  kinds: SearchKind[] = ['garage'],
   radiusKm = 6,
   signal?: AbortSignal,
 ): Promise<Place[]> {
   const r = Math.round(radiusKm * 1000)
+  // Asking for one kind at a time is the difference between an answer and a
+  // directory: central Kampala has 23 garages and 89 parts shops, and someone
+  // with a brake fault should not scroll past the spares dealers to find a
+  // mechanic.
+  const shops = (kinds.length ? kinds : (['garage'] as SearchKind[])).map((k) => OSM_SHOP[k])
   // `nwr` covers nodes, ways and relations in one pass; `out center` gives a
   // single coordinate for the ways, which would otherwise be a polygon.
   const q = `[out:json][timeout:25];
-nwr["shop"~"^(car_repair|tyres|car_parts)$"](around:${r},${lat},${lon});
+nwr["shop"~"^(${shops.join('|')})$"](around:${r},${lat},${lon});
 out center 120;`
 
   const res = await fetch(OVERPASS, {

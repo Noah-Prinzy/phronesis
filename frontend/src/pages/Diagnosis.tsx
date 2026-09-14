@@ -97,7 +97,7 @@ export function Diagnosis() {
         })
       }
     } catch {
-      if (alive.current) setError('She could not work that one out just now. Try again in a moment.')
+      if (alive.current) setError('He could not work that one out just now. Try again in a moment.')
     } finally {
       if (alive.current) setBusy(false)
     }
@@ -119,7 +119,7 @@ export function Diagnosis() {
           <div className="dg__askbox">
             <EmptyState
               title="What is it doing?"
-              body="Describe the noise, the light, the smell, the feel — in your own words. She will ask about anything she needs."
+              body="Describe the noise, the light, the smell, the feel — in your own words. He will ask about anything he needs."
             />
             <TextArea
               label="What is it doing?"
@@ -137,7 +137,7 @@ export function Diagnosis() {
                 Work it out
               </Button>
               <Button variant="ghost" onClick={() => navigate('/home')}>
-                Talk to her instead
+                Talk to him instead
               </Button>
             </div>
           </div>
@@ -187,16 +187,16 @@ export function Diagnosis() {
 
         {report.detectedCodes?.length ? (
           <aside className="dg__float dg__float--why">
-            <span className="label">Codes she read</span>
+            <span className="label">Codes he read</span>
             <p className="dg__body dg__body--tight">
               {report.detectedCodes.join(' · ')}
             </p>
           </aside>
         ) : (
           <aside className="dg__float dg__float--why">
-            <span className="label">Why she thinks so</span>
+            <span className="label">Why he thinks so</span>
             <p className="dg__body dg__body--tight">
-              This is from what you told her, with no reader plugged in. Pair one and she
+              This is from what you told him, with no reader plugged in. Pair one and he
               reads the codes instead of inferring them.
             </p>
           </aside>
@@ -228,9 +228,9 @@ export function Diagnosis() {
         </aside>
 
         <div className="dg__actions">
-          <Button onClick={() => navigate('/maps')}>Find a mechanic</Button>
+          <Button onClick={() => navigate('/maps?find=garage')}>Find a mechanic</Button>
           <Button variant="secondary" onClick={() => navigate('/home')}>
-            Ask her about this
+            Ask him about this
           </Button>
           <Button
             variant="ghost"

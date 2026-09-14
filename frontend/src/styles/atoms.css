@@ -1051,7 +1051,7 @@
 }
 
 /* -------------------------------------------------- spoken transcript
-   Words arrive as she says them. Transparent, not absent — the block
+   Words arrive as he says them. Transparent, not absent — the block
    holds its full height from the first frame so nothing below it
    jumps around while the line fills in. */
 .spoken__w {

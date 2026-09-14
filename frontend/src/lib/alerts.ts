@@ -109,7 +109,7 @@ export function sendAlert({ key, title, body, href }: AlertInput): boolean {
 
 /* ----------------------------------------------------------- the triggers */
 
-/** How far past the last service before she mentions it. */
+/** How far past the last service before he mentions it. */
 export const SERVICE_INTERVAL_KM = 5000
 
 export interface ServiceCheck {

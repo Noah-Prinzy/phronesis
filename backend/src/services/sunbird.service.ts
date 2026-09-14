@@ -24,6 +24,13 @@ export interface SunbirdTtsResult {
  * limited (~30 min) URL the client can play directly — we don't proxy the
  * audio bytes ourselves, just the URL.
  */
+/**
+ * Note: this does NOT run text through `normaliseForSpeech`, and should not
+ * start. Those rules are English — "UGX 280,000" becomes "280,000 shillings",
+ * "km" becomes "kilometres" — and this endpoint exists to speak Luganda and
+ * the other local languages, where every one of those substitutions would be
+ * wrong. Stripping markdown would be safe; the pronunciation table is not.
+ */
 export async function getSunbirdSpeech(text: string, speakerId: SunbirdSpeakerId): Promise<SunbirdTtsResult> {
   const response = await fetch(SUNBIRD_TTS_URL, {
     method: 'POST',

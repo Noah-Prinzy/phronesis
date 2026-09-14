@@ -8,13 +8,13 @@ import { loadDiagnoses, type StoredDiagnosis } from '../lib/userdata'
 import type { DiagnosisSolution } from '../lib/api'
 
 /**
- * Solutions: what it takes to fix the thing she found.
+ * Solutions: what it takes to fix the thing he found.
  *
  * Diagnosis says what is wrong. This says what to do about it and what it
  * should cost — and it is the page that decides whether someone gets
  * overcharged, which is most of why this app exists.
  *
- * Every number here comes from a diagnosis she actually produced and saved.
+ * Every number here comes from a diagnosis he actually produced and saved.
  * There are no invented mechanics and no invented prices: the shop list lives
  * on the Map, where it needs real data, and a fabricated garage is someone
  * driving across Kampala to a business that does not exist.
@@ -35,9 +35,9 @@ const URGENCY_WORD: Record<string, string> = {
 }
 
 /**
- * Which option she is actually recommending.
+ * Which option he is actually recommending.
  *
- * The cheapest is the right default: her second option is almost always the
+ * The cheapest is the right default: his second option is almost always the
  * "if it turns out worse" one, and steering someone toward the dearer repair
  * before anyone has looked at the car is the exact behaviour this app exists
  * to protect them from. Exactly one is ever marked — "recommended" appearing
@@ -83,7 +83,7 @@ export function Solutions() {
      * Never hang.
      *
      * The first version awaited Firestore and swallowed the error, so a read
-     * that never settled left "Looking up what she found…" on screen forever
+     * that never settled left "Looking up what he found…" on screen forever
      * — which is exactly what happened. Firestore's SDK waits on the server
      * rather than failing fast, so a blocked or unreachable backend produces
      * a promise that simply never resolves. A deadline is the only thing that
@@ -129,7 +129,7 @@ export function Solutions() {
           <h1 className="page__title">Fix</h1>
         </header>
         <div className="page__body sol sol--empty">
-          <p className="sol__loading">Looking up what she found…</p>
+          <p className="sol__loading">Looking up what he found…</p>
         </div>
       </main>
     )
@@ -169,12 +169,12 @@ export function Solutions() {
             title="Nothing to price yet"
             body={
               status === 'signedIn'
-                ? 'Once she has worked out what is wrong, this is where you will see what it takes to put right — and what it should cost.'
-                : 'Sign in and she will keep what she finds, so you can come back to the costs later.'
+                ? 'Once he has worked out what is wrong, this is where you will see what it takes to put right — and what it should cost.'
+                : 'Sign in and he will keep what he finds, so you can come back to the costs later.'
             }
             action={
               <Button onClick={() => navigate(status === 'signedIn' ? '/diagnosis' : '/join')}>
-                {status === 'signedIn' ? 'Tell her what it is doing' : 'Sign in'}
+                {status === 'signedIn' ? 'Tell him what it is doing' : 'Sign in'}
               </Button>
             }
           />
@@ -207,7 +207,7 @@ export function Solutions() {
           <span className="sol__carrymain">
             <span className="sol__carryname">{report.issue}</span>
             <span className="sol__carrysub">
-              She was {report.confidence}% sure · {report.timeline.toLowerCase()}
+              He was {report.confidence}% sure · {report.timeline.toLowerCase()}
             </span>
           </span>
           <span className="sol__link">See the diagnosis ›</span>
@@ -223,7 +223,7 @@ export function Solutions() {
           {report.solutions.map((s, i) => (
             <article key={s.option} className="sol__opt" data-pick={i === pick || undefined}>
               {i === pick && report.solutions.length > 1 ? (
-                <span className="sol__pickflag">Her pick</span>
+                <span className="sol__pickflag">His pick</span>
               ) : null}
               <h3 className="sol__optname">{s.option}</h3>
 
@@ -273,9 +273,9 @@ export function Solutions() {
         ) : null}
 
         <div className="sol__actions">
-          <Button onClick={() => navigate('/maps')}>Find someone to do it</Button>
+          <Button onClick={() => navigate('/maps?find=garage')}>Find someone to do it</Button>
           <Button variant="secondary" onClick={() => navigate('/home')}>
-            Ask her which one
+            Ask him which one
           </Button>
         </div>
 

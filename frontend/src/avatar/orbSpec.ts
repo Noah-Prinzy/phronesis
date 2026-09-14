@@ -68,7 +68,7 @@ export const ORB: Record<OrbState, OrbSpec> = {
     rate: 1.9,
   },
 
-  /* Speaking. Open, bright, and pulsing on her own syllables. */
+  /* Speaking. Open, bright, and pulsing on his own syllables. */
   responding: {
     sweep: 0.85,
     band: 0.34,

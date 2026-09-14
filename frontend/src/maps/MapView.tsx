@@ -26,8 +26,16 @@ import type { Place } from '../lib/places'
  * wrong colour anyway; a div takes its colour from the app's own tokens.
  */
 
+/**
+ * Esri's Canvas basemaps come in two halves, and loading only the first is an
+ * easy mistake: `_Base` is the geometry — coastline, roads, water — and
+ * `_Reference` is every piece of text on the map, the town names and the road
+ * names. A map with only the Base is a diagram of a city with nothing named.
+ */
 const TILES =
   'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}'
+const LABELS =
+  'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}'
 const ATTRIBUTION =
   'Places &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &middot; Tiles &copy; Esri'
 
@@ -60,9 +68,13 @@ export function MapView({ centre, exact, places, selectedId, onSelect, className
       attributionControl: true,
     })
     L.tileLayer(TILES, { attribution: ATTRIBUTION, maxZoom: 16 }).addTo(m)
+    // Above the geometry, below the markers: Leaflet's own overlay pane puts
+    // it in the right place without fighting z-index.
+    L.tileLayer(LABELS, { maxZoom: 16, pane: 'overlayPane' }).addTo(m)
     L.control.zoom({ position: 'bottomright' }).addTo(m)
     layer.current = L.layerGroup().addTo(m)
     map.current = m
+
 
     return () => {
       m.remove()
@@ -75,7 +87,10 @@ export function MapView({ centre, exact, places, selectedId, onSelect, className
   }, [])
 
   useEffect(() => {
-    map.current?.setView([centre.lat, centre.lon], exact ? 14 : 13, { animate: true })
+    // 14 either way: it is the zoom at which the names come on, and arriving
+    // below that shows a map of unlabelled dots — the thing this is meant to
+    // stop being.
+    map.current?.setView([centre.lat, centre.lon], 14, { animate: true })
   }, [centre.lat, centre.lon, exact])
 
   /* Markers, redrawn whenever the results or the selection change. */
@@ -101,7 +116,10 @@ export function MapView({ centre, exact, places, selectedId, onSelect, className
       const on = p.id === selectedId
       L.marker([p.lat, p.lon], {
         icon: L.divIcon({
-          className: `mv__pin${on ? ' is-on' : ''}`,
+          // Only the selected pin is named. The basemap now carries its own
+          // text — towns, roads — and fifty shop names layered over that turns
+          // a readable map back into a smear.
+          className: `mv__pin mv__pin--${p.kind}${on ? ' is-on' : ''}`,
           html: `<i></i>${on ? `<b>${escapeHtml(p.name)}</b>` : ''}`,
           iconSize: [16, 16],
           iconAnchor: [8, 8],
