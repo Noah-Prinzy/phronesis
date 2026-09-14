@@ -234,7 +234,16 @@ export function Spec({ label, value }: { label: ReactNode; value: ReactNode }) {
   )
 }
 
-export function SpecList({ className, children }: { className?: string; children: ReactNode }) {
+/**
+ * Children are OPTIONAL, and that is not laziness.
+ *
+ * "No specification yet" is a state this reaches — a vehicle whose data has
+ * not loaded, a diagnosis with nothing to list — and requiring children made
+ * it unrepresentable, so a caller in that position had to either render
+ * nothing or invent a row. Found by the stress bench in the styleguide, which
+ * is what it is for.
+ */
+export function SpecList({ className, children }: { className?: string; children?: ReactNode }) {
   return (
     <dl className={className} style={{ margin: 0 }}>
       {children}

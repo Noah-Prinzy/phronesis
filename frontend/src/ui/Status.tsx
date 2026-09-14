@@ -77,14 +77,23 @@ export function Steps({
   current: number
   className?: string
 }) {
+  /**
+   * Clamped, because `current` arrives from a caller and ARIA does not
+   * tolerate nonsense. Out of range it used to announce "step 7 of 3" with
+   * `aria-valuenow` past `aria-valuemax` — invisible on screen, since every
+   * segment simply renders as done, and plainly wrong to anyone listening.
+   * Found by the stress bench in the styleguide.
+   */
+  const at = Math.min(Math.max(1, current), Math.max(1, total))
+
   return (
     <div
       className={cx('ph-steps', className)}
       role="progressbar"
       aria-valuemin={1}
       aria-valuemax={total}
-      aria-valuenow={current}
-      aria-label={`Step ${current} of ${total}`}
+      aria-valuenow={at}
+      aria-label={`Step ${at} of ${total}`}
     >
       {Array.from({ length: total }, (_, i) => (
         <span

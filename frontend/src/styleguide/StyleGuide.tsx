@@ -31,6 +31,7 @@ import {
   SpecList,
   TrendSparkline,
   Spinner,
+  SpokenText,
   SplitBar,
   StarRating,
   Steps,
@@ -133,6 +134,7 @@ export function StyleGuide() {
             <a href="#display">Display</a>
             <a href="#nav">Nav</a>
             <a href="#status">Status</a>
+            <a href="#stress">Stress</a>
             <a href="#avatar">Avatar</a>
           </nav>
         </div>
@@ -506,10 +508,168 @@ export function StyleGuide() {
           </Case>
         </Bench>
 
+        {/* ---------------------------------------------------------- stress */}
+        <Bench
+          id="stress"
+          n="07"
+          title="Under stress"
+          note="Every case above shows an atom being given exactly what it wants. This bench gives them what they will actually get: a name longer than the box, a value of zero, a number outside its own range, a network that has not answered. If something breaks here it breaks in Kampala on a Tuesday, and it is far cheaper to see it now."
+        >
+          <Case label="overflow — one long word">
+            {/* A German part name, a pasted URL, a registration with no
+                spaces. Anything that cannot wrap is what actually splits a
+                layout open, and every one of these boxes has a fixed width. */}
+            <div style={{ width: 260, display: 'grid', gap: '0.6rem' }}>
+              <TextInput label="Part" defaultValue="Kurbelwellensensorsteckverbinder" />
+              <Group>
+                <Row label="Kurbelwellensensorsteckverbinder" value="UGX 1,284,000" />
+              </Group>
+              <SpecList className="specbox">
+                <Spec label="Kurbelwellensensor" value="Steckverbinder-Baugruppe" />
+              </SpecList>
+              <Chip pressed>Kurbelwellensensorsteckverbinder</Chip>
+            </div>
+          </Case>
+
+          <Case label="overflow — long labels">
+            <div style={{ width: 300, display: 'grid', gap: '0.6rem' }}>
+              <Segmented
+                label="Journey"
+                value={journey}
+                onChange={setJourney}
+                options={[
+                  { value: 'post', label: 'I already own a car' },
+                  { value: 'pre', label: 'Still shopping around' },
+                ]}
+              />
+              <Tabs
+                label="Compare view"
+                value={tab}
+                onChange={setTab}
+                options={[
+                  { value: 'compare', label: 'Everything side by side' },
+                  { value: 'market', label: 'What it should cost here' },
+                ]}
+              />
+              <Button wide>Find someone who can look at this today</Button>
+            </div>
+          </Case>
+
+          <Case label="overflow — a reply that will not stop">
+            <div className="thread" style={{ maxWidth: 340 }}>
+              <Bubble from="user">
+                it makes a noise
+              </Bubble>
+              <Bubble from="assistant">
+                A rattle only under braking usually means the pads are worn down to the wear
+                indicator, which is a small metal tab designed to make exactly that noise so
+                you hear the problem before you have to pay for the bigger one. If it has
+                started pulling to one side as well, that points at a sticking caliper rather
+                than the pads alone, and the two cost very different amounts to put right.
+              </Bubble>
+            </div>
+          </Case>
+
+          <Case label="empty and zero">
+            {/* Zero is not the same as absent, and both happen. A meter at 0
+                must still read as a meter; a split with nothing in it must not
+                divide by zero. */}
+            <div style={{ width: 240, display: 'grid', gap: '0.7rem' }}>
+              <Meter value={0} label="Confidence — nothing yet" />
+              <SplitBar segments={[{ value: 0 }, { value: 0, tone: 'dim' }]} />
+              <StarRating value={0} label="Unrated" />
+              <SpecList className="specbox" />
+              <ProConList pros={['Cheap to run']} cons={[]} />
+            </div>
+          </Case>
+
+          <Case label="out of range">
+            {/* Nothing stops a caller passing these. Clamping belongs in the
+                atom, because the page that gets it wrong will not know. */}
+            <div style={{ width: 260, display: 'grid', gap: '0.7rem' }}>
+              <Meter value={1.8} label="Over 100%" />
+              <Meter value={-0.4} label="Below zero" />
+              <StarRating value={9} label="Nine of five" />
+              <Steps total={3} current={7} />
+              <PriceBand
+                low={36_000_000}
+                high={58_000_000}
+                average={46_200_000}
+                mark={82_000_000}
+                source="Asking price above the whole band."
+                format={moneyShort}
+              />
+            </div>
+          </Case>
+
+          <Case label="too little data to draw">
+            <div style={{ width: 260, display: 'grid', gap: '0.7rem' }}>
+              <TrendSparkline values={[46, 46]} label="Two identical points — a flat line." />
+              <TrendSparkline values={[46]} label="One point. Draws nothing at all." />
+              <PriceBand
+                low={40_000_000}
+                high={40_000_000}
+                average={40_000_000}
+                source="Every listing at the same price."
+                format={moneyShort}
+              />
+            </div>
+          </Case>
+
+          <Case label="it went wrong">
+            <div style={{ width: 280, display: 'grid', gap: '0.6rem' }}>
+              <TextInput
+                label="Email"
+                defaultValue="noah@"
+                error="That does not look like an email address."
+              />
+              <PasswordInput label="Password" defaultValue="short" error="At least 8 characters." />
+              <Select
+                label="Sort by"
+                error="Could not load the list."
+                options={[{ value: 'match', label: 'Best match' }]}
+              />
+              <Toast
+                level="critical"
+                title="Could not reach the reader"
+                body="The adapter answered but the car did not. Turn the ignition on."
+              />
+            </div>
+          </Case>
+
+          <Case label="nothing is available">
+            <div style={{ width: 280, display: 'grid', gap: '0.6rem' }}>
+              <Button disabled wide>Send</Button>
+              <TextInput label="Mileage" placeholder="Sign in first" disabled />
+              <Switch checked={false} onChange={() => {}} label="Maintenance alerts" disabled />
+              <Chip disabled>Tyres</Chip>
+              <EmptyState
+                title="No market data for this one"
+                body="I have the specification but not what it sells for here. I will not guess at a price."
+              />
+            </div>
+          </Case>
+
+          <Case label="waiting">
+            <div style={{ width: 280, display: 'grid', gap: '0.6rem' }}>
+              <Button loading wide>Looking…</Button>
+              <Button variant="secondary" loading>Pairing</Button>
+              <div style={{ display: 'flex', gap: '0.6rem', alignItems: 'center' }}>
+                <Spinner size={18} />
+                <Skeleton height={12} width={160} />
+              </div>
+              <SpokenText
+                text="I am still working that one out — give me a moment."
+                progress={0.35}
+              />
+            </div>
+          </Case>
+        </Bench>
+
         {/* ---------------------------------------------------------- avatar */}
         <Bench
           id="avatar"
-          n="07"
+          n="08"
           title="Avatar"
           note="Phronesis' four states, side by side. They are separated on several axes — sweep speed, band width, how far the plates float off the shell, brightness and bloom — because brightness alone left listening and responding indistinguishable, which is the one distinction a voice interface cannot afford to blur."
         >
