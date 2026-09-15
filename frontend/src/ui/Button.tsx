@@ -73,8 +73,15 @@ export function IconButton({
 }: IconButtonProps) {
   return (
     <button
-      {...rest}
+      /* Before the spread, not after.
+         A default, so an icon button in a form is inert unless it asks to be
+         otherwise — but overridable, which is the part that was broken: set
+         AFTER `...rest` it clobbered every `type` a caller passed, and Home's
+         send button has been `type="submit"` inside a form since the first
+         commit while rendering as an inert `type="button"`. Clicking it did
+         nothing; only pressing Enter ever sent a message. */
       type="button"
+      {...rest}
       aria-label={label}
       title={label}
       data-size={size}

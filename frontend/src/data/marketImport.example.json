@@ -1,0 +1,55 @@
+{
+  "source": "SBT Japan export stock",
+  "capturedOn": "2026-09-15",
+  "currency": "USD",
+  "basis": "fob",
+  "totalListings": 283516,
+  "models": [
+    {
+      "make": "Toyota",
+      "model": "Premio",
+      "years": [
+        {
+          "year": 2015,
+          "count": 412,
+          "fobUsd": { "low": 3100, "median": 4250, "high": 6400 },
+          "medianKm": 78000,
+          "trailing": {
+            "fromMonth": "2026-04",
+            "medianUsd": [4140, 4180, 4210, 4190, 4230, 4250]
+          }
+        },
+        {
+          "year": 2016,
+          "count": 287,
+          "fobUsd": { "low": 3600, "median": 4820, "high": 7100 },
+          "medianKm": 64000
+        }
+      ]
+    },
+    {
+      "make": "Toyota",
+      "model": "Harrier",
+      "years": [
+        {
+          "year": 2014,
+          "count": 156,
+          "fobUsd": { "low": 6200, "median": 8400, "high": 12500 },
+          "medianKm": 92000
+        }
+      ]
+    },
+    {
+      "make": "Mazda",
+      "model": "Demio",
+      "years": [
+        {
+          "year": 2015,
+          "count": 934,
+          "fobUsd": { "low": 1900, "median": 2450, "high": 3600 },
+          "medianKm": 71000
+        }
+      ]
+    }
+  ]
+}

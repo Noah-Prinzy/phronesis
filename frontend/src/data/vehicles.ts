@@ -35,11 +35,25 @@ export type Drive = 'front' | 'rear' | 'all'
 /**
  * Where a figure came from. Required, and rendered.
  *
- * `listings` means somebody read real adverts and wrote down the spread.
+ * `listings` means somebody read real adverts here and wrote down the spread.
  * `illustrative` means it is a placeholder and the screen must admit it.
+ * `import` means an EXPORTER'S stock — what the car costs before it has been
+ * shipped, taxed and registered, which is a different number about a different
+ * transaction.
+ *
+ * **Why `import` is a kind rather than a source note.** An export price and a
+ * Kampala price are not the same figure measured twice; they are two figures
+ * about two different things, and the gap between them is duty that scales
+ * with the car's age and engine. A stock list from Japan can say a Premio is
+ * $4,250, and repeating that to somebody asking what their Premio is worth
+ * here is not an approximation — it is a different question answered
+ * confidently. Making it a separate kind means no screen can print one where
+ * it means the other by accident.
  */
+export type ProvenanceKind = 'listings' | 'illustrative' | 'import'
+
 export interface Provenance {
-  kind: 'listings' | 'illustrative'
+  kind: ProvenanceKind
   /** Shown to the user. "61 Jiji listings" or "not yet sourced". */
   note: string
   /** ISO date the figures were captured. Prices go stale; this is how we know. */
@@ -359,4 +373,24 @@ export const DRIVE_LABEL: Record<Drive, string> = {
   front: 'Front',
   rear: 'Rear',
   all: 'All wheel',
+}
+
+/**
+ * The body type of a car somebody actually owns.
+ *
+ * A saved `CarProfile` is a make, a model and a year — nobody is asked what
+ * shape their car is, and asking would be a silly question about a thing the
+ * catalogue already knows. So it is looked up: the diagnosis hologram needs a
+ * profile to extrude, and a Premio owner should see a saloon rather than
+ * whichever body happens to be the default.
+ *
+ * Matched on model alone, and deliberately. Makes get typed as "toyota",
+ * "TOYOTA" and occasionally "Toyota Motor", while a model name is short and
+ * people get it right; a wrong match on the make would drop a Harrier owner
+ * back to a saloon for no reason the user could ever see.
+ */
+export function bodyOfModel(model: string | undefined): BodyType | undefined {
+  if (!model) return undefined
+  const want = model.trim().toLowerCase()
+  return VEHICLES.find((v) => v.model.toLowerCase() === want)?.body
 }

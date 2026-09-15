@@ -264,6 +264,12 @@ export interface BubbleProps {
 export function Bubble({ from, streaming, children, className }: BubbleProps) {
   return (
     <div data-from={from} className={cx('ph-bubble', className)}>
+      {/* Only they are labelled. Once the fills and borders came off, a short
+          line ranged right — "Go on then" — stopped being obviously theirs;
+          he needs no label because he is the one at reading size in full ink.
+          A run of consecutive messages shows it once: see the sibling rule in
+          atoms.css, which hides it on every message after the first. */}
+      {from === 'user' && <span className="ph-bubble__who">You</span>}
       {children}
       {streaming && <span className="ph-bubble__caret" aria-hidden="true" />}
     </div>

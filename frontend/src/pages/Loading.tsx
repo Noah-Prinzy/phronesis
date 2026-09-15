@@ -18,7 +18,7 @@ const HOLD_MS = 1400
 export function Loading() {
   const navigate = useNavigate()
   const wide = useMediaQuery('(min-width: 768px)')
-  const size = useRem(wide ? 6.4 : 4.8)
+  const size = useRem(wide ? 9 : 7)
   const { status } = useAuth()
   const [held, setHeld] = useState(false)
 

@@ -8,10 +8,10 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "market:trim": "tsx scripts/trimMarket.ts"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.124.0",
     "@capacitor-community/bluetooth-le": "^8.3.0",
     "@capacitor/android": "^8.5.2",
     "@capacitor/core": "^8.5.2",

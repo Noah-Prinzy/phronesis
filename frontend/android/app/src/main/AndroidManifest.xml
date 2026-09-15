@@ -39,6 +39,15 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <!-- Showing him rather than describing: a photo of the car, and the noise
+         it is making. Both are captured in the WebView through getUserMedia
+         and <input type="file" capture>, which still need the platform
+         permission behind them. -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.microphone" android:required="false" />
+
     <!-- Bluetooth, for the OBD reader. Android 12+ split the old blanket
          BLUETOOTH permission into scan/connect, and made neverForLocation a
          promise the app has to make explicitly — without it Android demands

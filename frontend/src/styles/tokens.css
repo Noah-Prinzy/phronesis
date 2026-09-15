@@ -26,12 +26,11 @@
   /* --- ground --- */
   --ground: #0a0a0b;
 
-  /* Pools of lifted shadow drifting under everything, as though the
-     light above the surface were uneven. Warm-neutral, never blue:
-     these are the reason the page looks lit rather than painted. */
-  --bloom-warm: rgb(96 86 76 / 0.45);
-  --bloom-neutral: rgb(64 66 70 / 0.38);
-  --bloom-cool: rgb(80 74 84 / 0.3);
+  /* How hard the surface behind everything is pushed. The field itself is
+     built in app/Surface.tsx; this is the one number that decides how much
+     of it you actually see, and it is deliberately low — it is a ground,
+     not a picture. */
+  --surface-k: 0.3;
 
   /* --- the raised planes ---
      White at increasing opacity. The ladder runs the same direction
@@ -126,9 +125,6 @@
      deliberately prime-ish: because the periods do not divide into one
      another the pattern never visibly repeats, which is the whole
      difference between "alive" and "looping". */
-  --drift-a: 47s;
-  --drift-b: 61s;
-  --drift-c: 73s;
 
   /* --- elevation ---
      Depth is brightness again, so the sheen does the lifting and the

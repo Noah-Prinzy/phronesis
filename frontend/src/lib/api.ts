@@ -12,6 +12,21 @@ const BASE = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '')
 export interface ChatMessage {
   role: 'user' | 'assistant'
   content: string
+  /**
+   * A photo of the car, or a recording of the noise, sent with this turn.
+   *
+   * On the turn rather than on the request, because that is where it belongs
+   * in the conversation: asking a second question about a leak should not
+   * mean he has forgotten the picture from the first.
+   */
+  attachments?: WireAttachment[]
+}
+
+/** What the server accepts: base64, no `data:` prefix. See lib/attachments. */
+export interface WireAttachment {
+  kind: 'image' | 'audio'
+  mime: string
+  data: string
 }
 
 /**
@@ -298,6 +313,7 @@ export async function runDiagnosis(
   car: CarProfile | null,
   token: string | null,
   signal?: AbortSignal,
+  attachments?: WireAttachment[],
 ): Promise<DiagnosisReport> {
   const res = await fetch(`${BASE}/api/diagnosis`, {
     method: 'POST',
@@ -311,8 +327,16 @@ export async function runDiagnosis(
       carProfile: car
         ? { make: car.make, model: car.model, year: car.year, mileage: car.mileage }
         : undefined,
+      attachments,
     }),
   })
+  /* 415 is the server saying it cannot use what was sent, and it says why.
+     Surfacing that text matters: a recording that silently produced a
+     diagnosis never mentioning it would let somebody believe he had listened. */
+  if (res.status === 415) {
+    const why = (await res.json().catch(() => null)) as { error?: string } | null
+    throw new Error(why?.error ?? 'I could not use that attachment.')
+  }
   if (!res.ok) throw new Error(`Diagnosis failed (${res.status})`)
   const body = (await res.json()) as { report: DiagnosisReport }
   return body.report

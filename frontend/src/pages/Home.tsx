@@ -1,22 +1,26 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Bubble, Button, IconButton, SpokenText } from '../ui'
+import { Bubble, Button, Capture, IconButton, SentMedia, SpokenText, Toast } from '../ui'
 import { Halo } from '../avatar/Halo'
 import type { HaloState } from '../avatar/Halo'
 import { useMicLevel } from '../avatar/useMicLevel'
 import { useDictation } from '../voice/useDictation'
 import { IconMic, IconSend, IconSpark } from '../ui/icons'
 import { useJourney } from '../app/journey'
+import { journeyFromConversation } from '../app/intent'
+import type { Journey } from '../app/journey'
 import { useRem } from '../app/useRootFontSize'
 import { firstNameOf, useAuth } from '../app/auth'
 import { useSpeak } from '../voice/useSpeak'
 import { RESUME_LINES } from '../voice/lines'
 import { nextOpener } from '../voice/greeting'
 import { takeSentences } from '../voice/sentences'
-import { useFocus } from '../app/focus'
+import { useHandover } from '../app/handover'
+import { partFromText } from '../diagnosis/partFromText'
 import { ApiError, fetchChats, streamChat } from '../lib/api'
 import type { ChatMessage } from '../lib/api'
-import type { CarPart } from '../data/findings'
+import { forWire } from '../lib/attachments'
+import type { Attachment } from '../lib/attachments'
 
 /**
  * Home is a conversation, not a form.
@@ -46,8 +50,8 @@ import type { CarPart } from '../data/findings'
 /** The orb's two sizes, in rem. It is the same mounted element either way — the
     size prop changes and CSS transitions the box, so the video never remounts
     and the loop never restarts mid-conversation. */
-const ORB_HERO = 19
-const ORB_DOCKED = 6
+const ORB_HERO = 22
+const ORB_DOCKED = 11
 
 /**
  * How many past messages travel with a new question.
@@ -63,6 +67,29 @@ interface Msg {
   id: number
   from: 'user' | 'assistant'
   text: string
+  /**
+   * What went with it, kept so it stays on screen afterwards.
+   *
+   * The whole object rather than the wire form, because the preview URL is
+   * the part that matters here and the server never sees it. Only this
+   * session has them: a conversation restored from the server comes back as
+   * text, which is honest — the photo lives on the device that took it.
+   */
+  sent?: Attachment[]
+}
+
+/**
+ * What the user's own bubble says when they sent a file and no words.
+ *
+ * An empty bubble reads as a bug, and the model needs something to answer.
+ * Written in their voice rather than the app's — it is their turn.
+ */
+function describeOwn(list: Attachment[]): string {
+  const photos = list.filter((a) => a.kind === 'image').length
+  const clips = list.filter((a) => a.kind === 'audio').length
+  if (photos && clips) return 'Here is a photo and the sound it makes.'
+  if (clips) return clips > 1 ? 'Here are the sounds it makes.' : 'Here is the sound it makes.'
+  return photos > 1 ? 'Here are some photos.' : 'Here is a photo.'
 }
 
 /** A routing offer the assistant makes, rather than a jump it performs. */
@@ -98,31 +125,36 @@ function offerFor(owner: boolean): RouteOffer {
 /* The lines themselves are in `app/lines.ts`, pre-rendered to audio: an
    apology for interrupting has to land immediately or it is worse than none. */
 
-/**
- * Which car part a reply was about, guessed from its own words.
- *
- * The AI backend carries no structured metadata alongside the text, so this is
- * necessarily a text match rather than a real classification. Good enough to
- * point the hologram in the right direction when the owner follows the
- * "Open Diagnosis" offer; wrong far less often than it is silent.
- */
-function partFromText(text: string): CarPart | null {
-  if (/\brear\b.{0,12}\bbrake|\bbrake.{0,12}\brear\b/i.test(text)) return 'rear-brakes'
-  if (/\bbrake/i.test(text)) return 'front-brakes'
-  if (/\bengine\b/i.test(text)) return 'engine'
-  if (/\bcabin\b|\bair filter\b|\bhvac\b/i.test(text)) return 'cabin'
-  if (/\bbattery\b/i.test(text)) return 'battery'
-  return null
-}
 
 export function Home() {
   const navigate = useNavigate()
-  const { journey } = useJourney()
+  const { journey, setJourney } = useJourney()
   const owner = journey !== 'buyer'
 
   const [msgs, setMsgs] = useState<Msg[]>([])
   const [offer, setOffer] = useState<RouteOffer | null>(null)
   const [draft, setDraft] = useState('')
+  /**
+   * What is going with this turn: a photo of the car, or the noise itself.
+   *
+   * Held beside the draft rather than inside it because they are sent
+   * together and cleared together — an attachment left behind after a send
+   * would silently ride along with the next question about something else.
+   */
+  const [attachments, setAttachments] = useState<Attachment[]>([])
+  /** While the microphone is open the composer is not a composer. */
+  const [recording, setRecording] = useState(false)
+  /**
+   * He has moved them to the other half of the product.
+   *
+   * Held so the change can be said and taken back. The navigation
+   * rearranging IS the announcement — he does not also say it out loud,
+   * because reading out what is already on screen is the one thing his voice
+   * never does — but two pages appearing and two leaving with no explanation
+   * is disorienting, and on a wrong read the way back should be one tap
+   * rather than a trip into Account.
+   */
+  const [switched, setSwitched] = useState<{ from: Journey | null; to: Journey } | null>(null)
   const [thinking, setThinking] = useState(false)
   const [error, setError] = useState<string | null>(null)
   /** What the recogniser has heard so far this utterance. */
@@ -148,7 +180,23 @@ export function Home() {
   const { getToken, user, status: authStatus } = useAuth()
   const firstName = firstNameOf(user)
   const { talking, speak: speakLine, stream, stop: stopSpeaking, progress } = useSpeak()
-  const { setPart } = useFocus()
+  const { send: handOver } = useHandover()
+
+  /**
+   * Object URLs live until they are revoked, so leaving Home has to let go of
+   * every preview the thread is holding. Mirrored into a ref because an
+   * unmount effect reads whatever `msgs` was at mount time otherwise.
+   */
+  const held = useRef<Msg[]>([])
+  held.current = msgs
+  useEffect(
+    () => () => {
+      for (const m of held.current) {
+        for (const a of m.sent ?? []) if (a.preview) URL.revokeObjectURL(a.preview)
+      }
+    },
+    [],
+  )
 
   /**
    * How he opens, once it has been chosen. See `app/greeting.ts`.
@@ -350,8 +398,14 @@ export function Home() {
    */
   async function send(text: string) {
     const body = text.trim()
-    if (!body || thinking) return
+    /* A photo or a recording is a turn on its own. Somebody holding up a
+       phone to a running engine has said the most useful thing they can say,
+       and demanding they also type something would be the form reasserting
+       itself over the conversation. */
+    const going = attachments
+    if ((!body && going.length === 0) || thinking) return
     setDraft('')
+    setAttachments([])
     setHeard('')
     setOffer(null)
     setError(null)
@@ -360,7 +414,13 @@ export function Home() {
     setSpeakingId(null)
     stopSpeaking()
 
-    const mine: Msg = { id: idRef.current++, from: 'user', text: body }
+    const said = body || describeOwn(going)
+    const mine: Msg = {
+      id: idRef.current++,
+      from: 'user',
+      text: said,
+      sent: going.length > 0 ? going : undefined,
+    }
     // Build the wire history from what is on screen *plus* this turn, rather
     // than reading state back after setMsgs — that read would be one render
     // behind and would silently drop the newest message.
@@ -372,13 +432,38 @@ export function Home() {
     // The whole thread stays on screen and in Firestore either way.
     const history: ChatMessage[] = [
       ...msgs.slice(-RECENT_TURNS).map((m) => ({ role: m.from, content: m.text })),
-      { role: 'user' as const, content: body },
+      /* Only THIS turn carries its files. The earlier ones are replayed as
+         text, because re-uploading every photo on every turn would grow the
+         request without bound — the server keeps them against the
+         conversation it already has. */
+      { role: 'user' as const, content: said, attachments: forWire(going) },
     ]
     setMsgs((m) => [...m, mine])
     setThinking(true)
 
+    /**
+     * Has the conversation actually turned?
+     *
+     * Read across the recent turns rather than off this one sentence.
+     * Somebody mid-diagnosis mentioning that their brother is shopping has
+     * not stopped owning a car, and taking Diagnose out of their navigation
+     * for saying so would be worse than never moving anyone at all.
+     */
+    const moved = journeyFromConversation(
+      [...msgs.filter((m) => m.from === 'user').map((m) => m.text), said],
+      journey,
+    )
+    if (moved) {
+      setSwitched({ from: journey, to: moved })
+      setJourney(moved)
+    }
+
     const replyId = idRef.current++
     let full = ''
+    /* The id in scope is the one from BEFORE this request, and the server
+       mints a new one on the first turn — so the hand-off at the end would
+       carry null forever if it read the state variable. */
+    let liveChatId = chatId
     const controller = new AbortController()
     abortRef.current = controller
 
@@ -420,12 +505,20 @@ export function Home() {
 
       await streamChat({
         messages: history,
-        journey,
+        /* The journey he has just moved them to, not the one they arrived in.
+           `journey` in this scope is the value from before this turn, and
+           React has not re-rendered yet — so sending it would have him answer
+           the very message that made him switch as though he had not, with
+           the navigation already saying otherwise beside him. */
+        journey: moved ?? journey,
         token,
         // Absent on the first turn; the server mints one and hands it back,
         // and every turn after this appends to that same conversation.
         chatId,
-        onChatId: setChatId,
+        onChatId: (id) => {
+          liveChatId = id
+          setChatId(id)
+        },
         signal: controller.signal,
         onDelta: (delta) => {
           full += delta
@@ -440,12 +533,30 @@ export function Home() {
       const reply = full.trim()
       if (!reply) return
 
-      setOffer(offerFor(owner))
-      // Only owners have a Diagnosis page for this to point at.
-      if (owner) {
-        const part = partFromText(reply)
-        if (part) setPart(part)
+      /**
+       * He takes you there rather than offering you a door.
+       *
+       * The offer card was the seam: you told him about a noise, he answered,
+       * and then you clicked a button and were asked to type the noise again
+       * into an empty box. This is one conversation, so it moves with you —
+       * the symptom, the chat it belongs to, and the part he was pointing at
+       * all travel, and Diagnosis opens already working on it.
+       *
+       * Only when he NAMED a part. A reply that never mentions one is him
+       * answering a question, not routing you, and moving somebody who asked
+       * about insurance is worse than making them click. It is still a guess
+       * off a regex, so it will occasionally be wrong — the nav is right
+       * there, and nothing is destroyed by being in the wrong room.
+       */
+      const part = owner ? partFromText(reply) : null
+      if (part) {
+        handOver({ symptom: said, chatId: liveChatId ?? undefined, part, attachments: going })
+        navigate('/diagnosis')
+        return
       }
+
+      // He did not route you anywhere, so the old offer still stands.
+      setOffer(offerFor(owner))
     } catch (err) {
       if (controller.signal.aborted) return
       // Roll the whole turn back: drop the user's message and put their text
@@ -456,6 +567,9 @@ export function Home() {
       // re-sends — a malformed conversation some providers reject outright.
       setMsgs((m) => m.filter((x) => x.id !== mine.id))
       setDraft(body)
+      // Including the files. A failed send that quietly destroyed a recording
+      // of a noise the car was making an hour ago would be unforgivable.
+      setAttachments(going)
       setError(
         err instanceof ApiError ? err.message : 'I could not reach the server. Is it running?',
       )
@@ -492,6 +606,7 @@ export function Home() {
         <div className="home__thread" ref={threadRef}>
           {msgs.map((m) => (
             <Bubble key={m.id} from={m.from}>
+              {m.sent ? <SentMedia items={m.sent} /> : null}
               {m.id === speakingId ? (
                 <SpokenText text={m.text} progress={progress} />
               ) : (
@@ -516,6 +631,31 @@ export function Home() {
               </span>
               Thinking
             </p>
+          )}
+
+          {switched && (
+            <Toast
+              level="accent"
+              title={
+                switched.to === 'buyer'
+                  ? 'Switched to looking at cars to buy'
+                  : 'Switched to looking after the car you have'
+              }
+              body="Your navigation changed with it."
+              action={
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    // Back exactly where they were, including "not chosen yet".
+                    if (switched.from) setJourney(switched.from)
+                    setSwitched(null)
+                  }}
+                >
+                  Undo
+                </Button>
+              }
+            />
           )}
 
           {/* Held back until he has finished saying it — buttons appearing
@@ -571,29 +711,52 @@ export function Home() {
             send(draft)
           }}
         >
-          <IconButton
-            label={listening ? 'Stop listening' : talking ? 'Interrupt' : 'Speak instead of typing'}
-            title={canDictate ? undefined : 'This browser cannot listen — try Chrome or Edge'}
-            className={listening ? 'composer__mic--on' : undefined}
-            disabled={!canDictate}
-            onClick={toggleMic}
-          >
-            <IconMic />
-          </IconButton>
+          {/* While the microphone is open, the composer is the recording.
+              Everything else goes rather than being covered over — a send
+              button hidden under a strip is still there for a keyboard and
+              still there for a screen reader. */}
+          {!recording && (
+            <IconButton
+              label={listening ? 'Stop listening' : talking ? 'Interrupt' : 'Speak instead of typing'}
+              title={canDictate ? undefined : 'This browser cannot listen — try Chrome or Edge'}
+              className={listening ? 'composer__mic--on' : undefined}
+              disabled={!canDictate}
+              onClick={toggleMic}
+            >
+              <IconMic />
+            </IconButton>
+          )}
 
-          <input
-            className="composer__input"
-            value={draft}
-            onChange={(e) => setDraft(e.currentTarget.value)}
-            placeholder={
-              listening ? 'Listening…' : docked ? 'Message Phronesis…' : 'Describe it, or tap the orb'
-            }
-            aria-label="Message Phronesis"
+          {!recording && (
+            <input
+              className="composer__input"
+              value={draft}
+              onChange={(e) => setDraft(e.currentTarget.value)}
+              placeholder={
+                listening ? 'Listening…' : docked ? 'Message Phronesis…' : 'Describe it, or show him'
+              }
+              aria-label="Message Phronesis"
+            />
+          )}
+
+          <Capture
+            attachments={attachments}
+            onChange={setAttachments}
+            onError={setError}
+            onRecording={setRecording}
+            disabled={thinking}
           />
 
-          <IconButton label="Send" variant="filled" type="submit" disabled={!draft.trim()}>
-            <IconSend />
-          </IconButton>
+          {!recording && (
+            <IconButton
+              label="Send"
+              variant="filled"
+              type="submit"
+              disabled={!draft.trim() && attachments.length === 0}
+            >
+              <IconSend />
+            </IconButton>
+          )}
         </form>
       </div>
     </main>

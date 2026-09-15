@@ -71,6 +71,8 @@ export type {
   TextInputProps,
 } from './Form'
 
+export { Capture, SentMedia } from './Capture'
+export type { CaptureProps } from './Capture'
 export { SpokenText } from './SpokenText'
 export type { SpokenTextProps } from './SpokenText'
 

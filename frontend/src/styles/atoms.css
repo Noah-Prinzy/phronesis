@@ -1000,40 +1000,87 @@
   text-align: right;
 }
 
-/* --------------------------------------------------- message bubble
-   Both sides are flat panels. The sender is told by alignment and by
-   one accent edge, not by two competing fills. */
+/* --------------------------------------------------- message transcript
+   A transcript, not two columns of cards.
+
+   The `ph-bubble` name is now a lie, and is kept only because it is
+   load-bearing across the app: nothing here is a bubble any more. Every
+   message used to be a filled panel WITH a hairline border on top of the
+   fill, at a symmetric 16px radius, and his carried
+   `inset 2px 0 0 var(--accent)` down its left edge — a callout device.
+   Four rectangles-worth of chrome per exchange, and the column read as
+   boxes stacked inside a box.
+
+   All of it is gone. What is left is the text: his in full ink at reading
+   size, theirs right-aligned and stepped back in `--ink-3` under a small
+   label. Contrast carries the speaker, which is what contrast is for.
+
+   Chosen from three treatments auditioned abutted on the design canvas —
+   softened boxes, his-unboxed, and this. What decided it is the rule in
+   `feedback-phronesis-voice`: his reply is a live transcript revealed as he
+   speaks, and a box around it turns it back into a page he is reading out. */
 .ph-bubble {
   /* A character cap, not a percentage. 86% of a desktop column ran a message
      to nearly 800px — a line length nobody reads comfortably. The percentage
-     stays as a floor so a phone, where 42ch is already the whole column,
-     still gets a sensible bubble. */
-  max-width: min(42ch, 86%);
-  padding: 0.6rem 0.8rem;
-  border-radius: var(--r);
-  font-size: 0.85rem;
-  line-height: 1.55;
-  border: 1px solid var(--hairline);
+     stays as a floor so a phone, where the cap is already the whole column,
+     still gets a sensible measure. Unboxed text carries a slightly wider
+     measure than a padded panel could, since there is no frame tightening it. */
+  max-width: min(46ch, 96%);
+  font-size: 0.925rem;
+  line-height: 1.62;
+  letter-spacing: -0.005em;
+  color: var(--ink);
 }
 .ph-bubble[data-from='user'] {
   margin-left: auto;
-  background: var(--surface-2);
-  color: var(--ink);
+  max-width: min(40ch, 88%);
+  text-align: right;
+  font-size: 0.85rem;
+  line-height: 1.55;
+  color: var(--ink-3);
 }
 .ph-bubble[data-from='assistant'] {
   margin-right: auto;
-  background: var(--surface);
-  box-shadow: inset 2px 0 0 var(--accent);
 }
-/* A bubble whose text is still being spoken or heard. `SpokenText` renders a
-   paragraph, which must not bring its own margin into the bubble. */
+/* Their name. With no fill and no edge, alignment alone is thin evidence on a
+   short line — "Go on then" ranged right could be either of them. He needs no
+   label: he is the one at reading size in full ink. */
+.ph-bubble__who {
+  display: block;
+  font-family: var(--mono);
+  font-size: 0.56rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+  margin-bottom: 0.15rem;
+}
+/* A run from one speaker is ONE turn, so it is labelled once. */
+.ph-bubble[data-from='user'] + .ph-bubble[data-from='user'] .ph-bubble__who {
+  display: none;
+}
+
+/* Turn grouping. A flat `gap: 0.5rem` between every message made his two
+   consecutive lines read as two objects rather than one turn; the thread now
+   sets `gap: 0` and the rhythm lives here — tight inside a speaker's run,
+   open where the speaker changes. */
+.ph-bubble + .ph-bubble {
+  margin-top: 0.3rem;
+}
+.ph-bubble[data-from='user'] + .ph-bubble[data-from='assistant'],
+.ph-bubble[data-from='assistant'] + .ph-bubble[data-from='user'] {
+  margin-top: 1.15rem;
+}
+
+/* A message whose text is still being spoken or heard. `SpokenText` renders a
+   paragraph, which must not bring its own margin into the line. */
 .ph-bubble .spoken {
   margin: 0;
 }
-/* Their words, mid-utterance: present, but not yet a sent message. */
+/* Their words, mid-utterance: present, but not yet a sent message. The dashed
+   border went with the box, so dimming is the whole signal now — and it has to
+   be deeper than the old 0.72 to read against text that is already --ink-3. */
 .ph-bubble--forming {
-  opacity: 0.72;
-  border-style: dashed;
+  opacity: 0.55;
 }
 .ph-bubble__caret {
   display: inline-block;
@@ -1541,112 +1588,151 @@ main:focus {
   z-index: 0;
   pointer-events: none;
   overflow: hidden;
+  /* How hard the field is pushed. One number for the whole surface — see
+     --surface-k in tokens.css. */
+  opacity: var(--surface-k);
 }
 
-/* One blur over all three pools rather than three: a third of the work, and
-   it melts their edges into one another instead of leaving three discs. */
-.ph-surface__blooms {
+/* Authored LANDSCAPE, at the shape of the screen it lives on. `slice` so it
+   covers a portrait phone by cropping the sides, which a field this even
+   survives; the composition itself is built wide in Surface.tsx. */
+.ph-surface__svg {
   position: absolute;
-  inset: 0;
-  filter: blur(46px);
+  inset: -8%;
+  width: 116%;
+  height: 116%;
 }
 
-.ph-bloom {
+/* The bloom behind the densest part of the field. Without it the whole thing
+   lights evenly and reads as wallpaper rather than as a place. */
+.ph-core {
   position: absolute;
-  display: block;
+  left: 44%;
+  top: 50%;
+  width: 64vmax;
+  height: 46vmax;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(ellipse, rgb(226 238 255 / 0.1), transparent 66%);
+  filter: blur(44px);
+}
+
+/* ---- the drift, and why it is two elements deep.
+
+   A single element easing from A to B and back is a SEE-SAW: one axis, one
+   period, and the eye finds the loop in about four seconds. So each depth is
+   nested — an outer group moving only in x, an inner group moving only in y,
+   on periods that share no common factor. The composite path is a slow
+   Lissajous that does not come round again for the better part of an hour.
+
+   Every pair below is coprime, and that is load-bearing rather than
+   decorative: give both axes the same duration and the figure collapses back
+   into a straight diagonal line, which is the see-saw again.
+
+   Amplitudes are under two per cent. The drift is not meant to catch the eye;
+   it is meant to stop the field reading as a printed sheet. What catches the
+   eye is the events below. */
+.ph-pan,
+.ph-bob {
   will-change: transform;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  animation-direction: alternate;
 }
 
-.ph-bloom--a {
-  width: 62%;
-  height: 62%;
-  inset: auto auto 26% -8%;
-  background: radial-gradient(closest-side, var(--bloom-warm), transparent 70%);
-  animation: ph-drift-a var(--drift-a) ease-in-out infinite;
+.ph-pan--far { animation-name: ph-pan-far; animation-duration: 193s; }
+.ph-bob--far { animation-name: ph-bob-far; animation-duration: 139s; }
+.ph-pan--mid { animation-name: ph-pan-mid; animation-duration: 167s; }
+.ph-bob--mid { animation-name: ph-bob-mid; animation-duration: 113s; }
+.ph-pan--near { animation-name: ph-pan-near; animation-duration: 131s; }
+.ph-bob--near { animation-name: ph-bob-near; animation-duration: 89s; }
+
+@keyframes ph-pan-far {
+  from { transform: translate3d(-0.7%, 0, 0); }
+  to { transform: translate3d(0.7%, 0, 0); }
 }
-.ph-bloom--b {
-  width: 56%;
-  height: 56%;
-  inset: -10% -8% auto auto;
-  background: radial-gradient(closest-side, var(--bloom-neutral), transparent 70%);
-  animation: ph-drift-b var(--drift-b) ease-in-out infinite;
+@keyframes ph-bob-far {
+  from { transform: translate3d(0, -0.5%, 0); }
+  to { transform: translate3d(0, 0.5%, 0); }
 }
-.ph-bloom--c {
-  width: 60%;
-  height: 60%;
-  inset: auto -6% -20% auto;
-  background: radial-gradient(closest-side, var(--bloom-cool), transparent 70%);
-  animation: ph-drift-c var(--drift-c) ease-in-out infinite;
+@keyframes ph-pan-mid {
+  from { transform: translate3d(1.3%, 0, 0); }
+  to { transform: translate3d(-1.3%, 0, 0); }
+}
+@keyframes ph-bob-mid {
+  from { transform: translate3d(0, 0.9%, 0); }
+  to { transform: translate3d(0, -0.9%, 0); }
+}
+@keyframes ph-pan-near {
+  from { transform: translate3d(-2.1%, 0, 0); }
+  to { transform: translate3d(2.1%, 0, 0); }
+}
+@keyframes ph-bob-near {
+  from { transform: translate3d(0, 1.5%, 0); }
+  to { transform: translate3d(0, -1.5%, 0); }
 }
 
-@keyframes ph-drift-a {
-  0%,
-  100% {
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-  33% {
-    transform: translate3d(14%, -8%, 0) scale(1.12);
-  }
-  66% {
-    transform: translate3d(-6%, 10%, 0) scale(0.94);
-  }
-}
-@keyframes ph-drift-b {
-  0%,
-  100% {
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-  40% {
-    transform: translate3d(-16%, 12%, 0) scale(1.08);
-  }
-  70% {
-    transform: translate3d(6%, -6%, 0) scale(0.96);
-  }
-}
-@keyframes ph-drift-c {
-  0%,
-  100% {
-    transform: translate3d(0, 0, 0) scale(1);
-  }
-  45% {
-    transform: translate3d(-10%, -14%, 0) scale(1.1);
-  }
-  75% {
-    transform: translate3d(12%, 4%, 0) scale(0.92);
-  }
-}
+/* ---- what actually catches the eye: events, not motion.
 
-/* Dust catching the light. Warm, because this is a lit surface and not a
-   night sky — blue points would read as stars, which is a different room. */
-.ph-surface__motes {
-  position: absolute;
-  inset: 0;
-}
+   A surface that moves constantly is wallpaper you learn to ignore. One that
+   is nearly still and then DOES something is one you keep glancing back at.
+   All three below are rare, none are in step, and between them nothing is
+   happening most of the time. */
 
-.ph-mote {
-  position: absolute;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgb(255 246 232 / 0.9), transparent 70%);
-  animation-name: ph-rise;
+/* 1 · a signal running the length of a trace. Short bright dash, long dark
+   gap, so a pulse is an event rather than a texture. */
+.ph-pulse {
+  stroke: rgb(214 234 255 / 0.85);
+  stroke-width: 1.3;
+  stroke-dasharray: 30 470;
+  animation-name: ph-run;
   animation-timing-function: linear;
   animation-iteration-count: infinite;
 }
+@keyframes ph-run {
+  from { stroke-dashoffset: 500; }
+  to { stroke-dashoffset: 0; }
+}
 
-@keyframes ph-rise {
-  0% {
-    transform: translate3d(0, 0, 0);
-    opacity: 0;
-  }
-  12% {
-    opacity: 0.75;
-  }
-  86% {
-    opacity: 0.6;
-  }
-  100% {
-    transform: translate3d(24px, -210px, 0);
-    opacity: 0;
-  }
+/* 2 · a frame drawing itself. The loudest thing on the surface, so there are
+   exactly two of them. */
+.ph-perim {
+  stroke: rgb(214 234 255 / 0.9);
+  stroke-width: 1.4;
+  stroke-dasharray: 11 89;
+  animation-name: ph-perim;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+@keyframes ph-perim {
+  from { stroke-dashoffset: 100; }
+  to { stroke-dashoffset: 0; }
+}
+
+/* 3 · a cascade. Six specks lit a fifth of a second apart, so it reads as
+   something propagating rather than as decoration blinking. */
+.ph-flash {
+  fill: rgb(226 240 255 / 0.95);
+  animation-name: ph-flash;
+  animation-timing-function: ease-out;
+  animation-iteration-count: infinite;
+}
+@keyframes ph-flash {
+  0%,
+  100% { opacity: 0.1; }
+  4% { opacity: 1; }
+  16% { opacity: 0.1; }
+}
+
+/* 4 · a few that simply breathe, so the field is never wholly static. */
+.ph-breathe {
+  animation-name: ph-breathe;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  animation-direction: alternate;
+}
+@keyframes ph-breathe {
+  from { opacity: 0.1; }
+  to { opacity: 0.95; }
 }
 
 /* ============================================================
@@ -1809,4 +1895,211 @@ main:focus {
 }
 .ph-spark__now {
   fill: var(--accent);
+}
+
+
+/* ================================================================ capture
+   Showing him, rather than describing: a photo of the car and the noise it
+   is making. The chips sit above the composer so what is about to be sent is
+   visible before it goes, and removable after you change your mind. */
+
+.cap__file {
+  display: none;
+}
+
+.cap__list {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0 0 0.5rem;
+  padding: 0;
+  list-style: none;
+}
+
+.cap__chip {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.25rem 0.3rem 0.25rem 0.25rem;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--glass-border);
+  background: var(--glass);
+  font-size: 0.78rem;
+  color: var(--ink-2);
+}
+
+.cap__thumb {
+  width: 1.6rem;
+  height: 1.6rem;
+  border-radius: calc(var(--r-pill) - 0.2rem);
+  object-fit: cover;
+  flex: none;
+}
+.cap__thumb--audio {
+  display: grid;
+  place-items: center;
+  background: var(--accent-wash);
+  color: var(--accent);
+}
+
+.cap__name {
+  padding-inline: 0.1rem;
+}
+
+.cap__drop {
+  display: grid;
+  place-items: center;
+  width: 1.3rem;
+  height: 1.3rem;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--ink-3);
+  cursor: pointer;
+}
+.cap__drop:hover {
+  color: var(--ink);
+  background: var(--glass-2, rgb(255 255 255 / 0.07));
+}
+
+
+
+/* What you sent, still there after you sent it. Sits above the words inside
+   your own bubble, so the message reads as the thing plus what you said
+   about it rather than a caption with nothing attached. */
+.sent {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-bottom: 0.4rem;
+}
+
+.sent__shot {
+  display: block;
+  line-height: 0;
+  border-radius: var(--r-md, 0.6rem);
+  overflow: hidden;
+  border: 1px solid var(--glass-border);
+}
+.sent__shot img {
+  display: block;
+  max-width: 11rem;
+  max-height: 11rem;
+  object-fit: cover;
+}
+.sent__shot:focus-visible {
+  outline: 2px solid var(--accent-hi);
+  outline-offset: 2px;
+}
+
+/* The browser's own player. Restyling it fully is a rabbit hole with no exit;
+   holding it to the bubble's width and letting it look like itself is the
+   honest trade. */
+.sent__clip {
+  width: min(15rem, 100%);
+  height: 2.2rem;
+}
+
+.sent__missing {
+  font-size: 0.78rem;
+  color: var(--ink-3);
+}
+
+
+/* ============================================================== recording
+   The composer, while the microphone is open.
+
+   It takes the whole box rather than sitting in it, because sending a message
+   is not what you are doing right now — and a timer alone proves only that a
+   clock is running. Bars that move when you speak are the only honest
+   evidence that the microphone is actually hearing you. */
+
+.rec {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding-inline: 0.15rem;
+}
+
+.rec__x,
+.rec__ok {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  color: var(--ink-3);
+  cursor: pointer;
+  transition: color var(--t-hover) var(--ease), background var(--t-hover) var(--ease);
+}
+.rec__x:hover {
+  color: var(--ink);
+  background: rgb(255 255 255 / 0.07);
+}
+.rec__ok {
+  color: var(--accent);
+}
+.rec__ok:hover {
+  color: var(--accent-on);
+  background: var(--accent);
+}
+.rec__x:focus-visible,
+.rec__ok:focus-visible {
+  outline: 2px solid var(--accent-hi);
+  outline-offset: 2px;
+}
+
+/* Newest at the right, so it fills the way the recording runs. */
+.rec__wave {
+  flex: 1;
+  min-width: 0;
+  height: 1.6rem;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 2px;
+  overflow: hidden;
+}
+
+/* Not yet reached. A dotted rule, so the strip holds its full width from the
+   first frame and nothing reflows as it fills. */
+.rec__dot {
+  flex: none;
+  width: 2px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--ink-3);
+  opacity: 0.45;
+}
+
+.rec__bar {
+  flex: none;
+  width: 2px;
+  min-height: 2px;
+  border-radius: 1px;
+  background: var(--ink-2);
+  /* Short, because the next sample is 90ms away — any slower and the bars
+     lag visibly behind the voice making them. */
+  transition: height 80ms linear;
+}
+
+.rec__time {
+  flex: none;
+  font-size: 0.72rem;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rec__bar {
+    transition: none;
+  }
 }

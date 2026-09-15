@@ -171,10 +171,15 @@ function MarketView({ car }: { car: Vehicle | null }) {
     )
   }
 
+  /* Three sources, three sentences, and the differences are the point. An
+     import figure is deliberately the wordiest: it is the one a reader is
+     most likely to mistake for something it is not. */
   const source =
     band.from.kind === 'listings'
       ? `From ${band.from.note}, ${band.from.capturedOn}.`
-      : `Illustrative figures — ${band.from.note}. Not a guide to what to pay.`
+      : band.from.kind === 'import'
+        ? `Export stock — ${band.from.note}, ${band.from.capturedOn}. Before shipping, duty and registration, so not what one costs here.`
+        : `Illustrative figures — ${band.from.note}. Not a guide to what to pay.`
 
   const trend = band.trailingYearUgx
   const change =

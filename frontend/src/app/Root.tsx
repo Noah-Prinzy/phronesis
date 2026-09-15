@@ -5,7 +5,7 @@ import { VoiceProvider } from '../voice/settings'
 import { CarProvider } from './car'
 import { Surface } from './Surface'
 import { AlertsProvider } from './alerts'
-import { FocusProvider } from './focus'
+import { HandoverProvider } from './handover'
 import { useRouteAnnounce } from './useRouteAnnounce'
 import '../styles/tokens.css'
 import '../styles/atoms.css'
@@ -26,14 +26,14 @@ export function Root() {
         <VoiceProvider>
           <CarProvider>
           <AlertsProvider>
-          <FocusProvider>
+          <HandoverProvider>
             {/* First tab stop on every page. Keyboard users should not have to
                 walk the whole navigation to reach the content. */}
             <a className="ph-skip" href="#main">
               Skip to content
             </a>
             <Outlet />
-          </FocusProvider>
+          </HandoverProvider>
           </AlertsProvider>
           </CarProvider>
         </VoiceProvider>

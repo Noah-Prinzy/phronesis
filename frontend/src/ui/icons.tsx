@@ -130,6 +130,53 @@ export function IconMic({ size }: IconProps) {
   )
 }
 
+/* -------------------------------------------------------------- capture
+   A photo of the car and a recording of the noise it is making: the two
+   things somebody standing beside a broken car can offer that a sentence
+   cannot. */
+
+export function IconCamera({ size }: IconProps) {
+  return (
+    <Svg size={size}>
+      <path d="M3 8.5a2 2 0 0 1 2-2h2l1.4-2h7.2L17 6.5h2a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z" />
+      <circle cx="12" cy="12.5" r="3.5" />
+    </Svg>
+  )
+}
+
+/** What a recording looks like once it is made. */
+export function IconWave({ size }: IconProps) {
+  return (
+    <Svg size={size}>
+      <path d="M3 12h2" />
+      <path d="M7.5 8.5v7" />
+      <path d="M12 5v14" />
+      <path d="M16.5 9.5v5" />
+      <path d="M21 12h-2" />
+    </Svg>
+  )
+}
+
+/** Sound, unmistakably — a speaker throwing waves. Used where a recording
+    has to be represented by something, since it cannot show itself. */
+export function IconAudio({ size }: IconProps) {
+  return (
+    <Svg size={size}>
+      <path d="M4 9.5v5h3l4 3.5V6L7 9.5Z" />
+      <path d="M14.5 9.5a3.5 3.5 0 0 1 0 5" />
+      <path d="M17.5 7a7 7 0 0 1 0 10" />
+    </Svg>
+  )
+}
+
+export function IconClose({ size }: IconProps) {
+  return (
+    <Svg size={size}>
+      <path d="M6 6l12 12M18 6L6 18" />
+    </Svg>
+  )
+}
+
 export function IconBack({ size }: IconProps) {
   return (
     <Svg size={size}>

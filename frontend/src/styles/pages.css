@@ -484,6 +484,49 @@
 /* Both pre-conversation states own the screen. The difference is what sits
    under the orb: openers when nothing has been said, their own words once
    they start talking. */
+/* In a conversation the orb FLOATS over the talk rather than sitting in a
+ * band above it.
+ *
+ * `.home__stage` is a flex row, so in the flow it reserved a strip across the
+ * top — a header box with the orb inside it. Lifting it out of the flow costs
+ * the thread nothing and gives it the whole column to run in; he then sits on
+ * top of the talk with his own shadow, which is what an avatar should do.
+ *
+ * Only in `thread`. Fresh and speaking keep the orb as the hero, centred and
+ * filling the screen — that is the rule below this one.
+ */
+.home[data-mode='thread'] {
+  position: relative;
+}
+.home[data-mode='thread'] .home__stage {
+  position: absolute;
+  inset: 0 0 auto;
+  z-index: 3;
+  padding: 2.5rem 0 0;
+  /* The stage spans the full width once it is absolute, and everything either
+     side of the orb is empty space the thread needs to stay scrollable. */
+  pointer-events: none;
+}
+.home[data-mode='thread'] .home__stage > * {
+  pointer-events: auto;
+}
+/* A pool of ground between him and whatever is scrolling underneath, so he
+   reads against the page rather than against a passing sentence. Sized to the
+   orb, not the column, and sitting inside the stage's stacking context so it
+   is above the thread but still behind him. */
+.home[data-mode='thread'] .home__stage::before {
+  content: '';
+  position: absolute;
+  top: -2rem;
+  left: 50%;
+  width: 26rem;
+  height: 18rem;
+  transform: translateX(-50%);
+  background: radial-gradient(closest-side, var(--ground) 42%, transparent 72%);
+  z-index: -1;
+  pointer-events: none;
+}
+
 .home[data-mode='fresh'] .home__stage,
 .home[data-mode='speaking'] .home__stage {
   flex: 1;
@@ -529,18 +572,42 @@
    top of a scroll container, where it can never be scrolled back to. An auto
    margin collapses to nothing once the content is taller than the box, so a
    short thread sits low and a long one scrolls normally. */
+/* The talk runs the full height of the column and dissolves under the orb.
+ *
+ * It used to stop dead: the scroller began below the orb's band and messages
+ * were guillotined against a straight line, which is half of why the screen
+ * read as boxes. There is no top edge now — `mask-image` fades the first
+ * ~9rem to nothing, so a message scrolling up thins out and disappears
+ * behind him instead of being cut.
+ *
+ * --thread-fade must clear the DOCKED orb plus the stage's top padding
+ * (ORB_DOCKED 11rem + 2.5rem, with a little air). It is the one number to
+ * change if the docked size changes; nothing else depends on it.
+ *
+ * `gap` is deliberately 0 — spacing between messages is turn-grouped in
+ * atoms.css, where the rule can see who is speaking.
+ */
 .home__thread {
+  --thread-fade: 14.5rem;
   flex: 1;
   min-height: 0;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  padding: 0.8rem 0;
+  gap: 0;
+  padding: 0 0 0.8rem;
   scrollbar-width: thin;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 var(--thread-fade));
+  mask-image: linear-gradient(to bottom, transparent 0, #000 var(--thread-fade));
 }
 .home__thread > :first-child {
   margin-top: auto;
+}
+/* These two are siblings of the messages, not messages, so the turn-grouping
+   rules in atoms.css never reach them. */
+.home__thread > .home__thinking,
+.home__thread > .offer {
+  margin-top: 1.15rem;
 }
 
 .home__thinking {
@@ -963,6 +1030,33 @@
   pointer-events: none;
 }
 
+/* The generated car. It has a floor of its own, so unlike the drawing it
+   needs no shadow under it and no bob to look airborne — it is standing in a
+   room rather than hovering over a page. */
+.carho__canvas {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  /* The host turns pointer events off so the cards behind stay reachable;
+     the canvas is the one thing in here you are meant to grab. */
+  pointer-events: auto;
+  touch-action: none;
+  cursor: grab;
+}
+.carho__canvas:active {
+  cursor: grabbing;
+}
+
+/* Until the scene reports a WebGL context it is not on screen at all, and the
+   drawing holds the space. Absolute rather than hidden, so the two never both
+   claim height and the layout settles once instead of twice. */
+.carho:not([data-holo='on']) .carho__canvas {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .carho__svg {
   display: block;
   width: 100%;
@@ -1031,6 +1125,201 @@
   font-family: var(--mono);
   font-size: 0.72rem;
   color: var(--ink-3);
+}
+
+/* ================================================================ stage
+   Diagnosis, as one move: the car, then him, then the part in his hand.
+
+   Everything inside is positioned as a fraction of the stage's own HEIGHT
+   rather than in rem, which is what keeps the three zones — what he is
+   holding, what he is saying, and him — clear of one another at every size.
+   Sized in rem they collided the moment the window got short. */
+.stg {
+  position: relative;
+  width: 100%;
+  min-height: 22rem;
+  height: min(62vh, 30rem);
+  margin-bottom: 0.5rem;
+  /* No panel, no frame, no ground of its own. The car is standing in the
+     page rather than being shown inside something. */
+  container-type: inline-size;
+}
+
+/* What replaces the floor.
+   The car used to stand on two grids, a dot field, a pool of light and its
+   own reflection. It hangs now, and this is the whole of what took their
+   place: one soft bloom behind it, which is exactly the trick `.orb::before`
+   already plays for the avatar. It costs a gradient, it cannot clip to a
+   rectangle the way a grid plane did, and it leaves the car reading as a
+   projection in the room rather than a model on a stand. */
+.stg::before {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 46%;
+  width: min(46rem, 92%);
+  aspect-ratio: 3 / 2;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(ellipse, var(--accent-glow), transparent 68%);
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.stg__car,
+.stg__car .carho__canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  aspect-ratio: auto;
+}
+
+/* The car's name sits at the foot of the stage. With the canvas absolute it
+   has nothing to sit under any more, so it would otherwise stack at the top
+   over the roof. */
+.stg__car .carho__name {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+/* He moves between the three beats; the transition is on the box so the
+   travel is his, not a re-render. */
+.stg__orb {
+  position: absolute;
+  z-index: 3;
+  transform: translate(-50%, -50%);
+  transition:
+    left var(--t-dock, 620ms) var(--ease),
+    top var(--t-dock, 620ms) var(--ease);
+}
+.stg[data-beat='rest'] .stg__orb {
+  left: 13%;
+  top: 82%;
+}
+.stg[data-beat='centre'] .stg__orb {
+  left: 50%;
+  top: 44%;
+}
+.stg[data-beat='lift'] .stg__orb {
+  left: 50%;
+  top: 80%;
+}
+
+/* His words get a band of their own — never across him, never across the
+   part. A paragraph sitting on screen makes him sound like he is reading it
+   out; the same words landing as he says them read as somebody talking. */
+.stg__said {
+  position: absolute;
+  z-index: 4;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(34rem, 88%);
+  margin: 0;
+  text-align: center;
+  font-size: 1rem;
+  line-height: 1.5;
+  text-shadow: 0 1px 12px rgb(0 0 0 / 0.9);
+  transition: top var(--t-dock, 620ms) var(--ease);
+}
+.stg[data-beat='centre'] .stg__said {
+  top: 68%;
+}
+.stg[data-beat='lift'] .stg__said {
+  top: 60%;
+}
+
+/* The label on what he is holding, docked above his hand. */
+.stg__tag {
+  position: absolute;
+  z-index: 4;
+  left: 50%;
+  top: 9%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  padding: 0.35rem 0.85rem;
+  border-radius: var(--r-pill);
+  border: 1px solid currentColor;
+  background: rgb(0 0 0 / 0.55);
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  backdrop-filter: blur(var(--glass-blur));
+  font-size: var(--label);
+  letter-spacing: var(--track);
+  text-transform: uppercase;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.stg__dot {
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 50%;
+  background: currentColor;
+  flex: none;
+}
+.stg__pct {
+  color: var(--ink-3);
+  letter-spacing: 0;
+}
+
+/* ------------------------------------------------------- the follow-up
+   It appears after he has explained, not before, because this page is his
+   and you are joining a conversation rather than filling in a form. Quiet
+   enough not to compete with him: a rule, a line of his own asking, and a
+   single field. */
+.fup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--hairline);
+  margin-bottom: 0.9rem;
+}
+.fup__label {
+  font-size: 0.82rem;
+  color: var(--ink-3);
+}
+.fup__row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+.fup__input {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  font-size: 0.95rem;
+  color: var(--ink);
+  padding: 0.6rem 0.9rem;
+  border-radius: var(--r-pill);
+  border: 1px solid var(--glass-border);
+  background: var(--glass);
+}
+.fup__input::placeholder {
+  color: var(--ink-3);
+}
+.fup__input:focus-visible {
+  outline: 2px solid var(--accent-hi);
+  outline-offset: 2px;
+}
+
+/* The cards, below him rather than over him. */
+.dg__detail {
+  display: grid;
+  gap: 0.7rem;
+  margin-bottom: 0.9rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stg__orb,
+  .stg__said {
+    transition-duration: 1ms;
+  }
 }
 
 /* ------------------------------------------------- the floating cards */
@@ -1162,14 +1451,28 @@
 }
 
 /* ------------------------------------------------------- the ask state */
+/* `safe` centring, and it is load-bearing. A centred flex column whose
+   content is taller than it overflows in BOTH directions, and the half that
+   goes off the top cannot be scrolled to — so on a short window the car was
+   cropped by the header with no way to reach it. `safe` falls back to
+   flex-start at exactly the point centring stops being possible. */
 .dg--ask {
   align-items: center;
-  justify-content: center;
-  gap: 1.25rem;
+  justify-content: flex-start;
+  gap: 1.1rem;
 }
-.dg__carIdle {
-  max-width: 26rem;
-  opacity: 0.55;
+.dg--ask .dg__askbox {
+  flex: none;
+  padding-bottom: 0.5rem;
+}
+/* Beat one takes the screen. It is not a picture of a car above a form — the
+   car is what this page IS until he has something to say, so it gets the room
+   and the question sits under it. */
+.dg__stageIdle {
+  flex: 1;
+  min-height: 15rem;
+  height: auto;
+  margin-bottom: 0;
 }
 .dg__askbox {
   width: 100%;
@@ -1210,44 +1513,15 @@
     pointer-events: none;
   }
 
-  .dg__car {
-    position: absolute;
-    left: 50%;
-    top: 5.5rem;
-    transform: translateX(-50%);
-    width: 34rem;
-    max-width: 46%;
-    z-index: 2;
-  }
-
-  /* Each drifts on its own long loop, so the composition never sits
-     perfectly still and never moves together like one sheet. */
-  .dg__float--verdict {
-    position: absolute;
-    left: 0;
-    top: 1.5rem;
-    width: 19rem;
-    animation: dg-bob-1 11s var(--ease) infinite;
-  }
-  .dg__float--why {
-    position: absolute;
-    right: 0;
-    top: 0.5rem;
-    width: 17rem;
-    animation: dg-bob-2 13s var(--ease) infinite;
-  }
-  .dg__float--cost {
-    position: absolute;
-    right: 0.5rem;
-    top: 15rem;
-    width: 19rem;
-    animation: dg-bob-3 15s var(--ease) infinite;
+  /* Three across, under the stage. They used to float over the car on their
+     own bobbing loops, which was the arrangement the hologram has now
+     replaced: the car is the page, and a card drawn across it is a panel
+     covering the thing it is about. */
+  .dg__detail {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    align-items: start;
   }
   .dg__actions {
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
-    bottom: 0.5rem;
     justify-content: center;
   }
 

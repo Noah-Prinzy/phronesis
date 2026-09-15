@@ -1,14 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button, EmptyState, TextArea } from '../ui'
-import { CarHologram, type CarPart } from '../diagnosis/CarHologram'
+import type { CarPart } from '../diagnosis/CarHologram'
+import { DiagnosisStage } from '../diagnosis/DiagnosisStage'
 import { carName, useCar } from '../app/car'
+import { bodyOfModel } from '../data/vehicles'
+import { useHandover } from '../app/handover'
+import { FollowUp } from '../diagnosis/FollowUp'
 import { useAuth } from '../app/auth'
 import { useAlerts } from '../app/alerts'
 import { storeDiagnosis } from '../lib/userdata'
 import { sendAlert } from '../lib/alerts'
 import { money } from '../lib/money'
-import { runDiagnosis, type DiagnosisReport } from '../lib/api'
+import { runDiagnosis, type DiagnosisReport, type WireAttachment } from '../lib/api'
 
 /**
  * Diagnosis: one page that tells the story of one car.
@@ -56,10 +60,25 @@ export function Diagnosis() {
   const { getToken, user } = useAuth()
   const { live } = useAlerts()
 
+  const { pending, clear } = useHandover()
+
   const [symptom, setSymptom] = useState('')
   const [report, setReport] = useState<DiagnosisReport | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  /**
+   * Where he was pointing when he brought you here.
+   *
+   * It matters before the report lands. Without it the page has nothing to
+   * aim at for the seconds the model is thinking, and he would arrive holding
+   * nothing — so the hologram opens on the part he was already talking about
+   * and the report only confirms it.
+   */
+  const [carried, setCarried] = useState<CarPart | null>(null)
+  /** The conversation this page belongs to, carried in with the hand-off. */
+  const [chatId, setChatId] = useState<string | undefined>(undefined)
+  /** His answer to a follow-up, while he is giving it. */
+  const [aside, setAside] = useState('')
 
   const alive = useRef(true)
   useEffect(() => {
@@ -69,8 +88,8 @@ export function Diagnosis() {
     }
   }, [])
 
-  const submit = useCallback(async () => {
-    const text = symptom.trim()
+  const submit = useCallback(async (input?: string, evidence?: WireAttachment[]) => {
+    const text = (input ?? symptom).trim()
     if (!text || busy) return
     setBusy(true)
     setError(null)
@@ -78,7 +97,7 @@ export function Diagnosis() {
       // The token is optional: an unauthenticated user still gets a diagnosis,
       // it simply is not saved to their history.
       const token = await getToken().catch(() => null)
-      const result = await runDiagnosis(text, car, token)
+      const result = await runDiagnosis(text, car, token, undefined, evidence)
       if (!alive.current) return
       setReport(result)
 
@@ -96,16 +115,74 @@ export function Diagnosis() {
           href: '/diagnosis',
         })
       }
-    } catch {
-      if (alive.current) setError('He could not work that one out just now. Try again in a moment.')
+    } catch (err) {
+      if (!alive.current) return
+      /* The server's own words when it refused an attachment — it says which
+         one and why, and that is far more use than a generic failure. */
+      setError(
+        err instanceof Error && err.message && !err.message.startsWith('Diagnosis failed')
+          ? err.message
+          : 'He could not work that one out just now. Try again in a moment.',
+      )
+      // Let go of the hand-off on failure, so the page falls back to asking
+      // rather than stranding somebody on a screen with no way forward. The
+      // symptom is already in the box, so nobody retypes anything.
+      setCarried(null)
     } finally {
       if (alive.current) setBusy(false)
     }
   }, [symptom, busy, getToken, car])
 
-  const part = partFor(report)
+  /**
+   * He brought you here, so the page does not ask you anything.
+   *
+   * You described the noise to him on Home; being handed a blank box that
+   * says "What is it doing?" is the app forgetting a conversation you are
+   * still in the middle of. The symptom travels, the work starts on arrival,
+   * and the hologram is already aimed at the part he named.
+   *
+   * Cleared as it is read. A hand-off is something that just happened — left
+   * in place it would re-run every time this page re-rendered.
+   */
+  useEffect(() => {
+    if (!pending) return
+    setCarried(pending.part)
+    setChatId(pending.chatId)
+    setSymptom(pending.symptom)
+    void submit(pending.symptom, pending.attachments)
+    clear()
+    // `submit` is re-made whenever the draft changes; re-running this on that
+    // would fire the diagnosis again mid-typing.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pending])
+
+  const part = partFor(report) ?? carried
   const tone = report ? (TONE[report.urgencyLevel] ?? 'var(--warning)') : 'var(--accent)'
   const vehicle = carName(car) ?? 'your car'
+
+  /* ----------------------------------------------- he is working on it
+     Arrived from a conversation and the model has not answered yet. The car
+     is up, he is thinking over it, and nothing is asked — because nothing
+     needs to be. */
+  if (!report && (busy || carried)) {
+    return (
+      <main id="main" className="page">
+        <header className="page__head">
+          <h1 className="page__title">Diagnosis</h1>
+        </header>
+        <div className="page__body dg dg--work">
+          <DiagnosisStage
+            focus={carried}
+            vehicle={vehicle}
+            body={bodyOfModel(car?.model)}
+            working={busy}
+            className="dg__stageIdle"
+          />
+          {error ? <p className="dg__error">{error}</p> : null}
+        </div>
+      </main>
+    )
+  }
 
   /* ------------------------------------------------------- nothing yet */
   if (!report) {
@@ -115,7 +192,15 @@ export function Diagnosis() {
           <h1 className="page__title">Diagnosis</h1>
         </header>
         <div className="page__body dg dg--ask">
-          <CarHologram vehicle={vehicle} className="dg__carIdle" />
+          {/* Beat one, and it is the whole of this screen: the car IS the
+              page, and he waits in the corner until there is something to
+              say. No panel, no frame, nothing drawn around it. */}
+          <DiagnosisStage
+            focus={null}
+            vehicle={vehicle}
+            body={bodyOfModel(car?.model)}
+            className="dg__stageIdle"
+          />
           <div className="dg__askbox">
             <EmptyState
               title="What is it doing?"
@@ -159,15 +244,19 @@ export function Diagnosis() {
       </header>
 
       <div className="page__body dg">
-        {/* the thread: each card to the point on the car it is about */}
-        <svg className="dg__thread" viewBox="0 0 1000 700" preserveAspectRatio="none" aria-hidden="true">
-          <path d="M296 150 C 380 155, 400 250, 468 288" />
-          <path d="M545 300 C 620 320, 645 235, 726 188" />
-          <path d="M520 335 C 565 425, 645 400, 706 382" />
-        </svg>
+        {/* He takes it from here: the car, then him, then the part in his
+            hand. Everything below is what the model actually worked out, and
+            he does not read any of it back. */}
+        <DiagnosisStage
+          focus={part}
+          tone={tone}
+          vehicle={vehicle}
+          body={bodyOfModel(car?.model)}
+          confidence={report.confidence}
+          aside={aside}
+        />
 
-        <CarHologram focus={part} tone={tone} className="dg__car" />
-
+        <div className="dg__detail">
         <article className="dg__float dg__float--verdict">
           <div className="dg__vtop">
             <span className="dg__chip" style={{ color: tone }}>
@@ -226,6 +315,18 @@ export function Diagnosis() {
             </div>
           ) : null}
         </aside>
+
+        </div>
+
+        {/* Afterwards, never before. He has finished explaining; this is the
+            turn coming back to you, in the same conversation he has been
+            having with you since Home. */}
+        <FollowUp
+          chatId={chatId}
+          context={`I have just shown them the ${report.issue} on their ${vehicle}. ${report.rootCause}`}
+          onPart={setCarried}
+          onReply={(text) => setAside(text)}
+        />
 
         <div className="dg__actions">
           <Button onClick={() => navigate('/maps?find=garage')}>Find a mechanic</Button>
