@@ -29,6 +29,21 @@ const chatRequestSchema = z.object({
   chatId: z.string().min(1).max(128).optional(),
 });
 
+/**
+ * What went wrong, in words somebody can act on.
+ *
+ * Only one case is worth separating out. A 429 means the day's requests are
+ * spent and waiting is the only remedy — telling somebody that generically
+ * invites them to keep pressing send against a wall. Everything else really
+ * is unexpected, and the generic line is honest about that.
+ */
+function describeProviderError(err: unknown): string {
+  if ((err as { status?: number } | null)?.status === 429) {
+    return "He has used up today's free requests to the model. The limit resets tomorrow, or you can enable billing on the Gemini key.";
+  }
+  return 'Failed to get a response from the AI provider.';
+}
+
 chatRouter.post('/chat', optionalAuth, async (req, res) => {
   const parsed = chatRequestSchema.safeParse(req.body);
   if (!parsed.success) {
@@ -98,7 +113,11 @@ chatRouter.post('/chat', optionalAuth, async (req, res) => {
     res.write('data: [DONE]\n\n');
   } catch (err) {
     console.error('Chat request failed:', err);
-    res.write(`data: ${JSON.stringify({ error: 'Failed to get a response from the AI provider.' })}\n\n`);
+    /* A quota refusal is not something the user can retry their way out of,
+       and "failed to get a response" sends them round the loop trying. The
+       free tier is twenty requests a DAY, so this is the error they are most
+       likely to meet — it should say what actually happened. */
+    res.write(`data: ${JSON.stringify({ error: describeProviderError(err) })}\n\n`);
   }
   res.end();
 });

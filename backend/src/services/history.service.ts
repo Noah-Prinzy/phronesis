@@ -1,7 +1,7 @@
 // backend/src/services/history.service.ts
 
 import { FieldValue, QueryDocumentSnapshot } from 'firebase-admin/firestore';
-import { db } from '../config/firebase.js';
+import { db, hasFirestore } from '../config/firebase.js';
 
 export interface UserProfileData {
   uid: string;
@@ -70,6 +70,10 @@ export interface SaveChatMessageInput {
 const MAX_STORED_MESSAGES = 400;
 
 export async function syncUserProfile(data: UserProfileData): Promise<void> {
+  /* Nothing to write to, and that is a configuration state rather than a
+     failure — see `hasFirestore`. Returning quietly is what keeps one
+     missing service account from becoming a stack trace per request. */
+  if (!hasFirestore) return;
   const userRef = db.collection('users').doc(data.uid);
   await userRef.set(
     {
@@ -84,6 +88,10 @@ export async function syncUserProfile(data: UserProfileData): Promise<void> {
 }
 
 export async function saveCarProfile(data: CarProfileData): Promise<string> {
+  /* Nothing to write to, and that is a configuration state rather than a
+     failure — see `hasFirestore`. Returning quietly is what keeps one
+     missing service account from becoming a stack trace per request. */
+  if (!hasFirestore) return 'unsaved';
   const carRef = db.collection('cars').doc(data.userId);
   await carRef.set(
     {
@@ -96,11 +104,19 @@ export async function saveCarProfile(data: CarProfileData): Promise<string> {
 }
 
 export async function getCarProfile(userId: string): Promise<Record<string, any> | null> {
+  /* Nothing to write to, and that is a configuration state rather than a
+     failure — see `hasFirestore`. Returning quietly is what keeps one
+     missing service account from becoming a stack trace per request. */
+  if (!hasFirestore) return null;
   const doc = await db.collection('cars').doc(userId).get();
   return doc.exists ? doc.data() || null : null;
 }
 
 export async function saveDiagnosisReport(input: SaveDiagnosisInput): Promise<string> {
+  /* Nothing to write to, and that is a configuration state rather than a
+     failure — see `hasFirestore`. Returning quietly is what keeps one
+     missing service account from becoming a stack trace per request. */
+  if (!hasFirestore) return 'unsaved';
   const docRef = db.collection('diagnoses').doc();
   await docRef.set({
     diagnosisId: docRef.id,
@@ -116,6 +132,10 @@ export async function saveDiagnosisReport(input: SaveDiagnosisInput): Promise<st
 }
 
 export async function getUserDiagnoses(userId: string): Promise<Array<Record<string, any>>> {
+  /* Nothing to write to, and that is a configuration state rather than a
+     failure — see `hasFirestore`. Returning quietly is what keeps one
+     missing service account from becoming a stack trace per request. */
+  if (!hasFirestore) return [];
   const snapshot = await db
     .collection('diagnoses')
     .where('userId', '==', userId)
@@ -152,6 +172,10 @@ export async function getUserDiagnoses(userId: string): Promise<Array<Record<str
  * losing it over.
  */
 export async function saveChatSession(input: SaveChatMessageInput): Promise<string> {
+  /* Nothing to write to, and that is a configuration state rather than a
+     failure — see `hasFirestore`. Returning quietly is what keeps one
+     missing service account from becoming a stack trace per request. */
+  if (!hasFirestore) return input.chatId ?? 'unsaved';
   const existing = input.chatId
     ? await db.collection('chats').doc(input.chatId).get()
     : null;
@@ -192,6 +216,10 @@ export async function saveChatSession(input: SaveChatMessageInput): Promise<stri
 }
 
 export async function getUserChats(userId: string): Promise<Array<Record<string, any>>> {
+  /* Nothing to write to, and that is a configuration state rather than a
+     failure — see `hasFirestore`. Returning quietly is what keeps one
+     missing service account from becoming a stack trace per request. */
+  if (!hasFirestore) return [];
   const snapshot = await db
     .collection('chats')
     .where('userId', '==', userId)
@@ -215,6 +243,10 @@ const DEFAULT_PREFERENCES: Required<PreferencesData> = {
 };
 
 export async function getPreferences(userId: string): Promise<Required<PreferencesData>> {
+  /* Nothing to write to, and that is a configuration state rather than a
+     failure — see `hasFirestore`. Returning quietly is what keeps one
+     missing service account from becoming a stack trace per request. */
+  if (!hasFirestore) return { ...DEFAULT_PREFERENCES };
   const doc = await db.collection('preferences').doc(userId).get();
   // Defaults rather than nulls: a user who has never opened Account should be
   // told what WILL happen, not shown an empty switch.
@@ -222,6 +254,10 @@ export async function getPreferences(userId: string): Promise<Required<Preferenc
 }
 
 export async function savePreferences(userId: string, data: PreferencesData): Promise<void> {
+  /* Nothing to write to, and that is a configuration state rather than a
+     failure — see `hasFirestore`. Returning quietly is what keeps one
+     missing service account from becoming a stack trace per request. */
+  if (!hasFirestore) return;
   await db
     .collection('preferences')
     .doc(userId)
@@ -238,6 +274,10 @@ export async function savePreferences(userId: string, data: PreferencesData): Pr
  * A file someone cannot open is not a copy of their data.
  */
 export async function exportUserData(userId: string): Promise<Record<string, unknown>> {
+  /* Nothing to write to, and that is a configuration state rather than a
+     failure — see `hasFirestore`. Returning quietly is what keeps one
+     missing service account from becoming a stack trace per request. */
+  if (!hasFirestore) return {};
   const [profile, car, diagnoses, chats, preferences] = await Promise.all([
     db.collection('users').doc(userId).get(),
     getCarProfile(userId),
@@ -279,6 +319,10 @@ function readable(value: unknown): unknown {
  * — which is why this sits next to the writes rather than somewhere tidier.
  */
 export async function deleteUserData(userId: string): Promise<void> {
+  /* Nothing to write to, and that is a configuration state rather than a
+     failure — see `hasFirestore`. Returning quietly is what keeps one
+     missing service account from becoming a stack trace per request. */
+  if (!hasFirestore) return;
   const owned = ['users', 'cars', 'preferences'];
   const queried = ['diagnoses', 'chats'];
 
