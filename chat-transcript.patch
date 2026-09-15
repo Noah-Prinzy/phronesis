@@ -1,0 +1,229 @@
+diff --git a/frontend/src/styles/atoms.css b/frontend/src/styles/atoms.css
+index 6ee314f..87a8343 100644
+--- a/frontend/src/styles/atoms.css
++++ b/frontend/src/styles/atoms.css
+@@ -1000,40 +1000,87 @@
+   text-align: right;
+ }
+ 
+-/* --------------------------------------------------- message bubble
+-   Both sides are flat panels. The sender is told by alignment and by
+-   one accent edge, not by two competing fills. */
++/* --------------------------------------------------- message transcript
++   A transcript, not two columns of cards.
++
++   The `ph-bubble` name is now a lie, and is kept only because it is
++   load-bearing across the app: nothing here is a bubble any more. Every
++   message used to be a filled panel WITH a hairline border on top of the
++   fill, at a symmetric 16px radius, and his carried
++   `inset 2px 0 0 var(--accent)` down its left edge — a callout device.
++   Four rectangles-worth of chrome per exchange, and the column read as
++   boxes stacked inside a box.
++
++   All of it is gone. What is left is the text: his in full ink at reading
++   size, theirs right-aligned and stepped back in `--ink-3` under a small
++   label. Contrast carries the speaker, which is what contrast is for.
++
++   Chosen from three treatments auditioned abutted on the design canvas —
++   softened boxes, his-unboxed, and this. What decided it is the rule in
++   `feedback-phronesis-voice`: his reply is a live transcript revealed as he
++   speaks, and a box around it turns it back into a page he is reading out. */
+ .ph-bubble {
+   /* A character cap, not a percentage. 86% of a desktop column ran a message
+      to nearly 800px — a line length nobody reads comfortably. The percentage
+-     stays as a floor so a phone, where 42ch is already the whole column,
+-     still gets a sensible bubble. */
+-  max-width: min(42ch, 86%);
+-  padding: 0.6rem 0.8rem;
+-  border-radius: var(--r);
+-  font-size: 0.85rem;
+-  line-height: 1.55;
+-  border: 1px solid var(--hairline);
++     stays as a floor so a phone, where the cap is already the whole column,
++     still gets a sensible measure. Unboxed text carries a slightly wider
++     measure than a padded panel could, since there is no frame tightening it. */
++  max-width: min(46ch, 96%);
++  font-size: 0.925rem;
++  line-height: 1.62;
++  letter-spacing: -0.005em;
++  color: var(--ink);
+ }
+ .ph-bubble[data-from='user'] {
+   margin-left: auto;
+-  background: var(--surface-2);
+-  color: var(--ink);
++  max-width: min(40ch, 88%);
++  text-align: right;
++  font-size: 0.85rem;
++  line-height: 1.55;
++  color: var(--ink-3);
+ }
+ .ph-bubble[data-from='assistant'] {
+   margin-right: auto;
+-  background: var(--surface);
+-  box-shadow: inset 2px 0 0 var(--accent);
+ }
+-/* A bubble whose text is still being spoken or heard. `SpokenText` renders a
+-   paragraph, which must not bring its own margin into the bubble. */
++/* Their name. With no fill and no edge, alignment alone is thin evidence on a
++   short line — "Go on then" ranged right could be either of them. He needs no
++   label: he is the one at reading size in full ink. */
++.ph-bubble__who {
++  display: block;
++  font-family: var(--mono);
++  font-size: 0.56rem;
++  letter-spacing: 0.16em;
++  text-transform: uppercase;
++  color: var(--ink-3);
++  margin-bottom: 0.15rem;
++}
++/* A run from one speaker is ONE turn, so it is labelled once. */
++.ph-bubble[data-from='user'] + .ph-bubble[data-from='user'] .ph-bubble__who {
++  display: none;
++}
++
++/* Turn grouping. A flat `gap: 0.5rem` between every message made his two
++   consecutive lines read as two objects rather than one turn; the thread now
++   sets `gap: 0` and the rhythm lives here — tight inside a speaker's run,
++   open where the speaker changes. */
++.ph-bubble + .ph-bubble {
++  margin-top: 0.3rem;
++}
++.ph-bubble[data-from='user'] + .ph-bubble[data-from='assistant'],
++.ph-bubble[data-from='assistant'] + .ph-bubble[data-from='user'] {
++  margin-top: 1.15rem;
++}
++
++/* A message whose text is still being spoken or heard. `SpokenText` renders a
++   paragraph, which must not bring its own margin into the line. */
+ .ph-bubble .spoken {
+   margin: 0;
+ }
+-/* Their words, mid-utterance: present, but not yet a sent message. */
++/* Their words, mid-utterance: present, but not yet a sent message. The dashed
++   border went with the box, so dimming is the whole signal now — and it has to
++   be deeper than the old 0.72 to read against text that is already --ink-3. */
+ .ph-bubble--forming {
+-  opacity: 0.72;
+-  border-style: dashed;
++  opacity: 0.55;
+ }
+ .ph-bubble__caret {
+   display: inline-block;
+diff --git a/frontend/src/styles/pages.css b/frontend/src/styles/pages.css
+index de8c3a8..c6de3ce 100644
+--- a/frontend/src/styles/pages.css
++++ b/frontend/src/styles/pages.css
+@@ -522,6 +522,49 @@
+ /* Both pre-conversation states own the screen. The difference is what sits
+    under the orb: openers when nothing has been said, their own words once
+    they start talking. */
++/* In a conversation the orb FLOATS over the talk rather than sitting in a
++ * band above it.
++ *
++ * `.home__stage` is a flex row, so in the flow it reserved a strip across the
++ * top — a header box with the orb inside it. Lifting it out of the flow costs
++ * the thread nothing and gives it the whole column to run in; he then sits on
++ * top of the talk with his own shadow, which is what an avatar should do.
++ *
++ * Only in `thread`. Fresh and speaking keep the orb as the hero, centred and
++ * filling the screen — that is the rule below this one.
++ */
++.home[data-mode='thread'] {
++  position: relative;
++}
++.home[data-mode='thread'] .home__stage {
++  position: absolute;
++  inset: 0 0 auto;
++  z-index: 3;
++  padding: 0.75rem 0 0;
++  /* The stage spans the full width once it is absolute, and everything either
++     side of the orb is empty space the thread needs to stay scrollable. */
++  pointer-events: none;
++}
++.home[data-mode='thread'] .home__stage > * {
++  pointer-events: auto;
++}
++/* A pool of ground between him and whatever is scrolling underneath, so he
++   reads against the page rather than against a passing sentence. Sized to the
++   orb, not the column, and sitting inside the stage's stacking context so it
++   is above the thread but still behind him. */
++.home[data-mode='thread'] .home__stage::before {
++  content: '';
++  position: absolute;
++  top: -3.5rem;
++  left: 50%;
++  width: 22rem;
++  height: 15rem;
++  transform: translateX(-50%);
++  background: radial-gradient(closest-side, var(--ground) 42%, transparent 72%);
++  z-index: -1;
++  pointer-events: none;
++}
++
+ .home[data-mode='fresh'] .home__stage,
+ .home[data-mode='speaking'] .home__stage {
+   flex: 1;
+@@ -567,19 +610,43 @@
+    top of a scroll container, where it can never be scrolled back to. An auto
+    margin collapses to nothing once the content is taller than the box, so a
+    short thread sits low and a long one scrolls normally. */
++/* The talk runs the full height of the column and dissolves under the orb.
++ *
++ * It used to stop dead: the scroller began below the orb's band and messages
++ * were guillotined against a straight line, which is half of why the screen
++ * read as boxes. There is no top edge now — `mask-image` fades the first
++ * ~9rem to nothing, so a message scrolling up thins out and disappears
++ * behind him instead of being cut.
++ *
++ * --thread-fade must clear the DOCKED orb plus the stage's top padding
++ * (ORB_DOCKED 8rem + 0.75rem, with a little air). It is the one number to
++ * change if the docked size changes; nothing else depends on it.
++ *
++ * `gap` is deliberately 0 — spacing between messages is turn-grouped in
++ * atoms.css, where the rule can see who is speaking.
++ */
+ .home__thread {
++  --thread-fade: 9.25rem;
+   flex: 1;
+   min-height: 0;
+   overflow-y: auto;
+   display: flex;
+   flex-direction: column;
+-  gap: 0.5rem;
+-  padding: 0.8rem 0;
++  gap: 0;
++  padding: 0 0 0.8rem;
+   scrollbar-width: thin;
++  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 var(--thread-fade));
++  mask-image: linear-gradient(to bottom, transparent 0, #000 var(--thread-fade));
+ }
+ .home__thread > :first-child {
+   margin-top: auto;
+ }
++/* These two are siblings of the messages, not messages, so the turn-grouping
++   rules in atoms.css never reach them. */
++.home__thread > .home__thinking,
++.home__thread > .offer {
++  margin-top: 1.15rem;
++}
+ 
+ .home__thinking {
+   display: flex;
+diff --git a/frontend/src/ui/Display.tsx b/frontend/src/ui/Display.tsx
+index 598bad9..06badaa 100644
+--- a/frontend/src/ui/Display.tsx
++++ b/frontend/src/ui/Display.tsx
+@@ -255,6 +255,12 @@ export interface BubbleProps {
+ export function Bubble({ from, streaming, children, className }: BubbleProps) {
+   return (
+     <div data-from={from} className={cx('ph-bubble', className)}>
++      {/* Only they are labelled. Once the fills and borders came off, a short
++          line ranged right — "Go on then" — stopped being obviously theirs;
++          he needs no label because he is the one at reading size in full ink.
++          A run of consecutive messages shows it once: see the sibling rule in
++          atoms.css, which hides it on every message after the first. */}
++      {from === 'user' && <span className="ph-bubble__who">You</span>}
+       {children}
+       {streaming && <span className="ph-bubble__caret" aria-hidden="true" />}
+     </div>
