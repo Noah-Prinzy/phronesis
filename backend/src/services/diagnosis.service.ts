@@ -1,14 +1,13 @@
 // backend/src/services/diagnosis.service.ts
 
-import Anthropic from '@anthropic-ai/sdk';
 import { GoogleGenAI } from '@google/genai';
 import { z } from 'zod';
 import { env } from '../config/env.js';
+import { describeAttachments, toGeminiParts, type Attachment } from './attachments.js';
 
 // Separate from chat's MAX_TOKENS (1536) — a structured report with a
 // solutions array runs longer than a conversational reply.
 const DIAGNOSIS_MAX_TOKENS = 2048;
-const ANTHROPIC_MODEL = 'claude-sonnet-5';
 const GEMINI_MODEL = 'gemini-3.6-flash';
 
 export interface CarProfileInput {
@@ -34,6 +33,8 @@ export interface DiagnosisRequest {
   symptomText: string;
   carProfile?: CarProfileInput;
   obdSnapshot?: ObdSnapshotInput;
+  /** Photos of the car, or recordings of the noise. */
+  attachments?: Attachment[];
 }
 
 // snake_case: mirrors the design doc's field names and is what we ask the
@@ -126,9 +127,8 @@ const RESPONSE_JSON_SCHEMA = {
   ],
 };
 
-// Example the doc itself provides (section 9.4) — used to anchor both the
-// Anthropic prompt (as a literal template) and to keep the shape obvious
-// to a human reading this file.
+// Example the doc itself provides (section 9.4) — it anchors the prompt as a
+// literal template, and keeps the shape obvious to anyone reading this file.
 const EXAMPLE_JSON = `{"issue":"Engine Knock","root_cause":"Low-quality fuel or carbon buildup","category":"engine","urgency_level":"high","confidence":92,"cost_estimate_low":180000,"cost_estimate_high":600000,"timeline":"Fix within 2 weeks","solutions":[{"option":"Carbon cleaning (labor only)","cost_low":180000,"cost_high":320000,"parts_low":0,"parts_high":40000,"labour_low":180000,"labour_high":280000},{"option":"Replace knock sensor","cost_low":420000,"cost_high":600000,"parts_low":260000,"parts_high":380000,"labour_low":160000,"labour_high":220000}]}`;
 
 function buildSystemPrompt(): string {
@@ -139,6 +139,8 @@ Field notes: category must be one of engine/electrical/brakes/transmission/gener
 
 function buildUserPrompt(request: DiagnosisRequest): string {
   const lines: string[] = [`Symptoms described by the driver: ${request.symptomText}`];
+  const evidence = describeAttachments(request.attachments);
+  if (evidence) lines.push(evidence);
   const car = request.carProfile;
   if (car && (car.make || car.model || car.year)) {
     lines.push(
@@ -207,7 +209,11 @@ async function getGeminiDiagnosis(request: DiagnosisRequest): Promise<string> {
   const ai = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
   const response = await ai.models.generateContent({
     model: GEMINI_MODEL,
-    contents: buildUserPrompt(request),
+    // The text first, then whatever they sent. Gemini reads images and audio
+    // from the same array, so a photo and a recording need no special case.
+    contents: [
+      { role: 'user', parts: [{ text: buildUserPrompt(request) }, ...toGeminiParts(request.attachments)] },
+    ],
     config: {
       systemInstruction: buildSystemPrompt(),
       maxOutputTokens: DIAGNOSIS_MAX_TOKENS,
@@ -218,25 +224,13 @@ async function getGeminiDiagnosis(request: DiagnosisRequest): Promise<string> {
   return response.text ?? '';
 }
 
-async function getAnthropicDiagnosis(request: DiagnosisRequest): Promise<string> {
-  const anthropic = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
-  const response = await anthropic.messages.create({
-    model: ANTHROPIC_MODEL,
-    max_tokens: DIAGNOSIS_MAX_TOKENS,
-    system: buildSystemPrompt(),
-    messages: [{ role: 'user', content: buildUserPrompt(request) }],
-  });
-  const textBlock = response.content.find((block) => block.type === 'text');
-  return textBlock?.type === 'text' ? textBlock.text : '';
-}
-
 export async function runDiagnosis(request: DiagnosisRequest): Promise<DiagnosisReport> {
-  const raw = env.GEMINI_API_KEY ? await getGeminiDiagnosis(request) : await getAnthropicDiagnosis(request);
+  const raw = await getGeminiDiagnosis(request);
   const report = parseDiagnosisResponse(raw);
   report.detectedCodes = request.obdSnapshot?.dtcCodes ?? [];
   return report;
 }
 
 export function hasDiagnosisProviderConfigured(): boolean {
-  return Boolean(env.GEMINI_API_KEY || env.ANTHROPIC_API_KEY);
+  return Boolean(env.GEMINI_API_KEY);
 }

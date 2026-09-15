@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { optionalAuth } from '../middleware/auth.js';
 import { getChatReplyStream, hasChatProviderConfigured } from '../services/ai.service.js';
 import { saveChatSession } from '../services/history.service.js';
+import { attachmentSchema, rejectAttachments } from '../services/attachments.js';
 
 export const chatRouter = Router();
 
@@ -14,6 +15,8 @@ const chatRequestSchema = z.object({
       z.object({
         role: z.enum(['user', 'assistant']),
         content: z.string().min(1),
+        /** A photo or a recording sent with this turn. */
+        attachments: z.array(attachmentSchema).max(4).optional(),
       }),
     )
     .min(1, 'messages must contain at least one turn'),
@@ -33,8 +36,18 @@ chatRouter.post('/chat', optionalAuth, async (req, res) => {
     return;
   }
 
+  /* Refused with a reason rather than dropped, and BEFORE the SSE headers go
+     out — once the stream has started there is no status code left to send. */
+  for (const turn of parsed.data.messages) {
+    const refusal = rejectAttachments(turn.attachments);
+    if (refusal) {
+      res.status(415).json({ error: refusal });
+      return;
+    }
+  }
+
   if (!hasChatProviderConfigured()) {
-    res.status(503).json({ error: 'No chat provider configured — set GEMINI_API_KEY or ANTHROPIC_API_KEY.' });
+    res.status(503).json({ error: 'No chat provider configured — set GEMINI_API_KEY.' });
     return;
   }
 

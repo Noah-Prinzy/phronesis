@@ -1,14 +1,13 @@
 // backend/src/services/ai.service.ts
 
-import Anthropic from '@anthropic-ai/sdk';
 import { GoogleGenAI } from '@google/genai';
 import { env } from '../config/env.js';
+import { toGeminiParts, type Attachment } from './attachments.js';
 
-// Sonnet is the right balance of quality/cost/latency for a conversational
-// assistant like this — no need for Opus-level reasoning power here.
-const ANTHROPIC_MODEL = 'claude-sonnet-5';
-// Flash: fast, free-tier-friendly, strong enough for this — the free stand-in
-// while a custom model is being trained.
+// Flash: fast, free-tier-friendly, natively multimodal, and strong enough for
+// this. It is the only provider now — a second one existed as a fallback and
+// was costing an API key nobody was funding, which is a poor trade for a path
+// that never ran.
 const GEMINI_MODEL = 'gemini-3.6-flash';
 const MAX_TOKENS = 1536;
 
@@ -16,6 +15,14 @@ export type ChatRole = 'user' | 'assistant';
 export interface ChatTurn {
   role: ChatRole;
   content: string;
+  /**
+   * A photo of the car, or a recording of the noise, sent with this turn.
+   *
+   * On the turn rather than on the request, because that is where it belongs
+   * in the conversation: the second time you ask about a leak, he should
+   * still have the picture from the first time.
+   */
+  attachments?: Attachment[];
 }
 export type Journey = 'pre-car' | 'post-car';
 
@@ -89,7 +96,11 @@ async function* getGeminiReplyStream(messages: ChatTurn[], journey?: Journey | n
     contents: messages.map((m) => ({
       // Gemini uses "model" rather than "assistant" for the AI's own turns.
       role: m.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: m.content }],
+      // One model, both media. Gemini reads a photo and a recording out of
+      // the same array as the text, so nothing here needs a second pass
+      // through a describer first — the model that writes the answer is the
+      // one looking at the picture.
+      parts: [{ text: m.content }, ...toGeminiParts(m.attachments)],
     })),
     config: {
       systemInstruction: buildSystemPrompt(journey),
@@ -101,35 +112,20 @@ async function* getGeminiReplyStream(messages: ChatTurn[], journey?: Journey | n
   }
 }
 
-async function* getAnthropicReplyStream(messages: ChatTurn[], journey?: Journey | null): AsyncIterable<string> {
-  const anthropic = new Anthropic({ apiKey: env.ANTHROPIC_API_KEY });
-  const stream = anthropic.messages.stream({
-    model: ANTHROPIC_MODEL,
-    max_tokens: MAX_TOKENS,
-    system: buildSystemPrompt(journey),
-    messages: messages.map((m) => ({ role: m.role, content: m.content })),
-  });
-  for await (const event of stream) {
-    if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
-      yield event.delta.text;
-    }
-  }
-}
-
 /**
- * Streams Phronesis' reply from whichever provider is configured, one text
- * delta at a time. Gemini is preferred when both keys are set — it's the
- * free stand-in used while a custom model trains; once that's done (or
- * Claude is wanted instead), just unset GEMINI_API_KEY (or leave it blank)
- * and this falls through to Anthropic automatically, no code change needed.
+ * Streams Phronesis' reply, one text delta at a time.
+ *
+ * One provider. There was a second as a fallback and it never ran — Gemini
+ * was preferred whenever both keys were set, so the other path existed to be
+ * paid for rather than used. It also could not take a recording at all, which
+ * made it a fallback that silently dropped half of what this app now sends.
  */
 export function getChatReplyStream(messages: ChatTurn[], journey?: Journey | null): AsyncIterable<string> {
-  if (env.GEMINI_API_KEY) return getGeminiReplyStream(messages, journey);
-  if (env.ANTHROPIC_API_KEY) return getAnthropicReplyStream(messages, journey);
-  throw new Error('Neither GEMINI_API_KEY nor ANTHROPIC_API_KEY is configured.');
+  if (!env.GEMINI_API_KEY) throw new Error('GEMINI_API_KEY is not configured.');
+  return getGeminiReplyStream(messages, journey);
 }
 
 /** True once at least one chat provider is actually usable. */
 export function hasChatProviderConfigured(): boolean {
-  return Boolean(env.GEMINI_API_KEY || env.ANTHROPIC_API_KEY);
+  return Boolean(env.GEMINI_API_KEY);
 }

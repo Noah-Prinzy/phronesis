@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { optionalAuth } from '../middleware/auth.js';
 import { DiagnosisParseError, hasDiagnosisProviderConfigured, runDiagnosis } from '../services/diagnosis.service.js';
 import { saveDiagnosisReport } from '../services/history.service.js';
+import { attachmentsSchema, rejectAttachments } from '../services/attachments.js';
 
 export const diagnosisRouter = Router();
 
@@ -33,6 +34,8 @@ const diagnosisRequestSchema = z.object({
     })
     .partial()
     .optional(),
+  /** Photos of the car, or recordings of the noise it is making. */
+  attachments: attachmentsSchema,
 });
 
 diagnosisRouter.post('/diagnosis', optionalAuth, async (req, res) => {
@@ -42,8 +45,17 @@ diagnosisRouter.post('/diagnosis', optionalAuth, async (req, res) => {
     return;
   }
 
+  /* Turned away with a reason rather than dropped. Somebody who just recorded
+     a noise and got a diagnosis that never mentions it would reasonably
+     believe he had listened to it. */
+  const refusal = rejectAttachments(parsed.data.attachments);
+  if (refusal) {
+    res.status(415).json({ error: refusal });
+    return;
+  }
+
   if (!hasDiagnosisProviderConfigured()) {
-    res.status(503).json({ error: 'No chat provider configured — set GEMINI_API_KEY or ANTHROPIC_API_KEY.' });
+    res.status(503).json({ error: 'No chat provider configured — set GEMINI_API_KEY.' });
     return;
   }
 

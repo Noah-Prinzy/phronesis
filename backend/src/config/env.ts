@@ -5,14 +5,14 @@ import { z } from 'zod';
 
 const envSchema = z.object({
   // Deliberately not required at startup: an empty key lets the server
-  // (and /api/health) come up fine — /api/chat just fails per-request with
-  // a clear "authentication_error" from Anthropic until a real key is set,
-  // rather than the whole deployment crash-looping over a config value
-  // that's expected to arrive later.
-  ANTHROPIC_API_KEY: z.string().optional().default(''),
-  // Free stand-in for Claude while a custom model is being trained — see
-  // ai.service.ts for the selection order (Gemini preferred if both are
-  // set). Get a free key at https://aistudio.google.com/apikey.
+  // (and /api/health) come up fine — the AI routes just fail per-request
+  // with a clear message until a real key is set, rather than the whole
+  // deployment crash-looping over a config value expected to arrive later.
+  //
+  // It is the only model key now. Gemini is also what /api/tts speaks with
+  // and the only provider here that takes a photo or a recording, so there
+  // is nothing left for a second one to be a fallback FOR.
+  // Free key at https://aistudio.google.com/apikey.
   GEMINI_API_KEY: z.string().optional().default(''),
   // Scoped in ahead of need: nothing calls /api/tts-local yet (Sunbird's
   // TTS only covers Ugandan languages — Acholi, Ateso, Runyankole, Lugbara,
