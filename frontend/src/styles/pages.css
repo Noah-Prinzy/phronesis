@@ -1491,6 +1491,143 @@
   color: var(--critical);
 }
 
+/* --------------------------------------------------- diagnosis history */
+.dg__history {
+  margin-top: 1.25rem;
+  width: 100%;
+  max-width: 32rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.dg__historyHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding-inline: 0.2rem;
+}
+
+.dg__historyCount {
+  font-size: 0.72rem;
+  color: var(--ink-3);
+}
+
+.dg__historyList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 18rem;
+  overflow-y: auto;
+  padding-right: 0.2rem;
+}
+
+.dg__historyItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 0.75rem 0.9rem;
+  background: var(--surface-1);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-md, 0.6rem);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.18s ease, transform 0.14s ease, background 0.18s ease;
+  color: inherit;
+  font: inherit;
+}
+
+.dg__historyItem:hover {
+  border-color: var(--accent-line, var(--ink-3));
+  background: var(--surface-2);
+  transform: translateY(-1px);
+}
+
+.dg__historyItemTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.dg__historyDate {
+  font-size: 0.7rem;
+  color: var(--ink-3);
+}
+
+.dg__historyIssue {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: -0.01em;
+}
+
+.dg__historySymptom {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: var(--ink-2);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* History strip on active diagnosis page */
+.dg__historyBar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  overflow-x: auto;
+  padding: 0.4rem 0.2rem 0.8rem;
+  margin-bottom: 0.6rem;
+  scrollbar-width: thin;
+  position: relative;
+  z-index: 5;
+}
+
+.dg__historyPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  background: var(--surface-1);
+  border: 1px solid var(--hairline);
+  font-size: 0.78rem;
+  color: var(--ink-2);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.16s ease;
+  font-family: inherit;
+}
+
+.dg__historyPill:hover {
+  background: var(--surface-2);
+  color: var(--ink);
+  border-color: var(--ink-3);
+}
+
+.dg__historyPill--active {
+  background: var(--accent-surface, rgba(111, 180, 238, 0.12));
+  color: var(--ink);
+  border-color: var(--accent, #6fb4ee);
+  font-weight: 500;
+}
+
+.dg__historyPillTitle {
+  max-width: 12rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dg__historyPillDate {
+  font-size: 0.68rem;
+  color: var(--ink-3);
+}
+
 /* ------------------------------------------------- the spatial version
    Only wide enough to place things by hand. The car sits in the middle
    and the cards take the corners around it. */

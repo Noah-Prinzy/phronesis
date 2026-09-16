@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button, EmptyState, TextArea } from '../ui'
+import { cx } from '../ui/cx'
 import type { CarPart } from '../diagnosis/CarHologram'
 import { DiagnosisStage } from '../diagnosis/DiagnosisStage'
 import { carName, useCar } from '../app/car'
@@ -9,7 +10,7 @@ import { useHandover } from '../app/handover'
 import { FollowUp } from '../diagnosis/FollowUp'
 import { useAuth } from '../app/auth'
 import { useAlerts } from '../app/alerts'
-import { storeDiagnosis } from '../lib/userdata'
+import { loadDiagnoses, storeDiagnosis, type StoredDiagnosis } from '../lib/userdata'
 import { sendAlert } from '../lib/alerts'
 import { money } from '../lib/money'
 import { runDiagnosis, type DiagnosisReport, type WireAttachment } from '../lib/api'
@@ -77,6 +78,8 @@ export function Diagnosis() {
 
   const [symptom, setSymptom] = useState('')
   const [report, setReport] = useState<DiagnosisReport | null>(null)
+  const [history, setHistory] = useState<StoredDiagnosis[]>([])
+  const [selectedId, setSelectedId] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   /**
@@ -101,11 +104,47 @@ export function Diagnosis() {
     }
   }, [])
 
+  const fetchHistory = useCallback(async () => {
+    if (!user) {
+      setHistory([])
+      return
+    }
+    try {
+      const items = await loadDiagnoses(user.uid)
+      if (alive.current) setHistory(items)
+    } catch (err) {
+      console.warn('Failed to load diagnosis history', err)
+    }
+  }, [user])
+
+  useEffect(() => {
+    void fetchHistory()
+  }, [fetchHistory])
+
+  const selectFromHistory = useCallback((item: StoredDiagnosis) => {
+    setSelectedId(item.diagnosisId ?? null)
+    setReport(item)
+    setSymptom(item.symptom || '')
+    setAside('')
+    setError(null)
+    setCarried(null)
+  }, [])
+
+  const startNewDiagnosis = useCallback(() => {
+    setSelectedId(null)
+    setReport(null)
+    setSymptom('')
+    setAside('')
+    setError(null)
+    setCarried(null)
+  }, [])
+
   const submit = useCallback(async (input?: string, evidence?: WireAttachment[]) => {
     const text = (input ?? symptom).trim()
     if (!text || busy) return
     setBusy(true)
     setError(null)
+    setSelectedId(null)
     try {
       // The token is optional: an unauthenticated user still gets a diagnosis,
       // it simply is not saved to their history.
@@ -117,7 +156,11 @@ export function Diagnosis() {
       // Keep it, so there is a history — and so an alert has something to
       // fire from. Failing to save must not lose the diagnosis the user is
       // already looking at, so this never throws upward.
-      if (user) void storeDiagnosis(user.uid, result, text).catch(() => {})
+      if (user) {
+        void storeDiagnosis(user.uid, result, text)
+          .then(() => fetchHistory())
+          .catch(() => {})
+      }
 
       // Tell them, if they asked to be told and it is worth telling.
       if (live('faultAlerts') && (result.urgencyLevel === 'critical' || result.urgencyLevel === 'high')) {
@@ -238,6 +281,46 @@ export function Diagnosis() {
                 Talk to him instead
               </Button>
             </div>
+
+            {history.length > 0 ? (
+              <div className="dg__history">
+                <div className="dg__historyHead">
+                  <span className="label">Previous Diagnoses</span>
+                  <span className="dg__historyCount num">{history.length} recorded</span>
+                </div>
+                <div className="dg__historyList">
+                  {history.map((item) => {
+                    const itemTone = TONE[item.urgencyLevel] ?? 'var(--warning)'
+                    const dateStr = item.at
+                      ? new Date(item.at).toLocaleDateString(undefined, {
+                          month: 'short',
+                          day: 'numeric',
+                        })
+                      : ''
+                    return (
+                      <button
+                        key={item.diagnosisId || item.issue + item.at}
+                        type="button"
+                        className="dg__historyItem"
+                        onClick={() => selectFromHistory(item)}
+                      >
+                        <div className="dg__historyItemTop">
+                          <span className="dg__chip" style={{ color: itemTone }}>
+                            <span className="dg__dot" />
+                            {URGENCY_WORD[item.urgencyLevel] ?? item.urgencyLevel}
+                          </span>
+                          <span className="dg__historyDate num">{dateStr}</span>
+                        </div>
+                        <h4 className="dg__historyIssue">{item.issue}</h4>
+                        {item.symptom ? (
+                          <p className="dg__historySymptom">"{item.symptom}"</p>
+                        ) : null}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            ) : null}
           </div>
         </div>
       </main>
@@ -257,6 +340,42 @@ export function Diagnosis() {
       </header>
 
       <div className="page__body dg">
+        {history.length > 0 ? (
+          <nav className="dg__historyBar" aria-label="Previous diagnoses">
+            <button
+              type="button"
+              className={cx('dg__historyPill', !selectedId && 'dg__historyPill--active')}
+              onClick={startNewDiagnosis}
+            >
+              + New Diagnosis
+            </button>
+            {history.map((item) => {
+              const isSelected =
+                selectedId === item.diagnosisId ||
+                (report && report.issue === item.issue && (report as StoredDiagnosis).at === item.at)
+              const pillTone = TONE[item.urgencyLevel] ?? 'var(--warning)'
+              const dateStr = item.at
+                ? new Date(item.at).toLocaleDateString(undefined, {
+                    month: 'short',
+                    day: 'numeric',
+                  })
+                : ''
+              return (
+                <button
+                  key={item.diagnosisId || item.issue + item.at}
+                  type="button"
+                  className={cx('dg__historyPill', isSelected && 'dg__historyPill--active')}
+                  onClick={() => selectFromHistory(item)}
+                >
+                  <span className="dg__dot" style={{ background: pillTone }} />
+                  <span className="dg__historyPillTitle">{item.issue}</span>
+                  <span className="dg__historyPillDate num">{dateStr}</span>
+                </button>
+              )
+            })}
+          </nav>
+        ) : null}
+
         {/* He takes it from here: the car, then him, then the part in his
             hand. Everything below is what the model actually worked out, and
             he does not read any of it back. */}
@@ -347,14 +466,8 @@ export function Diagnosis() {
           <Button variant="secondary" onClick={() => navigate('/home')}>
             Ask him about this
           </Button>
-          <Button
-            variant="ghost"
-            onClick={() => {
-              setReport(null)
-              setSymptom('')
-            }}
-          >
-            Something else
+          <Button variant="ghost" onClick={startNewDiagnosis}>
+            New diagnosis
           </Button>
         </div>
       </div>

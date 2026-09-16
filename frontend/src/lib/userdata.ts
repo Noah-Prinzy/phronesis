@@ -136,6 +136,7 @@ export function toAvatarDataUrl(file: File, size = 256): Promise<string> {
 /* -------------------------------------------------------- the diagnoses */
 
 export interface StoredDiagnosis extends DiagnosisReport {
+  diagnosisId?: string
   userId: string
   symptom: string
   at: string
@@ -175,7 +176,7 @@ export async function loadDiagnoses(uid: string): Promise<StoredDiagnosis[]> {
   if (!d) return []
   const snap = await getDocs(query(collection(d, 'diagnoses'), where('userId', '==', uid)))
   return snap.docs
-    .map((s) => s.data() as StoredDiagnosis)
+    .map((s) => ({ diagnosisId: s.id, ...(s.data() as StoredDiagnosis) }))
     .toSorted((a, b) => (b.at ?? '').localeCompare(a.at ?? ''))
 }
 

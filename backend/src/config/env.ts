@@ -12,8 +12,12 @@ const envSchema = z.object({
   // It is the only model key now. Gemini is also what /api/tts speaks with
   // and the only provider here that takes a photo or a recording, so there
   // is nothing left for a second one to be a fallback FOR.
-  // Free key at https://aistudio.google.com/apikey.
-  GEMINI_API_KEY: z.string().optional().default(''),
+  // Can be set as GEMINI_API_KEY or PHRONESIS_GEMINI_API_KEY to avoid conflicts across projects.
+  GEMINI_API_KEY: z
+    .string()
+    .optional()
+    .default(() => process.env.PHRONESIS_GEMINI_API_KEY || process.env.GEMINI_API_KEY || ''),
+  GEMINI_API_KEY_FALLBACK: z.string().optional().default(''),
   // Scoped in ahead of need: nothing calls /api/tts-local yet (Sunbird's
   // TTS only covers Ugandan languages — Acholi, Ateso, Runyankole, Lugbara,
   // Swahili, Luganda — not English, so there's no current app content it
