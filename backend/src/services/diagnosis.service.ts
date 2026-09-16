@@ -43,7 +43,7 @@ export interface DiagnosisRequest {
 const diagnosisResultSchema = z.object({
   issue: z.string().min(1),
   root_cause: z.string().min(1),
-  category: z.enum(['engine', 'electrical', 'brakes', 'transmission', 'general']),
+  category: z.enum(['engine', 'electrical', 'brakes', 'transmission', 'body', 'suspension', 'general']),
   urgency_level: z.enum(['critical', 'high', 'medium', 'low']),
   confidence: z.number().min(0).max(100),
   cost_estimate_low: z.number().nonnegative(),
@@ -91,7 +91,7 @@ const RESPONSE_JSON_SCHEMA = {
   properties: {
     issue: { type: 'string' },
     root_cause: { type: 'string' },
-    category: { type: 'string', enum: ['engine', 'electrical', 'brakes', 'transmission', 'general'] },
+    category: { type: 'string', enum: ['engine', 'electrical', 'brakes', 'transmission', 'body', 'suspension', 'general'] },
     urgency_level: { type: 'string', enum: ['critical', 'high', 'medium', 'low'] },
     confidence: { type: 'number' },
     cost_estimate_low: { type: 'number' },
@@ -134,7 +134,7 @@ const EXAMPLE_JSON = `{"issue":"Engine Knock","root_cause":"Low-quality fuel or 
 function buildSystemPrompt(): string {
   return `You are Phronesis' diagnostic engine, generating a structured car diagnosis report for African drivers. Respond with ONLY a single raw JSON object matching this exact shape — no markdown fences, no prose before or after:
 ${EXAMPLE_JSON}
-Field notes: category must be one of engine/electrical/brakes/transmission/general. urgency_level must be one of critical/high/medium/low. confidence is 0-100. All costs are in UGX (Ugandan shillings), the currency this app's users actually pay in — never USD. Use realistic Kampala prices: a common independent-garage repair on a used Toyota runs roughly UGX 80,000 to 900,000, with major work into the millions. Round to the nearest 10,000. For every solution also split the cost into parts_low/parts_high and labour_low/labour_high, which must add up to cost_low/cost_high — people need to know which half of a quote is which. Base the diagnosis on the symptoms, car details, and OBD data given. If OBD DTC codes are present, weight them heavily. Be realistic and specific, not generic.`;
+Field notes: category must be one of engine/electrical/brakes/transmission/body/suspension/general. urgency_level must be one of critical/high/medium/low. confidence is 0-100. All costs are in UGX (Ugandan shillings), the currency this app's users actually pay in — never USD. Use realistic Kampala prices: a common independent-garage repair on a used Toyota runs roughly UGX 80,000 to 900,000, with major work into the millions. Round to the nearest 10,000. For every solution also split the cost into parts_low/parts_high and labour_low/labour_high, which must add up to cost_low/cost_high — people need to know which half of a quote is which. Base the diagnosis on the symptoms, car details, and OBD data given. If OBD DTC codes are present, weight them heavily. Be realistic and specific, not generic.`;
 }
 
 function buildUserPrompt(request: DiagnosisRequest): string {

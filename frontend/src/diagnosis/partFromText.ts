@@ -16,9 +16,10 @@ import type { CarPart } from '../data/findings'
  */
 export function partFromText(text: string): CarPart | null {
   if (/\brear\b.{0,12}\bbrake|\bbrake.{0,12}\brear\b/i.test(text)) return 'rear-brakes'
-  if (/\bbrake/i.test(text)) return 'front-brakes'
-  if (/\bengine\b/i.test(text)) return 'engine'
-  if (/\bcabin\b|\bair filter\b|\bhvac\b/i.test(text)) return 'cabin'
-  if (/\bbattery\b/i.test(text)) return 'battery'
+  if (/\bbrake|caliper|rotors?|pads?\b/i.test(text)) return 'front-brakes'
+  if (/\bbattery\b|\balternator\b|\bstarter\b|\bcharging\b/i.test(text)) return 'battery'
+  if (/\bcabin\b|\bair filter\b|\bhvac\b|\bdoor\b|\bhinge\b|\blatch\b|\bwindow\b|\bseat\b|\binterior\b|\bbody\b|\bhandle\b|\bmirror\b/i.test(text)) return 'cabin'
+  if (/\btransmission\b|\bgearbox\b|\bclutch\b/i.test(text)) return 'cabin'
+  if (/\bengine\b|\bmotor\b|\bcylinder\b|\bpiston\b|\bradiator\b|\bcoolant\b|\boil leak\b|\bspark plug\b/i.test(text)) return 'engine'
   return null
 }

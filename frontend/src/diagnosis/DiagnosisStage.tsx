@@ -43,9 +43,13 @@ const BEFORE_LIFT_MS = 900
  */
 const ORB_REM: Record<Beat, number> = { rest: 7, centre: 16, lift: 10 }
 
+import type { DiagnosisReport } from '../lib/api'
+
 export interface DiagnosisStageProps {
-  /** The part he is talking about. Null leaves the car whole and him quiet. */
+  /** The part he is talking about. Null leaves the car whole. */
   focus: CarPart | null
+  /** The diagnosis report with dynamic findings to speak aloud. */
+  report?: DiagnosisReport | null
   /** Severity token, e.g. `var(--critical)`. */
   tone?: string
   vehicle?: string
@@ -55,11 +59,6 @@ export interface DiagnosisStageProps {
   confidence?: number
   /**
    * He is waiting on the model.
-   *
-   * Given its own flag rather than inferred from `focus` being set, because
-   * the two are independent: he is brought here already pointing at a part
-   * and THEN thinks about it. Without this the seconds between arriving and
-   * the report landing are a page that looks finished and says nothing.
    */
   working?: boolean
   /**
@@ -73,6 +72,7 @@ export interface DiagnosisStageProps {
 
 export function DiagnosisStage({
   focus,
+  report,
   tone = 'var(--accent)',
   vehicle,
   body,
@@ -85,14 +85,12 @@ export function DiagnosisStage({
   const orbSize = useRem(ORB_REM[beat])
   const car = useRef<HologramHandle | null>(null)
   const { speak, talking, progress, line } = useSpeak()
+  const spokenReportRef = useRef<string | null>(null)
 
   /**
    * The sequence runs itself once there is something to talk about.
    *
-   * It is a real sequence rather than three states somebody clicks between:
-   * he arrives, says what he has found, and only then reaches in. Starting
-   * on `lift` would be a magic trick — the part already in his hand before
-   * anyone knew he was holding anything.
+   * He arrives, highlights the area, and reaches in to display the part.
    */
   useEffect(() => {
     if (!focus) {
@@ -100,22 +98,14 @@ export function DiagnosisStage({
       return
     }
     setBeat('centre')
-    // Nothing is said while he is still working it out. He arrives, takes the
-    // middle and thinks — saying "I have found it" before he has would be the
-    // page talking rather than him.
-    if (!working) speak(opener(focus))
+    if (!working && !report) speak(opener(focus))
     const t = window.setTimeout(() => setBeat('lift'), BEFORE_LIFT_MS)
     return () => window.clearTimeout(t)
-    // `speak` is stable for the life of the hook.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focus])
 
   /**
    * He answers a follow-up out loud, in the same voice and the same band.
-   *
-   * Only the finished text is spoken: the reply streams in token by token,
-   * and starting the voice on every delta would restart him mid-word several
-   * times a second.
    */
   const spokenAside = useRef('')
   useEffect(() => {
@@ -128,13 +118,37 @@ export function DiagnosisStage({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [aside])
 
-  /** Once he is holding it, he says what it is. */
+  /**
+   * Voice the actual diagnosis finding.
+   *
+   * When a report is available, he explains the actual issue and root cause.
+   * If a specific part is focused, he speaks as the part is lifted up.
+   * If no specific 3D part is focused, he speaks over the vehicle overview.
+   */
   useEffect(() => {
-    if (beat !== 'lift' || !focus || working) return
-    const t = window.setTimeout(() => speak(explain(focus)), 260)
-    return () => window.clearTimeout(t)
+    if (working) return
+
+    if (report) {
+      const reportKey = `${report.issue}:${report.rootCause}`
+      if (spokenReportRef.current === reportKey) return
+
+      if (focus) {
+        if (beat === 'lift') {
+          spokenReportRef.current = reportKey
+          const t = window.setTimeout(() => speak(explain(focus, report)), 260)
+          return () => window.clearTimeout(t)
+        }
+      } else {
+        spokenReportRef.current = reportKey
+        const t = window.setTimeout(() => speak(explain(null, report)), 260)
+        return () => window.clearTimeout(t)
+      }
+    } else if (focus && beat === 'lift') {
+      const t = window.setTimeout(() => speak(explain(focus)), 260)
+      return () => window.clearTimeout(t)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [beat, focus])
+  }, [beat, focus, working, report])
 
   const name = focus ? PART_NAME[focus] : null
 

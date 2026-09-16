@@ -31,13 +31,26 @@ import { runDiagnosis, type DiagnosisReport, type WireAttachment } from '../lib/
 /** Map the model's category onto a place on the car. */
 function partFor(report: DiagnosisReport | null): CarPart | null {
   if (!report) return null
-  const text = `${report.category} ${report.issue}`.toLowerCase()
-  if (text.includes('brake')) return text.includes('rear') ? 'rear-brakes' : 'front-brakes'
-  if (text.includes('battery') || text.includes('alternator')) return 'battery'
-  if (text.includes('electric')) return 'battery'
-  if (text.includes('transmission') || text.includes('clutch') || text.includes('gear')) return 'cabin'
-  if (text.includes('engine') || text.includes('knock') || text.includes('fuel')) return 'engine'
-  return 'engine'
+  const text = `${report.category} ${report.issue} ${report.rootCause || ''}`.toLowerCase()
+  if (/\brear\b.{0,15}\bbrake|\bbrake.{0,15}\brear\b/i.test(text)) return 'rear-brakes'
+  if (/\bbrake|caliper|rotors?|pads?\b/i.test(text)) return 'front-brakes'
+  if (/\bbattery|alternator|starter|charging|voltage|fuses?|wiring|relay\b/i.test(text)) return 'battery'
+  if (
+    /\bdoor|hinge|latch|lock|window|glass|windscreen|windshield|seat|cabin|interior|dash|mirror|handle|body|panel|trim|roof|boot|trunk|tailgate|hvac|air filter|blower\b/i.test(
+      text,
+    )
+  ) {
+    return 'cabin'
+  }
+  if (/\btransmission|gearbox|clutch|gears?\b/i.test(text)) return 'cabin'
+  if (
+    /\bengine|knock|motor|cylinder|piston|spark|radiator|coolant|oil leak|timing|valves?|turbo|injector|exhaust|manifold\b/i.test(
+      text,
+    )
+  ) {
+    return 'engine'
+  }
+  return null
 }
 
 const TONE: Record<string, string> = {
@@ -249,6 +262,7 @@ export function Diagnosis() {
             he does not read any of it back. */}
         <DiagnosisStage
           focus={part}
+          report={report}
           tone={tone}
           vehicle={vehicle}
           body={bodyOfModel(car?.model)}
