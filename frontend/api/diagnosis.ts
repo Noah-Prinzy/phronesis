@@ -1,7 +1,13 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { GoogleGenAI } from '@google/genai';
 
-const GEMINI_MODEL = 'gemini-3.6-flash';
+const GEMINI_FALLBACK_MODELS = [
+  'gemini-3.6-flash',
+  'gemini-3.5-flash',
+  'gemini-3.5-flash-lite',
+  'gemini-3-flash-preview',
+  'gemini-3.1-flash-lite',
+];
 const DIAGNOSIS_MAX_TOKENS = 2048;
 
 const EXAMPLE_JSON = `{"issue":"Engine Knock","root_cause":"Low-quality fuel or carbon buildup","category":"engine","urgency_level":"high","confidence":92,"cost_estimate_low":180000,"cost_estimate_high":600000,"timeline":"Fix within 2 weeks","solutions":[{"option":"Carbon cleaning (labor only)","cost_low":180000,"cost_high":320000,"parts_low":0,"parts_high":40000,"labour_low":180000,"labour_high":280000},{"option":"Replace knock sensor","cost_low":420000,"cost_high":600000,"parts_low":260000,"parts_high":380000,"labour_low":160000,"labour_high":220000}]}`;
@@ -89,18 +95,35 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const ai = new GoogleGenAI({ apiKey });
-    const response = await ai.models.generateContent({
-      model: GEMINI_MODEL,
-      contents: [{ role: 'user', parts: [{ text: buildUserPrompt(req.body) }] }],
-      config: {
-        systemInstruction: buildSystemPrompt(),
-        maxOutputTokens: DIAGNOSIS_MAX_TOKENS,
-        responseMimeType: 'application/json',
-        responseSchema: RESPONSE_JSON_SCHEMA,
-      },
-    });
+    let raw = '';
+    let lastError: any = null;
 
-    const raw = response.text || '';
+    for (const model of GEMINI_FALLBACK_MODELS) {
+      try {
+        const response = await ai.models.generateContent({
+          model,
+          contents: [{ role: 'user', parts: [{ text: buildUserPrompt(req.body) }] }],
+          config: {
+            systemInstruction: buildSystemPrompt(),
+            maxOutputTokens: DIAGNOSIS_MAX_TOKENS,
+            responseMimeType: 'application/json',
+            responseSchema: RESPONSE_JSON_SCHEMA,
+          },
+        });
+        if (response.text) {
+          raw = response.text;
+          break;
+        }
+      } catch (err: any) {
+        console.warn(`[Vercel Diagnosis] Model ${model} failed (${err?.message || err}). Trying fallback model...`);
+        lastError = err;
+      }
+    }
+
+    if (!raw) {
+      return res.status(502).json({ error: lastError?.message || 'All Gemini diagnosis model fallbacks failed' });
+    }
+
     const start = raw.indexOf('{');
     const end = raw.lastIndexOf('}');
     if (start === -1 || end === -1) {

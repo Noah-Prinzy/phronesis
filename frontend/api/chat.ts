@@ -1,7 +1,13 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { GoogleGenAI } from '@google/genai';
 
-const GEMINI_MODEL = 'gemini-3.6-flash';
+const GEMINI_FALLBACK_MODELS = [
+  'gemini-3.6-flash',
+  'gemini-3.5-flash',
+  'gemini-3.5-flash-lite',
+  'gemini-3-flash-preview',
+  'gemini-3.1-flash-lite',
+];
 const MAX_TOKENS = 1536;
 
 const BASE_PERSONA = `You are Phronesis — a car diagnostic assistant for drivers in Uganda and across East Africa.
@@ -70,14 +76,29 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       parts: [{ text: m.content || '' }],
     }));
 
-    const stream = await ai.models.generateContentStream({
-      model: GEMINI_MODEL,
-      contents,
-      config: {
-        systemInstruction: buildSystemPrompt(journey),
-        maxOutputTokens: MAX_TOKENS,
-      },
-    });
+    let stream: any = null;
+    let lastError: any = null;
+
+    for (const model of GEMINI_FALLBACK_MODELS) {
+      try {
+        stream = await ai.models.generateContentStream({
+          model,
+          contents,
+          config: {
+            systemInstruction: buildSystemPrompt(journey),
+            maxOutputTokens: MAX_TOKENS,
+          },
+        });
+        break;
+      } catch (err: any) {
+        console.warn(`[Vercel Chat] Model ${model} failed (${err?.message || err}). Trying fallback model...`);
+        lastError = err;
+      }
+    }
+
+    if (!stream) {
+      return res.status(502).json({ error: lastError?.message || 'All Gemini chat model fallbacks failed' });
+    }
 
     res.writeHead(200, {
       'Content-Type': 'text/event-stream; charset=utf-8',

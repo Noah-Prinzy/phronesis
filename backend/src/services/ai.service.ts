@@ -8,7 +8,13 @@ import { toGeminiParts, type Attachment } from './attachments.js';
 // this. It is the only provider now — a second one existed as a fallback and
 // was costing an API key nobody was funding, which is a poor trade for a path
 // that never ran.
-const GEMINI_MODEL = 'gemini-3.6-flash';
+export const GEMINI_FALLBACK_MODELS = [
+  'gemini-3.6-flash',
+  'gemini-3.5-flash',
+  'gemini-3.5-flash-lite',
+  'gemini-3-flash-preview',
+  'gemini-3.1-flash-lite',
+];
 const MAX_TOKENS = 1536;
 
 export type ChatRole = 'user' | 'assistant';
@@ -91,25 +97,40 @@ function buildSystemPrompt(journey?: Journey | null): string {
 
 async function* getGeminiReplyStream(messages: ChatTurn[], journey?: Journey | null): AsyncIterable<string> {
   const ai = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
-  const stream = await ai.models.generateContentStream({
-    model: GEMINI_MODEL,
-    contents: messages.map((m) => ({
-      // Gemini uses "model" rather than "assistant" for the AI's own turns.
-      role: m.role === 'assistant' ? 'model' : 'user',
-      // One model, both media. Gemini reads a photo and a recording out of
-      // the same array as the text, so nothing here needs a second pass
-      // through a describer first — the model that writes the answer is the
-      // one looking at the picture.
-      parts: [{ text: m.content }, ...toGeminiParts(m.attachments)],
-    })),
-    config: {
-      systemInstruction: buildSystemPrompt(journey),
-      maxOutputTokens: MAX_TOKENS,
-    },
-  });
-  for await (const chunk of stream) {
-    if (chunk.text) yield chunk.text;
+  const contents = messages.map((m) => ({
+    // Gemini uses "model" rather than "assistant" for the AI's own turns.
+    role: m.role === 'assistant' ? 'model' : 'user',
+    // One model, both media. Gemini reads a photo and a recording out of
+    // the same array as the text, so nothing here needs a second pass
+    // through a describer first — the model that writes the answer is the
+    // one looking at the picture.
+    parts: [{ text: m.content }, ...toGeminiParts(m.attachments)],
+  }));
+
+  let lastError: any = null;
+
+  for (const model of GEMINI_FALLBACK_MODELS) {
+    try {
+      const stream = await ai.models.generateContentStream({
+        model,
+        contents,
+        config: {
+          systemInstruction: buildSystemPrompt(journey),
+          maxOutputTokens: MAX_TOKENS,
+        },
+      });
+
+      for await (const chunk of stream) {
+        if (chunk.text) yield chunk.text;
+      }
+      return;
+    } catch (err: any) {
+      console.warn(`[AI Chat] Model ${model} failed (${err?.message || err}). Trying fallback model...`);
+      lastError = err;
+    }
   }
+
+  throw lastError || new Error('All Gemini chat model fallbacks failed.');
 }
 
 /**

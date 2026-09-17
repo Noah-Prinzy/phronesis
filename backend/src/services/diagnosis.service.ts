@@ -8,7 +8,13 @@ import { describeAttachments, toGeminiParts, type Attachment } from './attachmen
 // Separate from chat's MAX_TOKENS (1536) — a structured report with a
 // solutions array runs longer than a conversational reply.
 const DIAGNOSIS_MAX_TOKENS = 2048;
-const GEMINI_MODEL = 'gemini-3.6-flash';
+export const GEMINI_FALLBACK_MODELS = [
+  'gemini-3.6-flash',
+  'gemini-3.5-flash',
+  'gemini-3.5-flash-lite',
+  'gemini-3-flash-preview',
+  'gemini-3.1-flash-lite',
+];
 
 export interface CarProfileInput {
   make?: string;
@@ -207,21 +213,34 @@ export function parseDiagnosisResponse(raw: string): DiagnosisReport {
 
 async function getGeminiDiagnosis(request: DiagnosisRequest): Promise<string> {
   const ai = new GoogleGenAI({ apiKey: env.GEMINI_API_KEY });
-  const response = await ai.models.generateContent({
-    model: GEMINI_MODEL,
-    // The text first, then whatever they sent. Gemini reads images and audio
-    // from the same array, so a photo and a recording need no special case.
-    contents: [
-      { role: 'user', parts: [{ text: buildUserPrompt(request) }, ...toGeminiParts(request.attachments)] },
-    ],
-    config: {
-      systemInstruction: buildSystemPrompt(),
-      maxOutputTokens: DIAGNOSIS_MAX_TOKENS,
-      responseMimeType: 'application/json',
-      responseJsonSchema: RESPONSE_JSON_SCHEMA,
-    },
-  });
-  return response.text ?? '';
+  const contents = [
+    { role: 'user', parts: [{ text: buildUserPrompt(request) }, ...toGeminiParts(request.attachments)] },
+  ];
+
+  let lastError: any = null;
+
+  for (const model of GEMINI_FALLBACK_MODELS) {
+    try {
+      const response = await ai.models.generateContent({
+        model,
+        contents,
+        config: {
+          systemInstruction: buildSystemPrompt(),
+          maxOutputTokens: DIAGNOSIS_MAX_TOKENS,
+          responseMimeType: 'application/json',
+          responseJsonSchema: RESPONSE_JSON_SCHEMA,
+        },
+      });
+      if (response.text) {
+        return response.text;
+      }
+    } catch (err: any) {
+      console.warn(`[Diagnosis] Model ${model} failed (${err?.message || err}). Trying fallback model...`);
+      lastError = err;
+    }
+  }
+
+  throw lastError || new Error('All Gemini diagnosis model fallbacks failed.');
 }
 
 export async function runDiagnosis(request: DiagnosisRequest): Promise<DiagnosisReport> {
